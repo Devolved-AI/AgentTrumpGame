@@ -3,7 +3,8 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@smartcontractkit/chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+// import "@smartcontractkit/chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AgentTrumpGame is ReentrancyGuard, Ownable {
     // State variables
