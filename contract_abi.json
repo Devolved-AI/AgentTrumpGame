@@ -14,6 +14,13 @@
 	},
 	{
 		"inputs": [],
+		"name": "deposit",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "endGame",
 		"outputs": [],
 		"stateMutability": "nonpayable",
@@ -222,6 +229,13 @@
 		"type": "fallback"
 	},
 	{
+		"inputs": [],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"stateMutability": "payable",
 		"type": "receive"
 	},
@@ -241,6 +255,19 @@
 	{
 		"inputs": [],
 		"name": "currentMultiplier",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "currentRequiredAmount",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -394,7 +421,7 @@
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "pure",
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{

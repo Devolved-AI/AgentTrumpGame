@@ -1,0 +1,8 @@
+Saving last configuration file to .certora_internal/25_02_04_10_47_14_720/run.conf
+There is no TAC file. Going to script EVMVerifier/certoraBuild.py to main_with_args()
+Creating dir /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_47_14_720/.certora_config
+In /Users/pavondunbar/AgentTrumpGame/AgentTrumpGame.spec, found the imports: []
+copying spec file /Users/pavondunbar/AgentTrumpGame/AgentTrumpGame.spec to /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_47_14_720/.certora_sources/.0_AgentTrumpGame.spec.spec
+writing /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_47_14_720/.certora_verify.json
+Couldn't find the installed Java version.
+build failed

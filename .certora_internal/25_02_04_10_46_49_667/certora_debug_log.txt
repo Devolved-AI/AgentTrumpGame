@@ -1,0 +1,11 @@
+Saving last configuration file to .certora_internal/25_02_04_10_46_49_667/run.conf
+You are using certora-cli version 7.21.1; however, version 7.22.2 is available. It is recommended to upgrade by running: pip install certora-cli --upgrade
+or
+pip3 install certora-cli --upgrade
+There is no TAC file. Going to script EVMVerifier/certoraBuild.py to main_with_args()
+Creating dir /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_46_49_667/.certora_config
+In /Users/pavondunbar/AgentTrumpGame/AgentTrumpGame.spec, found the imports: []
+copying spec file /Users/pavondunbar/AgentTrumpGame/AgentTrumpGame.spec to /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_46_49_667/.certora_sources/.0_AgentTrumpGame.spec.spec
+writing /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_46_49_667/.certora_verify.json
+Couldn't find the installed Java version.
+build failed

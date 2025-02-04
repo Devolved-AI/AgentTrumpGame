@@ -1,0 +1,8 @@
+{
+    "importFilesToOrigRelpaths": {},
+    "primary_contract": "AgentTrumpGame",
+    "specfile": "AgentTrumpGame.spec",
+    "specfileOrigRelpath": "AgentTrumpGame.spec",
+    "specfilesToImportDecls": {},
+    "type": "spec"
+}

@@ -1,0 +1,8 @@
+testMode: property
+testLimit: 100000
+corpusDir: corpus
+prefix: "test"
+sender: ["0x10000"]
+deployer: "0x10000"
+multi-abi: true
+allContracts: true

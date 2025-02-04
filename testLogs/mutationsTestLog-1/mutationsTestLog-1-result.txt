@@ -1,0 +1,14 @@
+[2025-02-04T20:08:23.057Z] 
+Tests over mutants run in : 0h 6m 37s 241ms
+
+with command : forge test 
+
+Mutants skipped in 'mutants.log': none
+Mutants skipped not matching mutant pattern: none
+Mutants skipped due to no matching test pattern: none
+
+Total of mutants : 279, skipped : 0, tested : 279 of which killed : 279, survived : 0
+Mutation score: 100.00%
+Congratulations! All mutants were detected.
+
+

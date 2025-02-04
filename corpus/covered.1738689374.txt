@@ -1,0 +1,501 @@
+/Users/pavondunbar/AgentTrumpGame/echidna-property.sol
+  1 |     | // SPDX-License-Identifier: MIT
+  2 |     | pragma solidity 0.8.26;
+  3 |     | 
+  4 |     | import "./src/AgentTrumpGame.sol";
+  5 |     | 
+  6 | *r  | contract AgentTrumpGamePropertyTest {
+  7 |     |     AgentTrumpGame game;
+  8 |     |     bool echidna_initialSetup;
+  9 |     | 
+ 10 |     |     constructor() payable {
+ 11 | *   |         game = new AgentTrumpGame();
+ 12 |     |     }
+ 13 |     | 
+ 14 | *   |     function setup() public payable {
+ 15 | *r  |         require(!echidna_initialSetup);
+ 16 | *r  |         require(msg.value >= 1 ether);
+ 17 | *   |         echidna_initialSetup = true;
+ 18 |     |     }
+ 19 |     | 
+ 20 |     |     function submitValidGuess() internal {
+ 21 |     |         require(echidna_initialSetup);
+ 22 |     |         game.submitGuess{value: game.GAME_FEE()}("test");
+ 23 |     |     }
+ 24 |     | 
+ 25 |     |     function testGameFeeInvariant() public view returns (bool) {
+ 26 |     |         return game.getCurrentRequiredAmount() >= game.GAME_FEE();
+ 27 |     |     }
+ 28 |     | 
+ 29 |     |     function testBalanceInvariant() public view returns (bool) {
+ 30 |     |         return address(game).balance >= game.totalCollected();
+ 31 |     |     }
+ 32 |     | 
+ 33 |     |     function testEscalationInvariant() public view returns (bool) {
+ 34 |     |         if (game.escalationActive()) {
+ 35 |     |             return game.getCurrentRequiredAmount() > game.GAME_FEE();
+ 36 |     |         }
+ 37 |     |         return true;
+ 38 |     |     }
+ 39 |     | 
+ 40 |     |     function testPlayerResponsesInvariant() public returns (bool) {
+ 41 |     |         if (!echidna_initialSetup) return true;
+ 42 |     |         submitValidGuess();
+ 43 |     |         return game.getPlayerResponseCount(address(this)) > 0;
+ 44 |     |     }
+ 45 |     | 
+ 46 |     |     receive() external payable {}
+ 47 |     | }
+ 48 |     | 
+
+/Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/access/Ownable.sol
+   1 |     | // SPDX-License-Identifier: MIT
+   2 |     | // OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)
+   3 |     | 
+   4 |     | pragma solidity ^0.8.20;
+   5 |     | 
+   6 |     | import {Context} from "../utils/Context.sol";
+   7 |     | 
+   8 |     | /**
+   9 |     |  * @dev Contract module which provides a basic access control mechanism, where
+  10 |     |  * there is an account (an owner) that can be granted exclusive access to
+  11 |     |  * specific functions.
+  12 |     |  *
+  13 |     |  * The initial owner is set to the address provided by the deployer. This can
+  14 |     |  * later be changed with {transferOwnership}.
+  15 |     |  *
+  16 |     |  * This module is used through inheritance. It will make available the modifier
+  17 |     |  * `onlyOwner`, which can be applied to your functions to restrict their use to
+  18 |     |  * the owner.
+  19 |     |  */
+  20 |     | abstract contract Ownable is Context {
+  21 |     |     address private _owner;
+  22 |     | 
+  23 |     |     /**
+  24 |     |      * @dev The caller account is not authorized to perform an operation.
+  25 |     |      */
+  26 |     |     error OwnableUnauthorizedAccount(address account);
+  27 |     | 
+  28 |     |     /**
+  29 |     |      * @dev The owner is not a valid owner account. (eg. `address(0)`)
+  30 |     |      */
+  31 |     |     error OwnableInvalidOwner(address owner);
+  32 |     | 
+  33 |     |     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+  34 |     | 
+  35 |     |     /**
+  36 |     |      * @dev Initializes the contract setting the address provided by the deployer as the initial owner.
+  37 |     |      */
+  38 |     |     constructor(address initialOwner) {
+  39 | *   |         if (initialOwner == address(0)) {
+  40 |     |             revert OwnableInvalidOwner(address(0));
+  41 |     |         }
+  42 | *   |         _transferOwnership(initialOwner);
+  43 |     |     }
+  44 |     | 
+  45 |     |     /**
+  46 |     |      * @dev Throws if called by any account other than the owner.
+  47 |     |      */
+  48 |     |     modifier onlyOwner() {
+  49 | *   |         _checkOwner();
+  50 |     |         _;
+  51 |     |     }
+  52 |     | 
+  53 |     |     /**
+  54 |     |      * @dev Returns the address of the current owner.
+  55 |     |      */
+  56 | *r  |     function owner() public view virtual returns (address) {
+  57 | *   |         return _owner;
+  58 |     |     }
+  59 |     | 
+  60 |     |     /**
+  61 |     |      * @dev Throws if the sender is not the owner.
+  62 |     |      */
+  63 | *   |     function _checkOwner() internal view virtual {
+  64 | *   |         if (owner() != _msgSender()) {
+  65 | *   |             revert OwnableUnauthorizedAccount(_msgSender());
+  66 |     |         }
+  67 |     |     }
+  68 |     | 
+  69 |     |     /**
+  70 |     |      * @dev Leaves the contract without owner. It will not be possible to call
+  71 |     |      * `onlyOwner` functions. Can only be called by the current owner.
+  72 |     |      *
+  73 |     |      * NOTE: Renouncing ownership will leave the contract without an owner,
+  74 |     |      * thereby disabling any functionality that is only available to the owner.
+  75 |     |      */
+  76 | *   |     function renounceOwnership() public virtual onlyOwner {
+  77 |     |         _transferOwnership(address(0));
+  78 |     |     }
+  79 |     | 
+  80 |     |     /**
+  81 |     |      * @dev Transfers ownership of the contract to a new account (`newOwner`).
+  82 |     |      * Can only be called by the current owner.
+  83 |     |      */
+  84 | *r  |     function transferOwnership(address newOwner) public virtual onlyOwner {
+  85 |     |         if (newOwner == address(0)) {
+  86 |     |             revert OwnableInvalidOwner(address(0));
+  87 |     |         }
+  88 |     |         _transferOwnership(newOwner);
+  89 |     |     }
+  90 |     | 
+  91 |     |     /**
+  92 |     |      * @dev Transfers ownership of the contract to a new account (`newOwner`).
+  93 |     |      * Internal function without access restriction.
+  94 |     |      */
+  95 | *   |     function _transferOwnership(address newOwner) internal virtual {
+  96 | *   |         address oldOwner = _owner;
+  97 | *   |         _owner = newOwner;
+  98 | *   |         emit OwnershipTransferred(oldOwner, newOwner);
+  99 |     |     }
+ 100 |     | }
+ 101 |     | 
+
+/Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/Context.sol
+  1 |     | // SPDX-License-Identifier: MIT
+  2 |     | // OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)
+  3 |     | 
+  4 |     | pragma solidity ^0.8.20;
+  5 |     | 
+  6 |     | /**
+  7 |     |  * @dev Provides information about the current execution context, including the
+  8 |     |  * sender of the transaction and its data. While these are generally available
+  9 |     |  * via msg.sender and msg.data, they should not be accessed in such a direct
+ 10 |     |  * manner, since when dealing with meta-transactions the account sending and
+ 11 |     |  * paying for execution may not be the actual sender (as far as an application
+ 12 |     |  * is concerned).
+ 13 |     |  *
+ 14 |     |  * This contract is only required for intermediate, library-like contracts.
+ 15 |     |  */
+ 16 |     | abstract contract Context {
+ 17 |     |     function _msgSender() internal view virtual returns (address) {
+ 18 | *   |         return msg.sender;
+ 19 |     |     }
+ 20 |     | 
+ 21 |     |     function _msgData() internal view virtual returns (bytes calldata) {
+ 22 |     |         return msg.data;
+ 23 |     |     }
+ 24 |     | 
+ 25 |     |     function _contextSuffixLength() internal view virtual returns (uint256) {
+ 26 |     |         return 0;
+ 27 |     |     }
+ 28 |     | }
+ 29 |     | 
+
+/Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol
+  1 |     | // SPDX-License-Identifier: MIT
+  2 |     | // OpenZeppelin Contracts (last updated v5.1.0) (utils/ReentrancyGuard.sol)
+  3 |     | 
+  4 |     | pragma solidity ^0.8.20;
+  5 |     | 
+  6 |     | /**
+  7 |     |  * @dev Contract module that helps prevent reentrant calls to a function.
+  8 |     |  *
+  9 |     |  * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ 10 |     |  * available, which can be applied to functions to make sure there are no nested
+ 11 |     |  * (reentrant) calls to them.
+ 12 |     |  *
+ 13 |     |  * Note that because there is a single `nonReentrant` guard, functions marked as
+ 14 |     |  * `nonReentrant` may not call one another. This can be worked around by making
+ 15 |     |  * those functions `private`, and then adding `external` `nonReentrant` entry
+ 16 |     |  * points to them.
+ 17 |     |  *
+ 18 |     |  * TIP: If EIP-1153 (transient storage) is available on the chain you're deploying at,
+ 19 |     |  * consider using {ReentrancyGuardTransient} instead.
+ 20 |     |  *
+ 21 |     |  * TIP: If you would like to learn more about reentrancy and alternative ways
+ 22 |     |  * to protect against it, check out our blog post
+ 23 |     |  * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
+ 24 |     |  */
+ 25 |     | abstract contract ReentrancyGuard {
+ 26 |     |     // Booleans are more expensive than uint256 or any type that takes up a full
+ 27 |     |     // word because each write operation emits an extra SLOAD to first read the
+ 28 |     |     // slot's contents, replace the bits taken up by the boolean, and then write
+ 29 |     |     // back. This is the compiler's defense against contract upgrades and
+ 30 |     |     // pointer aliasing, and it cannot be disabled.
+ 31 |     | 
+ 32 |     |     // The values being non-zero value makes deployment a bit more expensive,
+ 33 |     |     // but in exchange the refund on every call to nonReentrant will be lower in
+ 34 |     |     // amount. Since refunds are capped to a percentage of the total
+ 35 |     |     // transaction's gas, it is best to keep them low in cases like this one, to
+ 36 |     |     // increase the likelihood of the full refund coming into effect.
+ 37 | *   |     uint256 private constant NOT_ENTERED = 1;
+ 38 | *   |     uint256 private constant ENTERED = 2;
+ 39 |     | 
+ 40 |     |     uint256 private _status;
+ 41 |     | 
+ 42 |     |     /**
+ 43 |     |      * @dev Unauthorized reentrant call.
+ 44 |     |      */
+ 45 |     |     error ReentrancyGuardReentrantCall();
+ 46 |     | 
+ 47 |     |     constructor() {
+ 48 | *   |         _status = NOT_ENTERED;
+ 49 |     |     }
+ 50 |     | 
+ 51 |     |     /**
+ 52 |     |      * @dev Prevents a contract from calling itself, directly or indirectly.
+ 53 |     |      * Calling a `nonReentrant` function from another `nonReentrant`
+ 54 |     |      * function is not supported. It is possible to prevent this from happening
+ 55 |     |      * by making the `nonReentrant` function external, and making it call a
+ 56 |     |      * `private` function that does the actual work.
+ 57 |     |      */
+ 58 |     |     modifier nonReentrant() {
+ 59 | *   |         _nonReentrantBefore();
+ 60 |     |         _;
+ 61 |     |         _nonReentrantAfter();
+ 62 |     |     }
+ 63 |     | 
+ 64 | *   |     function _nonReentrantBefore() private {
+ 65 |     |         // On the first call to nonReentrant, _status will be NOT_ENTERED
+ 66 | *   |         if (_status == ENTERED) {
+ 67 |     |             revert ReentrancyGuardReentrantCall();
+ 68 |     |         }
+ 69 |     | 
+ 70 |     |         // Any calls to nonReentrant after this point will fail
+ 71 | *   |         _status = ENTERED;
+ 72 |     |     }
+ 73 |     | 
+ 74 |     |     function _nonReentrantAfter() private {
+ 75 |     |         // By storing the original value once again, a refund is triggered (see
+ 76 |     |         // https://eips.ethereum.org/EIPS/eip-2200)
+ 77 |     |         _status = NOT_ENTERED;
+ 78 |     |     }
+ 79 |     | 
+ 80 |     |     /**
+ 81 |     |      * @dev Returns true if the reentrancy guard is currently set to "entered", which indicates there is a
+ 82 |     |      * `nonReentrant` function in the call stack.
+ 83 |     |      */
+ 84 |     |     function _reentrancyGuardEntered() internal view returns (bool) {
+ 85 |     |         return _status == ENTERED;
+ 86 |     |     }
+ 87 |     | }
+ 88 |     | 
+
+/Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol
+   1 |     | // SPDX-License-Identifier: MIT
+   2 |     | pragma solidity 0.8.26;
+   3 |     | 
+   4 |     | import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+   5 |     | import "@openzeppelin/contracts/access/Ownable.sol";
+   6 |     | 
+   7 | *   | contract AgentTrumpGame is ReentrancyGuard, Ownable {
+   8 | *   |     uint256 public gameEndBlock;
+   9 | *r  |     uint256 public escalationStartBlock;
+  10 | *   |     uint256 public lastGuessBlock;
+  11 |     |     
+  12 | *r  |     uint256 public constant BLOCKS_PER_MINUTE = 4;
+  13 | *   |     uint256 public constant INITIAL_GAME_DURATION = 20 * BLOCKS_PER_MINUTE;
+  14 | *r  |     uint256 public constant ESCALATION_PERIOD = 5 * BLOCKS_PER_MINUTE;
+  15 | *   |     uint256 public constant BASE_MULTIPLIER = 200;
+  16 | *   |     uint256 public constant GAME_FEE = 0.0009 ether;
+  17 |     |     
+  18 | *   |     uint256 public currentMultiplier;
+  19 | *r  |     uint256 public totalCollected;
+  20 | *   |     uint256 public currentRequiredAmount;
+  21 | *   |     address public lastPlayer;
+  22 | *   |     bool public gameWon;
+  23 | *   |     bool public escalationActive;
+  24 |     | 
+  25 |     |     struct PlayerResponse {
+  26 |     |         string response;
+  27 |     |         uint256 blockNumber;
+  28 |     |         bool exists;
+  29 |     |     }
+  30 |     |     
+  31 | *r  |     mapping(address => PlayerResponse[]) public playerResponses;
+  32 |     |     
+  33 |     |     event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex);
+  34 |     |     event GameWon(address indexed winner, uint256 reward);
+  35 |     |     event GameEnded(address indexed lastPlayer, uint256 lastPlayerReward, uint256 ownerReward);
+  36 |     |     event EscalationStarted(uint256 startBlock);
+  37 |     |     event GameExtended(uint256 newEndBlock, uint256 newMultiplier);
+  38 |     | 
+  39 | *   |     constructor() Ownable(msg.sender) {
+  40 | *   |         gameEndBlock = block.number + INITIAL_GAME_DURATION;
+  41 | *   |         currentMultiplier = 100;
+  42 | *   |         lastGuessBlock = block.number;
+  43 | *   |         currentRequiredAmount = GAME_FEE;
+  44 |     |     }
+  45 |     | 
+  46 | *r  |     function endGame() external onlyOwner nonReentrant {
+  47 |     |         require(totalCollected > 0, "No funds to distribute");
+  48 |     |         require(lastPlayer != address(0), "No players participated");
+  49 |     |         
+  50 |     |         uint256 ownerReward;
+  51 |     |         uint256 lastPlayerReward;
+  52 |     |         address paymentReceiver = lastPlayer;
+  53 |     |         
+  54 |     |         if (block.number >= gameEndBlock) {
+  55 |     |             lastPlayerReward = (totalCollected * 10) / 100;
+  56 |     |             ownerReward = totalCollected - lastPlayerReward;
+  57 |     |         } else {
+  58 |     |             ownerReward = totalCollected;
+  59 |     |             lastPlayerReward = 0;
+  60 |     |         }
+  61 |     |         
+  62 |     |         totalCollected = 0;
+  63 |     |         gameEndBlock = block.number;
+  64 |     |         gameWon = false;
+  65 |     |         
+  66 |     |         if (lastPlayerReward > 0) {
+  67 |     |             (bool success1, ) = payable(paymentReceiver).call{value: lastPlayerReward}("");
+  68 |     |             require(success1, "Last player reward transfer failed");
+  69 |     |         }
+  70 |     |         
+  71 |     |         (bool success2, ) = payable(owner()).call{value: ownerReward}("");
+  72 |     |         require(success2, "Owner reward transfer failed");
+  73 |     |         
+  74 |     |         emit GameEnded(paymentReceiver, lastPlayerReward, ownerReward);
+  75 |     |     }
+  76 |     | 
+  77 | *   |     function withdraw() external onlyOwner {
+  78 |     |         require(address(this).balance > 0, "No balance to withdraw");
+  79 |     |         require(totalCollected == 0, "Must call endGame first to distribute rewards");
+  80 |     |         
+  81 |     |         (bool success, ) = payable(owner()).call{value: address(this).balance}("");
+  82 |     |         require(success, "Withdraw failed");
+  83 |     |     }
+  84 |     |     
+  85 | *   |     function getCurrentRequiredAmount() public view returns (uint256) {
+  86 | *   |         if (!escalationActive) return GAME_FEE;
+  87 |     |         return currentRequiredAmount;
+  88 |     |     }
+  89 |     |     
+  90 | *   |     function shouldStartEscalation() public view returns (bool) {
+  91 | *   |         return !escalationActive && 
+  92 | *   |                block.number >= (gameEndBlock - ESCALATION_PERIOD);
+  93 |     |     }
+  94 |     |     
+  95 | *r  |     function shouldExtendGame() public view returns (bool) {
+  96 | *   |         return escalationActive && 
+  97 |     |                block.number <= gameEndBlock &&
+  98 |     |                (block.number - lastGuessBlock) <= ESCALATION_PERIOD;
+  99 |     |     }    
+ 100 |     |     
+ 101 | *   |     function submitGuess(string calldata response) external payable nonReentrant {
+ 102 | *   |         require(!gameWon, "Game already won");
+ 103 | *   |         require(bytes(response).length > 0, "Response cannot be empty");
+ 104 | *   |         require(bytes(response).length <= 1000, "Response too long");
+ 105 |     |         
+ 106 | *   |         uint256 requiredAmount = getCurrentRequiredAmount();
+ 107 | *   |         require(msg.value >= requiredAmount, "Insufficient payment");
+ 108 |     |         
+ 109 |     |         if (shouldStartEscalation()) {
+ 110 |     |             escalationActive = true;
+ 111 |     |             escalationStartBlock = block.number;
+ 112 |     |             currentRequiredAmount = GAME_FEE * BASE_MULTIPLIER / 100;
+ 113 |     |             emit EscalationStarted(escalationStartBlock);
+ 114 |     |         }
+ 115 |     |         
+ 116 |     |         if (shouldExtendGame()) {
+ 117 |     |             gameEndBlock = block.number + ESCALATION_PERIOD;
+ 118 |     |             currentRequiredAmount = currentRequiredAmount * BASE_MULTIPLIER / 100;
+ 119 |     |             emit GameExtended(gameEndBlock, currentRequiredAmount);
+ 120 |     |         }
+ 121 |     |         
+ 122 |     |         playerResponses[msg.sender].push(PlayerResponse({
+ 123 |     |             response: response,
+ 124 |     |             blockNumber: block.number,
+ 125 |     |             exists: true
+ 126 |     |         }));
+ 127 |     |         
+ 128 |     |         lastGuessBlock = block.number;
+ 129 |     |         lastPlayer = msg.sender;
+ 130 |     |         
+ 131 |     |         uint256 ownerShare = (requiredAmount * 30) / 100;
+ 132 |     |         totalCollected += (requiredAmount - ownerShare);
+ 133 |     |         
+ 134 |     |         if (msg.value > requiredAmount) {
+ 135 |     |             uint256 excess = msg.value - requiredAmount;
+ 136 |     |             (bool success1, ) = payable(msg.sender).call{value: excess}("");
+ 137 |     |             require(success1, "Refund failed");
+ 138 |     |         }
+ 139 |     |         
+ 140 |     |         (bool success2, ) = payable(owner()).call{value: ownerShare}("");
+ 141 |     |         require(success2, "Owner payment failed");
+ 142 |     |         
+ 143 |     |         emit GuessSubmitted(
+ 144 |     |             msg.sender,
+ 145 |     |             requiredAmount,
+ 146 |     |             currentMultiplier,
+ 147 |     |             response,
+ 148 |     |             block.number,
+ 149 |     |             playerResponses[msg.sender].length - 1
+ 150 |     |         );
+ 151 |     |     }
+ 152 |     | 
+ 153 | *   |     function getPlayerResponseCount(address player) public view returns (uint256) {
+ 154 | *   |         return playerResponses[player].length;
+ 155 |     |     }
+ 156 |     | 
+ 157 | *r  |     function getPlayerResponseByIndex(address player, uint256 index) public view returns (
+ 158 | *   |         string memory response, 
+ 159 | *   |         uint256 timestamp, 
+ 160 |     |         bool exists
+ 161 |     |     ) {
+ 162 | *   |         require(index < playerResponses[player].length, "Response index out of bounds");
+ 163 |     |         PlayerResponse memory playerResponse = playerResponses[player][index];
+ 164 |     |         return (playerResponse.response, playerResponse.blockNumber, playerResponse.exists);
+ 165 |     |     }
+ 166 |     | 
+ 167 | *   |     function getAllPlayerResponses(address player) public view returns (
+ 168 | *   |         string[] memory responses,
+ 169 |     |         uint256[] memory timestamps,
+ 170 |     |         bool[] memory exists
+ 171 |     |     ) {
+ 172 | *   |         uint256 responseCount = playerResponses[player].length;
+ 173 |     |         
+ 174 | *   |         responses = new string[](responseCount);
+ 175 | *   |         timestamps = new uint256[](responseCount);
+ 176 | *   |         exists = new bool[](responseCount);
+ 177 |     |         
+ 178 | *   |         for (uint256 i = 0; i < responseCount; i++) {
+ 179 |     |             PlayerResponse memory response = playerResponses[player][i];
+ 180 |     |             responses[i] = response.response;
+ 181 |     |             timestamps[i] = response.blockNumber;
+ 182 |     |             exists[i] = response.exists;
+ 183 |     |         }
+ 184 |     |         
+ 185 | *   |         return (responses, timestamps, exists);
+ 186 |     |     }
+ 187 |     |     
+ 188 | *   |     function buttonPushed(address winner) external onlyOwner nonReentrant {
+ 189 | *r  |         require(!gameWon, "Game already won");
+ 190 |     |         require(winner != address(0), "Invalid winner address");
+ 191 |     |         require(playerResponses[winner].length > 0, "Winner must have submitted at least one response");
+ 192 |     |         
+ 193 |     |         gameWon = true;
+ 194 |     |         uint256 reward = totalCollected;
+ 195 |     |         totalCollected = 0;
+ 196 |     |         
+ 197 |     |         (bool success, ) = payable(winner).call{value: reward}("");
+ 198 |     |         require(success, "Reward transfer failed");
+ 199 |     |         
+ 200 |     |         emit GameWon(winner, reward);
+ 201 |     |     }
+ 202 |     | 
+ 203 | *   |     function getTimeRemaining() public view returns (uint256) {
+ 204 | *   |         if (block.number >= gameEndBlock) return 0;
+ 205 |     |         // Convert blocks to seconds (approximate)
+ 206 | *   |         return (gameEndBlock - block.number) * 15;
+ 207 |     |     }
+ 208 |     |     
+ 209 | *r  |     function getContractBalance() public view returns (uint256) {
+ 210 | *   |         return address(this).balance;
+ 211 |     |     }
+ 212 |     |     
+ 213 | *   |     function getCurrentEscalationPeriod() public view returns (uint256) {
+ 214 | *   |         if (!escalationActive) return 0;
+ 215 |     |         return (block.number - escalationStartBlock) / ESCALATION_PERIOD;
+ 216 |     |     }
+ 217 |     |     
+ 218 | *   |     function deposit() external payable onlyOwner {
+ 219 |     |         require(msg.value > 0, "Must deposit some ETH");
+ 220 |     |     }
+ 221 |     |     
+ 222 |     |     receive() external payable {}
+ 223 |     |     fallback() external payable {}
+ 224 |     | }
+ 225 |     | 
+

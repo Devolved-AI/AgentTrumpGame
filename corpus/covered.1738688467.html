@@ -1,0 +1,539 @@
+<style> code { white-space: pre-wrap; display: block; background-color: #eee; }.executed { background-color: #afa; }.reverted { background-color: #ffa; }.unexecuted { background-color: #faa; }.neutral { background-color: #eee; }</style><b>/Users/pavondunbar/AgentTrumpGame/echidna-assertion.sol</b>
+<code>
+  1 |     | <span class='unexecuted'>// SPDX-License-Identifier: MIT</span>
+  2 |     | <span class='neutral'>pragma solidity 0.8.26;</span>
+  3 |     | <span class='neutral'></span>
+  4 |     | <span class='neutral'>import &quot;./src/AgentTrumpGame.sol&quot;;</span>
+  5 |     | <span class='neutral'></span>
+  6 | *   | <span class='executed'>contract AgentTrumpGameEchidna is AgentTrumpGame {</span>
+  7 | *   | <span class='executed'>    constructor() AgentTrumpGame() {}</span>
+  8 |     | <span class='neutral'></span>
+  9 |     | <span class='neutral'>    function echidna_balance_check() public view returns (bool) {</span>
+ 10 |     | <span class='neutral'>        return address(this).balance &gt;= totalCollected;</span>
+ 11 |     | <span class='neutral'>    }</span>
+ 12 |     | <span class='neutral'></span>
+ 13 |     | <span class='unexecuted'>    function echidna_game_won_state() public view returns (bool) {</span>
+ 14 |     | <span class='unexecuted'>        if (gameWon) {</span>
+ 15 |     | <span class='unexecuted'>            return totalCollected == 0;</span>
+ 16 |     | <span class='neutral'>        }</span>
+ 17 |     | <span class='neutral'>        return true;</span>
+ 18 |     | <span class='neutral'>    }</span>
+ 19 |     | <span class='neutral'></span>
+ 20 |     | <span class='unexecuted'>    function echidna_valid_required_amount() public view returns (bool) {</span>
+ 21 |     | <span class='unexecuted'>        return getCurrentRequiredAmount() &gt;= GAME_FEE;</span>
+ 22 |     | <span class='neutral'>    }</span>
+ 23 |     | <span class='neutral'></span>
+ 24 |     | <span class='unexecuted'>    function echidna_escalation_check() public view returns (bool) {</span>
+ 25 |     | <span class='unexecuted'>        if (escalationActive) {</span>
+ 26 |     | <span class='unexecuted'>            return block.number &gt;= (gameEndBlock - ESCALATION_PERIOD) &amp;&amp;</span>
+ 27 |     | <span class='unexecuted'>                   currentRequiredAmount &gt;= GAME_FEE;</span>
+ 28 |     | <span class='neutral'>        }</span>
+ 29 |     | <span class='neutral'>        return true;</span>
+ 30 |     | <span class='neutral'>    }</span>
+ 31 |     | <span class='neutral'></span>
+ 32 |     | <span class='unexecuted'>    function echidna_last_player_valid() public view returns (bool) {</span>
+ 33 |     | <span class='unexecuted'>        if (totalCollected &gt; 0) {</span>
+ 34 |     | <span class='unexecuted'>            return lastPlayer != address(0);</span>
+ 35 |     | <span class='neutral'>        }</span>
+ 36 |     | <span class='neutral'>        return true;</span>
+ 37 |     | <span class='neutral'>    }</span>
+ 38 |     | <span class='neutral'></span>
+ 39 |     | <span class='unexecuted'>    function echidna_response_validity() public view returns (bool) {</span>
+ 40 |     | <span class='unexecuted'>        if (lastPlayer != address(0)) {</span>
+ 41 |     | <span class='unexecuted'>            return playerResponses[lastPlayer].length &gt; 0;</span>
+ 42 |     | <span class='neutral'>        }</span>
+ 43 |     | <span class='neutral'>        return true;</span>
+ 44 |     | <span class='neutral'>    }</span>
+ 45 |     | <span class='neutral'></span>
+ 46 |     | <span class='unexecuted'>    function echidna_game_end_conditions() public view returns (bool) {</span>
+ 47 |     | <span class='unexecuted'>        if (block.number &gt;= gameEndBlock &amp;&amp; !gameWon) {</span>
+ 48 |     | <span class='unexecuted'>            return getTimeRemaining() == 0;</span>
+ 49 |     | <span class='neutral'>        }</span>
+ 50 |     | <span class='unexecuted'>        return true;</span>
+ 51 |     | <span class='neutral'>    }</span>
+ 52 |     | <span class='neutral'></span>
+ 53 |     | <span class='unexecuted'>    function echidna_escrow_consistency() public view returns (bool) {</span>
+ 54 |     | <span class='unexecuted'>        uint256 contractBalance = address(this).balance;</span>
+ 55 |     | <span class='unexecuted'>        return contractBalance &gt;= totalCollected;</span>
+ 56 |     | <span class='neutral'>    }</span>
+ 57 |     | <span class='neutral'></span>
+ 58 |     | <span class='unexecuted'>    function echidna_no_zero_fee() public view returns (bool) {</span>
+ 59 |     | <span class='unexecuted'>        return GAME_FEE &gt; 0 &amp;&amp; getCurrentRequiredAmount() &gt; 0;</span>
+ 60 |     | <span class='neutral'>    }</span>
+ 61 |     | <span class='neutral'></span>
+ 62 |     | <span class='unexecuted'>    function echidna_valid_game_duration() public view returns (bool) {</span>
+ 63 |     | <span class='unexecuted'>        return INITIAL_GAME_DURATION &gt; ESCALATION_PERIOD;</span>
+ 64 |     | <span class='neutral'>    }</span>
+ 65 |     | <span class='neutral'>}</span>
+ 66 |     | <span class='neutral'></span>
+
+</code>
+<br />
+
+<b>/Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/access/Ownable.sol</b>
+<code>
+   1 |     | <span class='neutral'>// SPDX-License-Identifier: MIT</span>
+   2 |     | <span class='neutral'>// OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)</span>
+   3 |     | <span class='neutral'></span>
+   4 |     | <span class='neutral'>pragma solidity ^0.8.20;</span>
+   5 |     | <span class='neutral'></span>
+   6 |     | <span class='neutral'>import {Context} from &quot;../utils/Context.sol&quot;;</span>
+   7 |     | <span class='neutral'></span>
+   8 |     | <span class='neutral'>/**</span>
+   9 |     | <span class='neutral'> * @dev Contract module which provides a basic access control mechanism, where</span>
+  10 |     | <span class='neutral'> * there is an account (an owner) that can be granted exclusive access to</span>
+  11 |     | <span class='neutral'> * specific functions.</span>
+  12 |     | <span class='neutral'> *</span>
+  13 |     | <span class='neutral'> * The initial owner is set to the address provided by the deployer. This can</span>
+  14 |     | <span class='neutral'> * later be changed with {transferOwnership}.</span>
+  15 |     | <span class='neutral'> *</span>
+  16 |     | <span class='neutral'> * This module is used through inheritance. It will make available the modifier</span>
+  17 |     | <span class='neutral'> * `onlyOwner`, which can be applied to your functions to restrict their use to</span>
+  18 |     | <span class='neutral'> * the owner.</span>
+  19 |     | <span class='neutral'> */</span>
+  20 |     | <span class='neutral'>abstract contract Ownable is Context {</span>
+  21 |     | <span class='neutral'>    address private _owner;</span>
+  22 |     | <span class='neutral'></span>
+  23 |     | <span class='neutral'>    /**</span>
+  24 |     | <span class='neutral'>     * @dev The caller account is not authorized to perform an operation.</span>
+  25 |     | <span class='neutral'>     */</span>
+  26 |     | <span class='neutral'>    error OwnableUnauthorizedAccount(address account);</span>
+  27 |     | <span class='neutral'></span>
+  28 |     | <span class='neutral'>    /**</span>
+  29 |     | <span class='neutral'>     * @dev The owner is not a valid owner account. (eg. `address(0)`)</span>
+  30 |     | <span class='neutral'>     */</span>
+  31 |     | <span class='neutral'>    error OwnableInvalidOwner(address owner);</span>
+  32 |     | <span class='neutral'></span>
+  33 |     | <span class='neutral'>    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);</span>
+  34 |     | <span class='neutral'></span>
+  35 |     | <span class='neutral'>    /**</span>
+  36 |     | <span class='neutral'>     * @dev Initializes the contract setting the address provided by the deployer as the initial owner.</span>
+  37 |     | <span class='neutral'>     */</span>
+  38 |     | <span class='neutral'>    constructor(address initialOwner) {</span>
+  39 | *   | <span class='executed'>        if (initialOwner == address(0)) {</span>
+  40 |     | <span class='unexecuted'>            revert OwnableInvalidOwner(address(0));</span>
+  41 |     | <span class='neutral'>        }</span>
+  42 | *   | <span class='executed'>        _transferOwnership(initialOwner);</span>
+  43 |     | <span class='neutral'>    }</span>
+  44 |     | <span class='neutral'></span>
+  45 |     | <span class='neutral'>    /**</span>
+  46 |     | <span class='neutral'>     * @dev Throws if called by any account other than the owner.</span>
+  47 |     | <span class='neutral'>     */</span>
+  48 |     | <span class='neutral'>    modifier onlyOwner() {</span>
+  49 | *   | <span class='executed'>        _checkOwner();</span>
+  50 |     | <span class='neutral'>        _;</span>
+  51 |     | <span class='neutral'>    }</span>
+  52 |     | <span class='neutral'></span>
+  53 |     | <span class='neutral'>    /**</span>
+  54 |     | <span class='neutral'>     * @dev Returns the address of the current owner.</span>
+  55 |     | <span class='neutral'>     */</span>
+  56 | *   | <span class='executed'>    function owner() public view virtual returns (address) {</span>
+  57 | *   | <span class='executed'>        return _owner;</span>
+  58 |     | <span class='neutral'>    }</span>
+  59 |     | <span class='neutral'></span>
+  60 |     | <span class='neutral'>    /**</span>
+  61 |     | <span class='neutral'>     * @dev Throws if the sender is not the owner.</span>
+  62 |     | <span class='neutral'>     */</span>
+  63 | *   | <span class='executed'>    function _checkOwner() internal view virtual {</span>
+  64 | *   | <span class='executed'>        if (owner() != _msgSender()) {</span>
+  65 | *   | <span class='executed'>            revert OwnableUnauthorizedAccount(_msgSender());</span>
+  66 |     | <span class='neutral'>        }</span>
+  67 |     | <span class='neutral'>    }</span>
+  68 |     | <span class='neutral'></span>
+  69 |     | <span class='neutral'>    /**</span>
+  70 |     | <span class='neutral'>     * @dev Leaves the contract without owner. It will not be possible to call</span>
+  71 |     | <span class='neutral'>     * `onlyOwner` functions. Can only be called by the current owner.</span>
+  72 |     | <span class='neutral'>     *</span>
+  73 |     | <span class='neutral'>     * NOTE: Renouncing ownership will leave the contract without an owner,</span>
+  74 |     | <span class='neutral'>     * thereby disabling any functionality that is only available to the owner.</span>
+  75 |     | <span class='neutral'>     */</span>
+  76 | *r  | <span class='executed'>    function renounceOwnership() public virtual onlyOwner {</span>
+  77 | *   | <span class='executed'>        _transferOwnership(address(0));</span>
+  78 |     | <span class='neutral'>    }</span>
+  79 |     | <span class='neutral'></span>
+  80 |     | <span class='neutral'>    /**</span>
+  81 |     | <span class='neutral'>     * @dev Transfers ownership of the contract to a new account (`newOwner`).</span>
+  82 |     | <span class='neutral'>     * Can only be called by the current owner.</span>
+  83 |     | <span class='neutral'>     */</span>
+  84 | *r  | <span class='executed'>    function transferOwnership(address newOwner) public virtual onlyOwner {</span>
+  85 | *   | <span class='executed'>        if (newOwner == address(0)) {</span>
+  86 | *   | <span class='executed'>            revert OwnableInvalidOwner(address(0));</span>
+  87 |     | <span class='neutral'>        }</span>
+  88 | *   | <span class='executed'>        _transferOwnership(newOwner);</span>
+  89 |     | <span class='neutral'>    }</span>
+  90 |     | <span class='neutral'></span>
+  91 |     | <span class='neutral'>    /**</span>
+  92 |     | <span class='neutral'>     * @dev Transfers ownership of the contract to a new account (`newOwner`).</span>
+  93 |     | <span class='neutral'>     * Internal function without access restriction.</span>
+  94 |     | <span class='neutral'>     */</span>
+  95 | *   | <span class='executed'>    function _transferOwnership(address newOwner) internal virtual {</span>
+  96 | *   | <span class='executed'>        address oldOwner = _owner;</span>
+  97 | *   | <span class='executed'>        _owner = newOwner;</span>
+  98 | *   | <span class='executed'>        emit OwnershipTransferred(oldOwner, newOwner);</span>
+  99 |     | <span class='neutral'>    }</span>
+ 100 |     | <span class='neutral'>}</span>
+ 101 |     | <span class='neutral'></span>
+
+</code>
+<br />
+
+<b>/Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/Context.sol</b>
+<code>
+  1 |     | <span class='neutral'>// SPDX-License-Identifier: MIT</span>
+  2 |     | <span class='neutral'>// OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)</span>
+  3 |     | <span class='neutral'></span>
+  4 |     | <span class='neutral'>pragma solidity ^0.8.20;</span>
+  5 |     | <span class='neutral'></span>
+  6 |     | <span class='neutral'>/**</span>
+  7 |     | <span class='neutral'> * @dev Provides information about the current execution context, including the</span>
+  8 |     | <span class='neutral'> * sender of the transaction and its data. While these are generally available</span>
+  9 |     | <span class='neutral'> * via msg.sender and msg.data, they should not be accessed in such a direct</span>
+ 10 |     | <span class='neutral'> * manner, since when dealing with meta-transactions the account sending and</span>
+ 11 |     | <span class='neutral'> * paying for execution may not be the actual sender (as far as an application</span>
+ 12 |     | <span class='neutral'> * is concerned).</span>
+ 13 |     | <span class='neutral'> *</span>
+ 14 |     | <span class='neutral'> * This contract is only required for intermediate, library-like contracts.</span>
+ 15 |     | <span class='neutral'> */</span>
+ 16 |     | <span class='neutral'>abstract contract Context {</span>
+ 17 |     | <span class='neutral'>    function _msgSender() internal view virtual returns (address) {</span>
+ 18 | *   | <span class='executed'>        return msg.sender;</span>
+ 19 |     | <span class='neutral'>    }</span>
+ 20 |     | <span class='neutral'></span>
+ 21 |     | <span class='neutral'>    function _msgData() internal view virtual returns (bytes calldata) {</span>
+ 22 |     | <span class='neutral'>        return msg.data;</span>
+ 23 |     | <span class='neutral'>    }</span>
+ 24 |     | <span class='neutral'></span>
+ 25 |     | <span class='neutral'>    function _contextSuffixLength() internal view virtual returns (uint256) {</span>
+ 26 |     | <span class='neutral'>        return 0;</span>
+ 27 |     | <span class='neutral'>    }</span>
+ 28 |     | <span class='neutral'>}</span>
+ 29 |     | <span class='neutral'></span>
+
+</code>
+<br />
+
+<b>/Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol</b>
+<code>
+  1 |     | <span class='neutral'>// SPDX-License-Identifier: MIT</span>
+  2 |     | <span class='neutral'>// OpenZeppelin Contracts (last updated v5.1.0) (utils/ReentrancyGuard.sol)</span>
+  3 |     | <span class='neutral'></span>
+  4 |     | <span class='neutral'>pragma solidity ^0.8.20;</span>
+  5 |     | <span class='neutral'></span>
+  6 |     | <span class='neutral'>/**</span>
+  7 |     | <span class='neutral'> * @dev Contract module that helps prevent reentrant calls to a function.</span>
+  8 |     | <span class='neutral'> *</span>
+  9 |     | <span class='neutral'> * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier</span>
+ 10 |     | <span class='neutral'> * available, which can be applied to functions to make sure there are no nested</span>
+ 11 |     | <span class='neutral'> * (reentrant) calls to them.</span>
+ 12 |     | <span class='neutral'> *</span>
+ 13 |     | <span class='neutral'> * Note that because there is a single `nonReentrant` guard, functions marked as</span>
+ 14 |     | <span class='neutral'> * `nonReentrant` may not call one another. This can be worked around by making</span>
+ 15 |     | <span class='neutral'> * those functions `private`, and then adding `external` `nonReentrant` entry</span>
+ 16 |     | <span class='neutral'> * points to them.</span>
+ 17 |     | <span class='neutral'> *</span>
+ 18 |     | <span class='neutral'> * TIP: If EIP-1153 (transient storage) is available on the chain you&#39;re deploying at,</span>
+ 19 |     | <span class='neutral'> * consider using {ReentrancyGuardTransient} instead.</span>
+ 20 |     | <span class='neutral'> *</span>
+ 21 |     | <span class='neutral'> * TIP: If you would like to learn more about reentrancy and alternative ways</span>
+ 22 |     | <span class='neutral'> * to protect against it, check out our blog post</span>
+ 23 |     | <span class='neutral'> * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].</span>
+ 24 |     | <span class='neutral'> */</span>
+ 25 |     | <span class='neutral'>abstract contract ReentrancyGuard {</span>
+ 26 |     | <span class='neutral'>    // Booleans are more expensive than uint256 or any type that takes up a full</span>
+ 27 |     | <span class='neutral'>    // word because each write operation emits an extra SLOAD to first read the</span>
+ 28 |     | <span class='neutral'>    // slot&#39;s contents, replace the bits taken up by the boolean, and then write</span>
+ 29 |     | <span class='neutral'>    // back. This is the compiler&#39;s defense against contract upgrades and</span>
+ 30 |     | <span class='neutral'>    // pointer aliasing, and it cannot be disabled.</span>
+ 31 |     | <span class='neutral'></span>
+ 32 |     | <span class='neutral'>    // The values being non-zero value makes deployment a bit more expensive,</span>
+ 33 |     | <span class='neutral'>    // but in exchange the refund on every call to nonReentrant will be lower in</span>
+ 34 |     | <span class='neutral'>    // amount. Since refunds are capped to a percentage of the total</span>
+ 35 |     | <span class='neutral'>    // transaction&#39;s gas, it is best to keep them low in cases like this one, to</span>
+ 36 |     | <span class='neutral'>    // increase the likelihood of the full refund coming into effect.</span>
+ 37 | *   | <span class='executed'>    uint256 private constant NOT_ENTERED = 1;</span>
+ 38 | *   | <span class='executed'>    uint256 private constant ENTERED = 2;</span>
+ 39 |     | <span class='neutral'></span>
+ 40 |     | <span class='neutral'>    uint256 private _status;</span>
+ 41 |     | <span class='neutral'></span>
+ 42 |     | <span class='neutral'>    /**</span>
+ 43 |     | <span class='neutral'>     * @dev Unauthorized reentrant call.</span>
+ 44 |     | <span class='neutral'>     */</span>
+ 45 |     | <span class='neutral'>    error ReentrancyGuardReentrantCall();</span>
+ 46 |     | <span class='neutral'></span>
+ 47 |     | <span class='neutral'>    constructor() {</span>
+ 48 | *   | <span class='executed'>        _status = NOT_ENTERED;</span>
+ 49 |     | <span class='neutral'>    }</span>
+ 50 |     | <span class='neutral'></span>
+ 51 |     | <span class='neutral'>    /**</span>
+ 52 |     | <span class='neutral'>     * @dev Prevents a contract from calling itself, directly or indirectly.</span>
+ 53 |     | <span class='neutral'>     * Calling a `nonReentrant` function from another `nonReentrant`</span>
+ 54 |     | <span class='neutral'>     * function is not supported. It is possible to prevent this from happening</span>
+ 55 |     | <span class='neutral'>     * by making the `nonReentrant` function external, and making it call a</span>
+ 56 |     | <span class='neutral'>     * `private` function that does the actual work.</span>
+ 57 |     | <span class='neutral'>     */</span>
+ 58 |     | <span class='neutral'>    modifier nonReentrant() {</span>
+ 59 | *   | <span class='executed'>        _nonReentrantBefore();</span>
+ 60 |     | <span class='neutral'>        _;</span>
+ 61 | *   | <span class='executed'>        _nonReentrantAfter();</span>
+ 62 |     | <span class='neutral'>    }</span>
+ 63 |     | <span class='neutral'></span>
+ 64 | *   | <span class='executed'>    function _nonReentrantBefore() private {</span>
+ 65 |     | <span class='neutral'>        // On the first call to nonReentrant, _status will be NOT_ENTERED</span>
+ 66 | *   | <span class='executed'>        if (_status == ENTERED) {</span>
+ 67 |     | <span class='unexecuted'>            revert ReentrancyGuardReentrantCall();</span>
+ 68 |     | <span class='neutral'>        }</span>
+ 69 |     | <span class='neutral'></span>
+ 70 |     | <span class='neutral'>        // Any calls to nonReentrant after this point will fail</span>
+ 71 | *   | <span class='executed'>        _status = ENTERED;</span>
+ 72 |     | <span class='neutral'>    }</span>
+ 73 |     | <span class='neutral'></span>
+ 74 | *   | <span class='executed'>    function _nonReentrantAfter() private {</span>
+ 75 |     | <span class='neutral'>        // By storing the original value once again, a refund is triggered (see</span>
+ 76 |     | <span class='neutral'>        // https://eips.ethereum.org/EIPS/eip-2200)</span>
+ 77 | *   | <span class='executed'>        _status = NOT_ENTERED;</span>
+ 78 |     | <span class='neutral'>    }</span>
+ 79 |     | <span class='neutral'></span>
+ 80 |     | <span class='neutral'>    /**</span>
+ 81 |     | <span class='neutral'>     * @dev Returns true if the reentrancy guard is currently set to &quot;entered&quot;, which indicates there is a</span>
+ 82 |     | <span class='neutral'>     * `nonReentrant` function in the call stack.</span>
+ 83 |     | <span class='neutral'>     */</span>
+ 84 |     | <span class='neutral'>    function _reentrancyGuardEntered() internal view returns (bool) {</span>
+ 85 |     | <span class='neutral'>        return _status == ENTERED;</span>
+ 86 |     | <span class='neutral'>    }</span>
+ 87 |     | <span class='neutral'>}</span>
+ 88 |     | <span class='neutral'></span>
+
+</code>
+<br />
+
+<b>/Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol</b>
+<code>
+   1 |     | <span class='neutral'>// SPDX-License-Identifier: MIT</span>
+   2 |     | <span class='neutral'>pragma solidity 0.8.26;</span>
+   3 |     | <span class='neutral'></span>
+   4 |     | <span class='neutral'>import &quot;@openzeppelin/contracts/utils/ReentrancyGuard.sol&quot;;</span>
+   5 |     | <span class='neutral'>import &quot;@openzeppelin/contracts/access/Ownable.sol&quot;;</span>
+   6 |     | <span class='neutral'></span>
+   7 |     | <span class='unexecuted'>contract AgentTrumpGame is ReentrancyGuard, Ownable {</span>
+   8 |     | <span class='unexecuted'>    uint256 public gameEndBlock;</span>
+   9 | *   | <span class='executed'>    uint256 public escalationStartBlock;</span>
+  10 | *   | <span class='executed'>    uint256 public lastGuessBlock;</span>
+  11 |     | <span class='neutral'>    </span>
+  12 | *   | <span class='executed'>    uint256 public constant BLOCKS_PER_MINUTE = 4;</span>
+  13 | *   | <span class='executed'>    uint256 public constant INITIAL_GAME_DURATION = 20 * BLOCKS_PER_MINUTE;</span>
+  14 | *   | <span class='executed'>    uint256 public constant ESCALATION_PERIOD = 5 * BLOCKS_PER_MINUTE;</span>
+  15 | *   | <span class='executed'>    uint256 public constant BASE_MULTIPLIER = 200;</span>
+  16 | *   | <span class='executed'>    uint256 public constant GAME_FEE = 0.0009 ether;</span>
+  17 |     | <span class='neutral'>    </span>
+  18 |     | <span class='unexecuted'>    uint256 public currentMultiplier;</span>
+  19 | *   | <span class='executed'>    uint256 public totalCollected;</span>
+  20 | *   | <span class='executed'>    uint256 public currentRequiredAmount;</span>
+  21 | *   | <span class='executed'>    address public lastPlayer;</span>
+  22 | *   | <span class='executed'>    bool public gameWon;</span>
+  23 |     | <span class='unexecuted'>    bool public escalationActive;</span>
+  24 |     | <span class='neutral'></span>
+  25 |     | <span class='neutral'>    struct PlayerResponse {</span>
+  26 |     | <span class='neutral'>        string response;</span>
+  27 |     | <span class='neutral'>        uint256 blockNumber;</span>
+  28 |     | <span class='neutral'>        bool exists;</span>
+  29 |     | <span class='neutral'>    }</span>
+  30 |     | <span class='neutral'>    </span>
+  31 | *r  | <span class='executed'>    mapping(address =&gt; PlayerResponse[]) public playerResponses;</span>
+  32 |     | <span class='neutral'>    </span>
+  33 |     | <span class='neutral'>    event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex);</span>
+  34 |     | <span class='neutral'>    event GameWon(address indexed winner, uint256 reward);</span>
+  35 |     | <span class='neutral'>    event GameEnded(address indexed lastPlayer, uint256 lastPlayerReward, uint256 ownerReward);</span>
+  36 |     | <span class='neutral'>    event EscalationStarted(uint256 startBlock);</span>
+  37 |     | <span class='neutral'>    event GameExtended(uint256 newEndBlock, uint256 newMultiplier);</span>
+  38 |     | <span class='neutral'></span>
+  39 | *   | <span class='executed'>    constructor() Ownable(msg.sender) {</span>
+  40 | *   | <span class='executed'>        gameEndBlock = block.number + INITIAL_GAME_DURATION;</span>
+  41 | *   | <span class='executed'>        currentMultiplier = 100;</span>
+  42 | *   | <span class='executed'>        lastGuessBlock = block.number;</span>
+  43 | *   | <span class='executed'>        currentRequiredAmount = GAME_FEE;</span>
+  44 |     | <span class='neutral'>    }</span>
+  45 |     | <span class='neutral'></span>
+  46 | *r  | <span class='executed'>    function endGame() external onlyOwner nonReentrant {</span>
+  47 | *   | <span class='executed'>        require(totalCollected &gt; 0, &quot;No funds to distribute&quot;);</span>
+  48 | *   | <span class='executed'>        require(lastPlayer != address(0), &quot;No players participated&quot;);</span>
+  49 |     | <span class='neutral'>        </span>
+  50 | *   | <span class='executed'>        uint256 ownerReward;</span>
+  51 |     | <span class='neutral'>        uint256 lastPlayerReward;</span>
+  52 | *   | <span class='executed'>        address paymentReceiver = lastPlayer;</span>
+  53 |     | <span class='neutral'>        </span>
+  54 | *   | <span class='executed'>        if (block.number &gt;= gameEndBlock) {</span>
+  55 | *   | <span class='executed'>            lastPlayerReward = (totalCollected * 10) / 100;</span>
+  56 | *   | <span class='executed'>            ownerReward = totalCollected - lastPlayerReward;</span>
+  57 |     | <span class='neutral'>        } else {</span>
+  58 |     | <span class='unexecuted'>            ownerReward = totalCollected;</span>
+  59 |     | <span class='unexecuted'>            lastPlayerReward = 0;</span>
+  60 |     | <span class='neutral'>        }</span>
+  61 |     | <span class='neutral'>        </span>
+  62 | *   | <span class='executed'>        totalCollected = 0;</span>
+  63 | *   | <span class='executed'>        gameEndBlock = block.number;</span>
+  64 | *   | <span class='executed'>        gameWon = false;</span>
+  65 |     | <span class='neutral'>        </span>
+  66 | *   | <span class='executed'>        if (lastPlayerReward &gt; 0) {</span>
+  67 | *   | <span class='executed'>            (bool success1, ) = payable(paymentReceiver).call{value: lastPlayerReward}(&quot;&quot;);</span>
+  68 | *   | <span class='executed'>            require(success1, &quot;Last player reward transfer failed&quot;);</span>
+  69 |     | <span class='neutral'>        }</span>
+  70 |     | <span class='neutral'>        </span>
+  71 | *   | <span class='executed'>        (bool success2, ) = payable(owner()).call{value: ownerReward}(&quot;&quot;);</span>
+  72 | *   | <span class='executed'>        require(success2, &quot;Owner reward transfer failed&quot;);</span>
+  73 |     | <span class='neutral'>        </span>
+  74 | *   | <span class='executed'>        emit GameEnded(paymentReceiver, lastPlayerReward, ownerReward);</span>
+  75 |     | <span class='neutral'>    }</span>
+  76 |     | <span class='neutral'></span>
+  77 | *r  | <span class='executed'>    function withdraw() external onlyOwner {</span>
+  78 | *   | <span class='executed'>        require(address(this).balance &gt; 0, &quot;No balance to withdraw&quot;);</span>
+  79 | *   | <span class='executed'>        require(totalCollected == 0, &quot;Must call endGame first to distribute rewards&quot;);</span>
+  80 |     | <span class='neutral'>        </span>
+  81 | *   | <span class='executed'>        (bool success, ) = payable(owner()).call{value: address(this).balance}(&quot;&quot;);</span>
+  82 | *   | <span class='executed'>        require(success, &quot;Withdraw failed&quot;);</span>
+  83 |     | <span class='neutral'>    }</span>
+  84 |     | <span class='neutral'>    </span>
+  85 | *   | <span class='executed'>    function getCurrentRequiredAmount() public view returns (uint256) {</span>
+  86 | *   | <span class='executed'>        if (!escalationActive) return GAME_FEE;</span>
+  87 | *   | <span class='executed'>        return currentRequiredAmount;</span>
+  88 |     | <span class='neutral'>    }</span>
+  89 |     | <span class='neutral'>    </span>
+  90 | *   | <span class='executed'>    function shouldStartEscalation() public view returns (bool) {</span>
+  91 | *   | <span class='executed'>        return !escalationActive &amp;&amp; </span>
+  92 | *   | <span class='executed'>               block.number &gt;= (gameEndBlock - ESCALATION_PERIOD);</span>
+  93 |     | <span class='neutral'>    }</span>
+  94 |     | <span class='neutral'>    </span>
+  95 | *   | <span class='executed'>    function shouldExtendGame() public view returns (bool) {</span>
+  96 | *   | <span class='executed'>        return escalationActive &amp;&amp; </span>
+  97 | *   | <span class='executed'>               block.number &lt;= gameEndBlock &amp;&amp;</span>
+  98 | *   | <span class='executed'>               (block.number - lastGuessBlock) &lt;= ESCALATION_PERIOD;</span>
+  99 |     | <span class='neutral'>    }    </span>
+ 100 |     | <span class='neutral'>    </span>
+ 101 | *   | <span class='executed'>    function submitGuess(string calldata response) external payable nonReentrant {</span>
+ 102 | *   | <span class='executed'>        require(!gameWon, &quot;Game already won&quot;);</span>
+ 103 | *   | <span class='executed'>        require(bytes(response).length &gt; 0, &quot;Response cannot be empty&quot;);</span>
+ 104 | *   | <span class='executed'>        require(bytes(response).length &lt;= 1000, &quot;Response too long&quot;);</span>
+ 105 |     | <span class='neutral'>        </span>
+ 106 | *   | <span class='executed'>        uint256 requiredAmount = getCurrentRequiredAmount();</span>
+ 107 | *   | <span class='executed'>        require(msg.value &gt;= requiredAmount, &quot;Insufficient payment&quot;);</span>
+ 108 |     | <span class='neutral'>        </span>
+ 109 | *   | <span class='executed'>        if (shouldStartEscalation()) {</span>
+ 110 | *   | <span class='executed'>            escalationActive = true;</span>
+ 111 | *   | <span class='executed'>            escalationStartBlock = block.number;</span>
+ 112 | *   | <span class='executed'>            currentRequiredAmount = GAME_FEE * BASE_MULTIPLIER / 100;</span>
+ 113 | *   | <span class='executed'>            emit EscalationStarted(escalationStartBlock);</span>
+ 114 |     | <span class='neutral'>        }</span>
+ 115 |     | <span class='neutral'>        </span>
+ 116 | *   | <span class='executed'>        if (shouldExtendGame()) {</span>
+ 117 |     | <span class='unexecuted'>            gameEndBlock = block.number + ESCALATION_PERIOD;</span>
+ 118 |     | <span class='unexecuted'>            currentRequiredAmount = currentRequiredAmount * BASE_MULTIPLIER / 100;</span>
+ 119 |     | <span class='unexecuted'>            emit GameExtended(gameEndBlock, currentRequiredAmount);</span>
+ 120 |     | <span class='neutral'>        }</span>
+ 121 |     | <span class='neutral'>        </span>
+ 122 | *   | <span class='executed'>        playerResponses[msg.sender].push(PlayerResponse({</span>
+ 123 | *   | <span class='executed'>            response: response,</span>
+ 124 | *   | <span class='executed'>            blockNumber: block.number,</span>
+ 125 | *   | <span class='executed'>            exists: true</span>
+ 126 |     | <span class='neutral'>        }));</span>
+ 127 |     | <span class='neutral'>        </span>
+ 128 | *   | <span class='executed'>        lastGuessBlock = block.number;</span>
+ 129 | *   | <span class='executed'>        lastPlayer = msg.sender;</span>
+ 130 |     | <span class='neutral'>        </span>
+ 131 | *   | <span class='executed'>        uint256 ownerShare = (requiredAmount * 30) / 100;</span>
+ 132 | *   | <span class='executed'>        totalCollected += (requiredAmount - ownerShare);</span>
+ 133 |     | <span class='neutral'>        </span>
+ 134 | *   | <span class='executed'>        if (msg.value &gt; requiredAmount) {</span>
+ 135 | *   | <span class='executed'>            uint256 excess = msg.value - requiredAmount;</span>
+ 136 | *   | <span class='executed'>            (bool success1, ) = payable(msg.sender).call{value: excess}(&quot;&quot;);</span>
+ 137 | *   | <span class='executed'>            require(success1, &quot;Refund failed&quot;);</span>
+ 138 |     | <span class='neutral'>        }</span>
+ 139 |     | <span class='neutral'>        </span>
+ 140 | *   | <span class='executed'>        (bool success2, ) = payable(owner()).call{value: ownerShare}(&quot;&quot;);</span>
+ 141 | *   | <span class='executed'>        require(success2, &quot;Owner payment failed&quot;);</span>
+ 142 |     | <span class='neutral'>        </span>
+ 143 | *   | <span class='executed'>        emit GuessSubmitted(</span>
+ 144 | *   | <span class='executed'>            msg.sender,</span>
+ 145 | *   | <span class='executed'>            requiredAmount,</span>
+ 146 | *   | <span class='executed'>            currentMultiplier,</span>
+ 147 | *   | <span class='executed'>            response,</span>
+ 148 | *   | <span class='executed'>            block.number,</span>
+ 149 | *   | <span class='executed'>            playerResponses[msg.sender].length - 1</span>
+ 150 |     | <span class='neutral'>        );</span>
+ 151 |     | <span class='neutral'>    }</span>
+ 152 |     | <span class='neutral'></span>
+ 153 |     | <span class='unexecuted'>    function getPlayerResponseCount(address player) public view returns (uint256) {</span>
+ 154 |     | <span class='unexecuted'>        return playerResponses[player].length;</span>
+ 155 |     | <span class='neutral'>    }</span>
+ 156 |     | <span class='neutral'></span>
+ 157 | *   | <span class='executed'>    function getPlayerResponseByIndex(address player, uint256 index) public view returns (</span>
+ 158 | *   | <span class='executed'>        string memory response, </span>
+ 159 | *   | <span class='executed'>        uint256 timestamp, </span>
+ 160 |     | <span class='neutral'>        bool exists</span>
+ 161 |     | <span class='neutral'>    ) {</span>
+ 162 | *   | <span class='executed'>        require(index &lt; playerResponses[player].length, &quot;Response index out of bounds&quot;);</span>
+ 163 |     | <span class='unexecuted'>        PlayerResponse memory playerResponse = playerResponses[player][index];</span>
+ 164 |     | <span class='unexecuted'>        return (playerResponse.response, playerResponse.blockNumber, playerResponse.exists);</span>
+ 165 |     | <span class='neutral'>    }</span>
+ 166 |     | <span class='neutral'></span>
+ 167 |     | <span class='unexecuted'>    function getAllPlayerResponses(address player) public view returns (</span>
+ 168 |     | <span class='unexecuted'>        string[] memory responses,</span>
+ 169 |     | <span class='neutral'>        uint256[] memory timestamps,</span>
+ 170 |     | <span class='neutral'>        bool[] memory exists</span>
+ 171 |     | <span class='neutral'>    ) {</span>
+ 172 |     | <span class='unexecuted'>        uint256 responseCount = playerResponses[player].length;</span>
+ 173 |     | <span class='neutral'>        </span>
+ 174 |     | <span class='unexecuted'>        responses = new string[](responseCount);</span>
+ 175 |     | <span class='unexecuted'>        timestamps = new uint256[](responseCount);</span>
+ 176 |     | <span class='unexecuted'>        exists = new bool[](responseCount);</span>
+ 177 |     | <span class='neutral'>        </span>
+ 178 |     | <span class='unexecuted'>        for (uint256 i = 0; i &lt; responseCount; i++) {</span>
+ 179 |     | <span class='unexecuted'>            PlayerResponse memory response = playerResponses[player][i];</span>
+ 180 |     | <span class='unexecuted'>            responses[i] = response.response;</span>
+ 181 |     | <span class='unexecuted'>            timestamps[i] = response.blockNumber;</span>
+ 182 |     | <span class='unexecuted'>            exists[i] = response.exists;</span>
+ 183 |     | <span class='neutral'>        }</span>
+ 184 |     | <span class='neutral'>        </span>
+ 185 |     | <span class='unexecuted'>        return (responses, timestamps, exists);</span>
+ 186 |     | <span class='neutral'>    }</span>
+ 187 |     | <span class='neutral'>    </span>
+ 188 | *r  | <span class='executed'>    function buttonPushed(address winner) external onlyOwner nonReentrant {</span>
+ 189 | *r  | <span class='executed'>        require(!gameWon, &quot;Game already won&quot;);</span>
+ 190 | *   | <span class='executed'>        require(winner != address(0), &quot;Invalid winner address&quot;);</span>
+ 191 | *   | <span class='executed'>        require(playerResponses[winner].length &gt; 0, &quot;Winner must have submitted at least one response&quot;);</span>
+ 192 |     | <span class='neutral'>        </span>
+ 193 | *   | <span class='executed'>        gameWon = true;</span>
+ 194 | *   | <span class='executed'>        uint256 reward = totalCollected;</span>
+ 195 | *   | <span class='executed'>        totalCollected = 0;</span>
+ 196 |     | <span class='neutral'>        </span>
+ 197 | *   | <span class='executed'>        (bool success, ) = payable(winner).call{value: reward}(&quot;&quot;);</span>
+ 198 | *   | <span class='executed'>        require(success, &quot;Reward transfer failed&quot;);</span>
+ 199 |     | <span class='neutral'>        </span>
+ 200 | *   | <span class='executed'>        emit GameWon(winner, reward);</span>
+ 201 |     | <span class='neutral'>    }</span>
+ 202 |     | <span class='neutral'></span>
+ 203 | *   | <span class='executed'>    function getTimeRemaining() public view returns (uint256) {</span>
+ 204 | *   | <span class='executed'>        if (block.number &gt;= gameEndBlock) return 0;</span>
+ 205 |     | <span class='neutral'>        // Convert blocks to seconds (approximate)</span>
+ 206 |     | <span class='unexecuted'>        return (gameEndBlock - block.number) * 15;</span>
+ 207 |     | <span class='neutral'>    }</span>
+ 208 |     | <span class='neutral'>    </span>
+ 209 |     | <span class='unexecuted'>    function getContractBalance() public view returns (uint256) {</span>
+ 210 |     | <span class='unexecuted'>        return address(this).balance;</span>
+ 211 |     | <span class='neutral'>    }</span>
+ 212 |     | <span class='neutral'>    </span>
+ 213 |     | <span class='unexecuted'>    function getCurrentEscalationPeriod() public view returns (uint256) {</span>
+ 214 |     | <span class='unexecuted'>        if (!escalationActive) return 0;</span>
+ 215 |     | <span class='unexecuted'>        return (block.number - escalationStartBlock) / ESCALATION_PERIOD;</span>
+ 216 |     | <span class='neutral'>    }</span>
+ 217 |     | <span class='neutral'>    </span>
+ 218 | *   | <span class='executed'>    function deposit() external payable onlyOwner {</span>
+ 219 | *   | <span class='executed'>        require(msg.value &gt; 0, &quot;Must deposit some ETH&quot;);</span>
+ 220 |     | <span class='neutral'>    }</span>
+ 221 |     | <span class='neutral'>    </span>
+ 222 |     | <span class='neutral'>    receive() external payable {}</span>
+ 223 |     | <span class='neutral'>    fallback() external payable {}</span>
+ 224 |     | <span class='neutral'>}</span>
+ 225 |     | <span class='neutral'></span>
+
+</code>
+<br />
+

@@ -1,0 +1,88 @@
+Saving last configuration file to .certora_internal/25_02_04_10_49_42_666/run.conf
+There is no TAC file. Going to script EVMVerifier/certoraBuild.py to main_with_args()
+Creating dir /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_config
+In /Users/pavondunbar/AgentTrumpGame/AgentTrumpGame.spec, found the imports: []
+copying spec file /Users/pavondunbar/AgentTrumpGame/AgentTrumpGame.spec to /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/.0_AgentTrumpGame.spec.spec
+writing /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_verify.json
+Local checks of CVL specification files disabled. It is recommended to enable the checks.
+
+building file src/AgentTrumpGame.sol
+Running cmd solc --version
+stdout, stderr = .certora_internal/25_02_04_10_49_42_666/.certora_config/version_check_solc.stdout, .certora_internal/25_02_04_10_49_42_666/.certora_config/version_check_solc.stderr
+Exitcode 0
+Solc run solc --version time: 0.0764
+Running cmd solc -o ".certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0/" --overwrite --allow-paths ".",.,"lib/openzeppelin-contracts/contracts/","lib/smartcontractkit/chainlink/contracts/","lib/chainlink/","lib/openzeppelin-contracts/lib/erc4626-tests/","lib/forge-std/src/","lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/","lib/openzeppelin-contracts/" --standard-json
+stdout, stderr = .certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0.standard.stdout.json, .certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0.standard.stderr.json
+Exitcode 0
+Solc run solc -o ".certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0/" --overwrite --allow-paths ".",.,"lib/openzeppelin-contracts/contracts/","lib/smartcontractkit/chainlink/contracts/","lib/chainlink/","lib/openzeppelin-contracts/lib/erc4626-tests/","lib/forge-std/src/","lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/","lib/openzeppelin-contracts/" --standard-json time: 0.1116
+reading standard json data from .certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0.standard.stdout.json
+collecting worklist for /Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol
+Processing dependencies from file /Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol
+available keys: dict_keys(['/Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol', 'lib/openzeppelin-contracts/contracts/access/Ownable.sol', 'lib/openzeppelin-contracts/contracts/utils/Context.sol', 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol'])
+Adding a base contract link ref /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/access/Ownable.sol to worklist
+Adding a base contract link ref /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/Context.sol to worklist
+Adding a base contract link ref /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol to worklist
+Processing dependencies from file /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol
+available keys: dict_keys(['/Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol', 'lib/openzeppelin-contracts/contracts/access/Ownable.sol', 'lib/openzeppelin-contracts/contracts/utils/Context.sol', 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol'])
+Processing dependencies from file /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/Context.sol
+available keys: dict_keys(['/Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol', 'lib/openzeppelin-contracts/contracts/access/Ownable.sol', 'lib/openzeppelin-contracts/contracts/utils/Context.sol', 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol'])
+Processing dependencies from file /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/access/Ownable.sol
+available keys: dict_keys(['/Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol', 'lib/openzeppelin-contracts/contracts/access/Ownable.sol', 'lib/openzeppelin-contracts/contracts/utils/Context.sol', 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol'])
+Contracts in AgentTrumpGame.sol_0 (file src/AgentTrumpGame.sol): ['AgentTrumpGame']
+Contracts with their chosen addresses: [(274184521717934524641157099916833587200, '/Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol:AgentTrumpGame'), (274184521717934524641157099916833587201, 'lib/openzeppelin-contracts/contracts/access/Ownable.sol:Ownable'), (274184521717934524641157099916833587202, 'lib/openzeppelin-contracts/contracts/utils/Context.sol:Context'), (274184521717934524641157099916833587203, 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol:ReentrancyGuard')]
+Working on contract AgentTrumpGame
+Working on contract AgentTrumpGame
+Working on contract Ownable
+Working on contract Ownable
+Working on contract Context
+Working on contract Context
+Working on contract ReentrancyGuard
+Working on contract ReentrancyGuard
+For contracts of primary AgentTrumpGame
+finding primary contract address of /Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol:AgentTrumpGame in [(274184521717934524641157099916833587200, '/Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol:AgentTrumpGame'), (274184521717934524641157099916833587201, 'lib/openzeppelin-contracts/contracts/access/Ownable.sol:Ownable'), (274184521717934524641157099916833587202, 'lib/openzeppelin-contracts/contracts/utils/Context.sol:Context'), (274184521717934524641157099916833587203, 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol:ReentrancyGuard')]
+Contracts in SDC AgentTrumpGame.sol_0: ['AgentTrumpGame', 'Ownable', 'Context', 'ReentrancyGuard']
+Building source tree
+Copying /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/access/Ownable.sol to .certora_internal/25_02_04_10_49_42_666/.certora_sources/lib/openzeppelin-contracts/contracts/access/Ownable.sol
+Copying /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol to .certora_internal/25_02_04_10_49_42_666/.certora_sources/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol
+Copying /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/Context.sol to .certora_internal/25_02_04_10_49_42_666/.certora_sources/lib/openzeppelin-contracts/contracts/utils/Context.sol
+Copying /Users/pavondunbar/AgentTrumpGame/src/AgentTrumpGame.sol to .certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol
+Copying /Users/pavondunbar/AgentTrumpGame/AgentTrumpGame.spec to .certora_internal/25_02_04_10_49_42_666/.certora_sources/AgentTrumpGame.spec
+Copying /Users/pavondunbar/AgentTrumpGame/remappings.txt to .certora_internal/25_02_04_10_49_42_666/.certora_sources/remappings.txt
+Backing up current .certora_sources to .certora_internal/25_02_04_10_49_42_666/.certora_sources/.pre_autofinders.0
+Running cmd solc -o ".certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0/" --overwrite --allow-paths "/Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources",.,"lib/openzeppelin-contracts/contracts/","lib/smartcontractkit/chainlink/contracts/","lib/chainlink/","lib/openzeppelin-contracts/lib/erc4626-tests/","lib/forge-std/src/","lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/","lib/openzeppelin-contracts/" --standard-json
+stdout, stderr = .certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0.standard.stdout.json, .certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0.standard.stderr.json
+Exitcode 0
+Solc run solc -o ".certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0/" --overwrite --allow-paths "/Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources",.,"lib/openzeppelin-contracts/contracts/","lib/smartcontractkit/chainlink/contracts/","lib/chainlink/","lib/openzeppelin-contracts/lib/erc4626-tests/","lib/forge-std/src/","lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/","lib/openzeppelin-contracts/" --standard-json time: 0.123
+reading standard json data from .certora_internal/25_02_04_10_49_42_666/.certora_config/AgentTrumpGame.sol_0.standard.stdout.json
+collecting worklist for /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol
+Processing dependencies from file /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol
+available keys: dict_keys(['/Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol', 'lib/openzeppelin-contracts/contracts/access/Ownable.sol', 'lib/openzeppelin-contracts/contracts/utils/Context.sol', 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol'])
+Adding a base contract link ref /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/access/Ownable.sol to worklist
+Adding a base contract link ref /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/Context.sol to worklist
+Adding a base contract link ref /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol to worklist
+Processing dependencies from file /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol
+available keys: dict_keys(['/Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol', 'lib/openzeppelin-contracts/contracts/access/Ownable.sol', 'lib/openzeppelin-contracts/contracts/utils/Context.sol', 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol'])
+Processing dependencies from file /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/utils/Context.sol
+available keys: dict_keys(['/Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol', 'lib/openzeppelin-contracts/contracts/access/Ownable.sol', 'lib/openzeppelin-contracts/contracts/utils/Context.sol', 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol'])
+Processing dependencies from file /Users/pavondunbar/AgentTrumpGame/lib/openzeppelin-contracts/contracts/access/Ownable.sol
+available keys: dict_keys(['/Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol', 'lib/openzeppelin-contracts/contracts/access/Ownable.sol', 'lib/openzeppelin-contracts/contracts/utils/Context.sol', 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol'])
+Contracts in AgentTrumpGame.sol_0 (file .certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol): ['AgentTrumpGame']
+Contracts with their chosen addresses: [(274184521717934524641157099916833587204, '/Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol:AgentTrumpGame'), (274184521717934524641157099916833587205, 'lib/openzeppelin-contracts/contracts/access/Ownable.sol:Ownable'), (274184521717934524641157099916833587206, 'lib/openzeppelin-contracts/contracts/utils/Context.sol:Context'), (274184521717934524641157099916833587207, 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol:ReentrancyGuard')]
+Working on contract AgentTrumpGame
+Working on contract AgentTrumpGame
+Working on contract Ownable
+Working on contract Ownable
+Working on contract Context
+Working on contract Context
+Working on contract ReentrancyGuard
+Working on contract ReentrancyGuard
+For contracts of primary AgentTrumpGame
+finding primary contract address of /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol:AgentTrumpGame in [(274184521717934524641157099916833587204, '/Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_sources/src/AgentTrumpGame.sol:AgentTrumpGame'), (274184521717934524641157099916833587205, 'lib/openzeppelin-contracts/contracts/access/Ownable.sol:Ownable'), (274184521717934524641157099916833587206, 'lib/openzeppelin-contracts/contracts/utils/Context.sol:Context'), (274184521717934524641157099916833587207, 'lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol:ReentrancyGuard')]
+Contracts in SDC AgentTrumpGame.sol_0: ['AgentTrumpGame', 'Ownable', 'Context', 'ReentrancyGuard']
+Backing up instrumented .certora_sources to .certora_internal/25_02_04_10_49_42_666/.certora_sources/.post_autofinders.0
+Rolling back .certora_sources to .certora_internal/25_02_04_10_49_42_666/.certora_sources/.pre_autofinders.0 version
+Libraries to add = []
+writing file /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_build.json
+writing file /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_build_output_props.json
+writing /Users/pavondunbar/AgentTrumpGame/.certora_internal/25_02_04_10_49_42_666/.certora_verify.json
+Local checks of CVL specification files disabled. It is recommended to enable the checks.

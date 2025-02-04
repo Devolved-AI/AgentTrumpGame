@@ -1,0 +1,279 @@
+1,BinaryOpMutation,src/AgentTrumpGame.sol,13:55, * ,+
+2,BinaryOpMutation,src/AgentTrumpGame.sol,13:55, * ,-
+3,BinaryOpMutation,src/AgentTrumpGame.sol,13:55, * ,/
+4,BinaryOpMutation,src/AgentTrumpGame.sol,13:55, * ,%
+5,BinaryOpMutation,src/AgentTrumpGame.sol,13:55, * ,**
+6,BinaryOpMutation,src/AgentTrumpGame.sol,14:50, * ,+
+7,BinaryOpMutation,src/AgentTrumpGame.sol,14:50, * ,-
+8,BinaryOpMutation,src/AgentTrumpGame.sol,14:50, * ,/
+9,BinaryOpMutation,src/AgentTrumpGame.sol,14:50, * ,%
+10,BinaryOpMutation,src/AgentTrumpGame.sol,14:50, * ,**
+11,DeleteExpressionMutation,src/AgentTrumpGame.sol,40:9,gameEndBlock = block.number + INITIAL_GAME_DURATION,assert(true)
+12,AssignmentMutation,src/AgentTrumpGame.sol,40:24,block.number + INITIAL_GAME_DURATION,0
+13,AssignmentMutation,src/AgentTrumpGame.sol,40:24,block.number + INITIAL_GAME_DURATION,1
+14,BinaryOpMutation,src/AgentTrumpGame.sol,40:36, + ,-
+15,BinaryOpMutation,src/AgentTrumpGame.sol,40:36, + ,*
+16,BinaryOpMutation,src/AgentTrumpGame.sol,40:36, + ,/
+17,BinaryOpMutation,src/AgentTrumpGame.sol,40:36, + ,%
+18,BinaryOpMutation,src/AgentTrumpGame.sol,40:36, + ,**
+19,DeleteExpressionMutation,src/AgentTrumpGame.sol,41:9,currentMultiplier = 100,assert(true)
+20,AssignmentMutation,src/AgentTrumpGame.sol,41:29,100,0
+21,AssignmentMutation,src/AgentTrumpGame.sol,41:29,100,1
+22,DeleteExpressionMutation,src/AgentTrumpGame.sol,42:9,lastGuessBlock = block.number,assert(true)
+23,AssignmentMutation,src/AgentTrumpGame.sol,42:26,block.number,0
+24,AssignmentMutation,src/AgentTrumpGame.sol,42:26,block.number,1
+25,DeleteExpressionMutation,src/AgentTrumpGame.sol,43:9,currentRequiredAmount = GAME_FEE,assert(true)
+26,AssignmentMutation,src/AgentTrumpGame.sol,43:33,GAME_FEE,0
+27,AssignmentMutation,src/AgentTrumpGame.sol,43:33,GAME_FEE,1
+28,DeleteExpressionMutation,src/AgentTrumpGame.sol,47:9,"require(totalCollected > 0, ""No funds to distribute"")",assert(true)
+29,RequireMutation,src/AgentTrumpGame.sol,47:17,totalCollected > 0,true
+30,RequireMutation,src/AgentTrumpGame.sol,47:17,totalCollected > 0,false
+31,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,47:17,totalCollected > 0,0 > totalCollected
+32,DeleteExpressionMutation,src/AgentTrumpGame.sol,48:9,"require(lastPlayer != address(0), ""No players participated"")",assert(true)
+33,RequireMutation,src/AgentTrumpGame.sol,48:17,lastPlayer != address(0),true
+34,RequireMutation,src/AgentTrumpGame.sol,48:17,lastPlayer != address(0),false
+35,IfStatementMutation,src/AgentTrumpGame.sol,54:13,block.number >= gameEndBlock,true
+36,IfStatementMutation,src/AgentTrumpGame.sol,54:13,block.number >= gameEndBlock,false
+37,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,54:13,block.number >= gameEndBlock,gameEndBlock >= block.number
+38,DeleteExpressionMutation,src/AgentTrumpGame.sol,58:13,ownerReward = totalCollected,assert(true)
+39,AssignmentMutation,src/AgentTrumpGame.sol,58:27,totalCollected,0
+40,AssignmentMutation,src/AgentTrumpGame.sol,58:27,totalCollected,1
+41,DeleteExpressionMutation,src/AgentTrumpGame.sol,59:13,lastPlayerReward = 0,assert(true)
+42,AssignmentMutation,src/AgentTrumpGame.sol,59:32,0,1
+43,DeleteExpressionMutation,src/AgentTrumpGame.sol,55:13,lastPlayerReward = (totalCollected * 10) / 100,assert(true)
+44,AssignmentMutation,src/AgentTrumpGame.sol,55:32,(totalCollected * 10) / 100,0
+45,AssignmentMutation,src/AgentTrumpGame.sol,55:32,(totalCollected * 10) / 100,1
+46,BinaryOpMutation,src/AgentTrumpGame.sol,55:53, / ,+
+47,BinaryOpMutation,src/AgentTrumpGame.sol,55:53, / ,-
+48,BinaryOpMutation,src/AgentTrumpGame.sol,55:53, / ,*
+49,BinaryOpMutation,src/AgentTrumpGame.sol,55:53, / ,%
+50,BinaryOpMutation,src/AgentTrumpGame.sol,55:53, / ,**
+51,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,55:32,(totalCollected * 10) / 100,100 / (totalCollected * 10)
+52,BinaryOpMutation,src/AgentTrumpGame.sol,55:47, * ,+
+53,BinaryOpMutation,src/AgentTrumpGame.sol,55:47, * ,-
+54,BinaryOpMutation,src/AgentTrumpGame.sol,55:47, * ,/
+55,BinaryOpMutation,src/AgentTrumpGame.sol,55:47, * ,%
+56,BinaryOpMutation,src/AgentTrumpGame.sol,55:47, * ,**
+57,DeleteExpressionMutation,src/AgentTrumpGame.sol,56:13,ownerReward = totalCollected - lastPlayerReward,assert(true)
+58,AssignmentMutation,src/AgentTrumpGame.sol,56:27,totalCollected - lastPlayerReward,0
+59,AssignmentMutation,src/AgentTrumpGame.sol,56:27,totalCollected - lastPlayerReward,1
+60,BinaryOpMutation,src/AgentTrumpGame.sol,56:41, - ,+
+61,BinaryOpMutation,src/AgentTrumpGame.sol,56:41, - ,*
+62,BinaryOpMutation,src/AgentTrumpGame.sol,56:41, - ,/
+63,BinaryOpMutation,src/AgentTrumpGame.sol,56:41, - ,%
+64,BinaryOpMutation,src/AgentTrumpGame.sol,56:41, - ,**
+65,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,56:27,totalCollected - lastPlayerReward,lastPlayerReward - totalCollected
+66,DeleteExpressionMutation,src/AgentTrumpGame.sol,62:9,totalCollected = 0,assert(true)
+67,AssignmentMutation,src/AgentTrumpGame.sol,62:26,0,1
+68,DeleteExpressionMutation,src/AgentTrumpGame.sol,63:9,gameEndBlock = block.number,assert(true)
+69,AssignmentMutation,src/AgentTrumpGame.sol,63:24,block.number,0
+70,AssignmentMutation,src/AgentTrumpGame.sol,63:24,block.number,1
+71,DeleteExpressionMutation,src/AgentTrumpGame.sol,64:9,gameWon = false,assert(true)
+72,AssignmentMutation,src/AgentTrumpGame.sol,64:19,false,true
+73,IfStatementMutation,src/AgentTrumpGame.sol,66:13,lastPlayerReward > 0,true
+74,IfStatementMutation,src/AgentTrumpGame.sol,66:13,lastPlayerReward > 0,false
+75,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,66:13,lastPlayerReward > 0,0 > lastPlayerReward
+76,DeleteExpressionMutation,src/AgentTrumpGame.sol,68:13,"require(success1, ""Last player reward transfer failed"")",assert(true)
+77,RequireMutation,src/AgentTrumpGame.sol,68:21,success1,true
+78,RequireMutation,src/AgentTrumpGame.sol,68:21,success1,false
+79,DeleteExpressionMutation,src/AgentTrumpGame.sol,72:9,"require(success2, ""Owner reward transfer failed"")",assert(true)
+80,RequireMutation,src/AgentTrumpGame.sol,72:17,success2,true
+81,RequireMutation,src/AgentTrumpGame.sol,72:17,success2,false
+82,DeleteExpressionMutation,src/AgentTrumpGame.sol,78:9,"require(address(this).balance > 0, ""No balance to withdraw"")",assert(true)
+83,RequireMutation,src/AgentTrumpGame.sol,78:17,address(this).balance > 0,true
+84,RequireMutation,src/AgentTrumpGame.sol,78:17,address(this).balance > 0,false
+85,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,78:17,address(this).balance > 0,0 > address(this).balance
+86,DeleteExpressionMutation,src/AgentTrumpGame.sol,79:9,"require(totalCollected == 0, ""Must call endGame first to distribute rewards"")",assert(true)
+87,RequireMutation,src/AgentTrumpGame.sol,79:17,totalCollected == 0,true
+88,RequireMutation,src/AgentTrumpGame.sol,79:17,totalCollected == 0,false
+89,DeleteExpressionMutation,src/AgentTrumpGame.sol,82:9,"require(success, ""Withdraw failed"")",assert(true)
+90,RequireMutation,src/AgentTrumpGame.sol,82:17,success,true
+91,RequireMutation,src/AgentTrumpGame.sol,82:17,success,false
+92,IfStatementMutation,src/AgentTrumpGame.sol,86:13,!escalationActive,true
+93,IfStatementMutation,src/AgentTrumpGame.sol,86:13,!escalationActive,false
+94,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,92:16,block.number >= (gameEndBlock - ESCALATION_PERIOD),(gameEndBlock - ESCALATION_PERIOD) >= block.number
+95,BinaryOpMutation,src/AgentTrumpGame.sol,92:45, - ,+
+96,BinaryOpMutation,src/AgentTrumpGame.sol,92:45, - ,*
+97,BinaryOpMutation,src/AgentTrumpGame.sol,92:45, - ,/
+98,BinaryOpMutation,src/AgentTrumpGame.sol,92:45, - ,%
+99,BinaryOpMutation,src/AgentTrumpGame.sol,92:45, - ,**
+100,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,92:33,gameEndBlock - ESCALATION_PERIOD,ESCALATION_PERIOD - gameEndBlock
+101,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,97:16,block.number <= gameEndBlock,gameEndBlock <= block.number
+102,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,98:16,(block.number - lastGuessBlock) <= ESCALATION_PERIOD,ESCALATION_PERIOD <= (block.number - lastGuessBlock)
+103,BinaryOpMutation,src/AgentTrumpGame.sol,98:29, - ,+
+104,BinaryOpMutation,src/AgentTrumpGame.sol,98:29, - ,*
+105,BinaryOpMutation,src/AgentTrumpGame.sol,98:29, - ,/
+106,BinaryOpMutation,src/AgentTrumpGame.sol,98:29, - ,%
+107,BinaryOpMutation,src/AgentTrumpGame.sol,98:29, - ,**
+108,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,98:17,block.number - lastGuessBlock,lastGuessBlock - block.number
+109,DeleteExpressionMutation,src/AgentTrumpGame.sol,102:9,"require(!gameWon, ""Game already won"")",assert(true)
+110,RequireMutation,src/AgentTrumpGame.sol,102:17,!gameWon,true
+111,RequireMutation,src/AgentTrumpGame.sol,102:17,!gameWon,false
+112,DeleteExpressionMutation,src/AgentTrumpGame.sol,103:9,"require(bytes(response).length > 0, ""Response cannot be empty"")",assert(true)
+113,RequireMutation,src/AgentTrumpGame.sol,103:17,bytes(response).length > 0,true
+114,RequireMutation,src/AgentTrumpGame.sol,103:17,bytes(response).length > 0,false
+115,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,103:17,bytes(response).length > 0,0 > bytes(response).length
+116,DeleteExpressionMutation,src/AgentTrumpGame.sol,104:9,"require(bytes(response).length <= 1000, ""Response too long"")",assert(true)
+117,RequireMutation,src/AgentTrumpGame.sol,104:17,bytes(response).length <= 1000,true
+118,RequireMutation,src/AgentTrumpGame.sol,104:17,bytes(response).length <= 1000,false
+119,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,104:17,bytes(response).length <= 1000,1000 <= bytes(response).length
+120,DeleteExpressionMutation,src/AgentTrumpGame.sol,107:9,"require(msg.value >= requiredAmount, ""Insufficient payment"")",assert(true)
+121,RequireMutation,src/AgentTrumpGame.sol,107:17,msg.value >= requiredAmount,true
+122,RequireMutation,src/AgentTrumpGame.sol,107:17,msg.value >= requiredAmount,false
+123,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,107:17,msg.value >= requiredAmount,requiredAmount >= msg.value
+124,IfStatementMutation,src/AgentTrumpGame.sol,109:13,shouldStartEscalation(),true
+125,IfStatementMutation,src/AgentTrumpGame.sol,109:13,shouldStartEscalation(),false
+126,DeleteExpressionMutation,src/AgentTrumpGame.sol,110:13,escalationActive = true,assert(true)
+127,AssignmentMutation,src/AgentTrumpGame.sol,110:32,true,false
+128,DeleteExpressionMutation,src/AgentTrumpGame.sol,111:13,escalationStartBlock = block.number,assert(true)
+129,AssignmentMutation,src/AgentTrumpGame.sol,111:36,block.number,0
+130,AssignmentMutation,src/AgentTrumpGame.sol,111:36,block.number,1
+131,DeleteExpressionMutation,src/AgentTrumpGame.sol,112:13,currentRequiredAmount = GAME_FEE * BASE_MULTIPLIER / 100,assert(true)
+132,AssignmentMutation,src/AgentTrumpGame.sol,112:37,GAME_FEE * BASE_MULTIPLIER / 100,0
+133,AssignmentMutation,src/AgentTrumpGame.sol,112:37,GAME_FEE * BASE_MULTIPLIER / 100,1
+134,BinaryOpMutation,src/AgentTrumpGame.sol,112:63, / ,+
+135,BinaryOpMutation,src/AgentTrumpGame.sol,112:63, / ,-
+136,BinaryOpMutation,src/AgentTrumpGame.sol,112:63, / ,*
+137,BinaryOpMutation,src/AgentTrumpGame.sol,112:63, / ,%
+138,BinaryOpMutation,src/AgentTrumpGame.sol,112:63, / ,**
+139,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,112:37,GAME_FEE * BASE_MULTIPLIER / 100,100 / GAME_FEE * BASE_MULTIPLIER
+140,BinaryOpMutation,src/AgentTrumpGame.sol,112:45, * ,+
+141,BinaryOpMutation,src/AgentTrumpGame.sol,112:45, * ,-
+142,BinaryOpMutation,src/AgentTrumpGame.sol,112:45, * ,/
+143,BinaryOpMutation,src/AgentTrumpGame.sol,112:45, * ,%
+144,BinaryOpMutation,src/AgentTrumpGame.sol,112:45, * ,**
+145,IfStatementMutation,src/AgentTrumpGame.sol,116:13,shouldExtendGame(),true
+146,IfStatementMutation,src/AgentTrumpGame.sol,116:13,shouldExtendGame(),false
+147,DeleteExpressionMutation,src/AgentTrumpGame.sol,117:13,gameEndBlock = block.number + ESCALATION_PERIOD,assert(true)
+148,AssignmentMutation,src/AgentTrumpGame.sol,117:28,block.number + ESCALATION_PERIOD,0
+149,AssignmentMutation,src/AgentTrumpGame.sol,117:28,block.number + ESCALATION_PERIOD,1
+150,BinaryOpMutation,src/AgentTrumpGame.sol,117:40, + ,-
+151,BinaryOpMutation,src/AgentTrumpGame.sol,117:40, + ,*
+152,BinaryOpMutation,src/AgentTrumpGame.sol,117:40, + ,/
+153,BinaryOpMutation,src/AgentTrumpGame.sol,117:40, + ,%
+154,BinaryOpMutation,src/AgentTrumpGame.sol,117:40, + ,**
+155,DeleteExpressionMutation,src/AgentTrumpGame.sol,118:13,currentRequiredAmount = currentRequiredAmount * BASE_MULTIPLIER / 100,assert(true)
+156,AssignmentMutation,src/AgentTrumpGame.sol,118:37,currentRequiredAmount * BASE_MULTIPLIER / 100,0
+157,AssignmentMutation,src/AgentTrumpGame.sol,118:37,currentRequiredAmount * BASE_MULTIPLIER / 100,1
+158,BinaryOpMutation,src/AgentTrumpGame.sol,118:76, / ,+
+159,BinaryOpMutation,src/AgentTrumpGame.sol,118:76, / ,-
+160,BinaryOpMutation,src/AgentTrumpGame.sol,118:76, / ,*
+161,BinaryOpMutation,src/AgentTrumpGame.sol,118:76, / ,%
+162,BinaryOpMutation,src/AgentTrumpGame.sol,118:76, / ,**
+163,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,118:37,currentRequiredAmount * BASE_MULTIPLIER / 100,100 / currentRequiredAmount * BASE_MULTIPLIER
+164,BinaryOpMutation,src/AgentTrumpGame.sol,118:58, * ,+
+165,BinaryOpMutation,src/AgentTrumpGame.sol,118:58, * ,-
+166,BinaryOpMutation,src/AgentTrumpGame.sol,118:58, * ,/
+167,BinaryOpMutation,src/AgentTrumpGame.sol,118:58, * ,%
+168,BinaryOpMutation,src/AgentTrumpGame.sol,118:58, * ,**
+169,DeleteExpressionMutation,src/AgentTrumpGame.sol,128:9,lastGuessBlock = block.number,assert(true)
+170,AssignmentMutation,src/AgentTrumpGame.sol,128:26,block.number,0
+171,AssignmentMutation,src/AgentTrumpGame.sol,128:26,block.number,1
+172,DeleteExpressionMutation,src/AgentTrumpGame.sol,129:9,lastPlayer = msg.sender,assert(true)
+173,BinaryOpMutation,src/AgentTrumpGame.sol,131:51, / ,+
+174,BinaryOpMutation,src/AgentTrumpGame.sol,131:51, / ,-
+175,BinaryOpMutation,src/AgentTrumpGame.sol,131:51, / ,*
+176,BinaryOpMutation,src/AgentTrumpGame.sol,131:51, / ,%
+177,BinaryOpMutation,src/AgentTrumpGame.sol,131:51, / ,**
+178,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,131:30,(requiredAmount * 30) / 100,100 / (requiredAmount * 30)
+179,BinaryOpMutation,src/AgentTrumpGame.sol,131:45, * ,+
+180,BinaryOpMutation,src/AgentTrumpGame.sol,131:45, * ,-
+181,BinaryOpMutation,src/AgentTrumpGame.sol,131:45, * ,/
+182,BinaryOpMutation,src/AgentTrumpGame.sol,131:45, * ,%
+183,BinaryOpMutation,src/AgentTrumpGame.sol,131:45, * ,**
+184,DeleteExpressionMutation,src/AgentTrumpGame.sol,132:9,totalCollected += (requiredAmount - ownerShare),assert(true)
+185,AssignmentMutation,src/AgentTrumpGame.sol,132:27,(requiredAmount - ownerShare),0
+186,AssignmentMutation,src/AgentTrumpGame.sol,132:27,(requiredAmount - ownerShare),1
+187,BinaryOpMutation,src/AgentTrumpGame.sol,132:42, - ,+
+188,BinaryOpMutation,src/AgentTrumpGame.sol,132:42, - ,*
+189,BinaryOpMutation,src/AgentTrumpGame.sol,132:42, - ,/
+190,BinaryOpMutation,src/AgentTrumpGame.sol,132:42, - ,%
+191,BinaryOpMutation,src/AgentTrumpGame.sol,132:42, - ,**
+192,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,132:28,requiredAmount - ownerShare,ownerShare - requiredAmount
+193,IfStatementMutation,src/AgentTrumpGame.sol,134:13,msg.value > requiredAmount,true
+194,IfStatementMutation,src/AgentTrumpGame.sol,134:13,msg.value > requiredAmount,false
+195,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,134:13,msg.value > requiredAmount,requiredAmount > msg.value
+196,BinaryOpMutation,src/AgentTrumpGame.sol,135:39, - ,+
+197,BinaryOpMutation,src/AgentTrumpGame.sol,135:39, - ,*
+198,BinaryOpMutation,src/AgentTrumpGame.sol,135:39, - ,/
+199,BinaryOpMutation,src/AgentTrumpGame.sol,135:39, - ,%
+200,BinaryOpMutation,src/AgentTrumpGame.sol,135:39, - ,**
+201,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,135:30,msg.value - requiredAmount,requiredAmount - msg.value
+202,DeleteExpressionMutation,src/AgentTrumpGame.sol,137:13,"require(success1, ""Refund failed"")",assert(true)
+203,RequireMutation,src/AgentTrumpGame.sol,137:21,success1,true
+204,RequireMutation,src/AgentTrumpGame.sol,137:21,success1,false
+205,DeleteExpressionMutation,src/AgentTrumpGame.sol,141:9,"require(success2, ""Owner payment failed"")",assert(true)
+206,RequireMutation,src/AgentTrumpGame.sol,141:17,success2,true
+207,RequireMutation,src/AgentTrumpGame.sol,141:17,success2,false
+208,BinaryOpMutation,src/AgentTrumpGame.sol,149:47, - ,+
+209,BinaryOpMutation,src/AgentTrumpGame.sol,149:47, - ,*
+210,BinaryOpMutation,src/AgentTrumpGame.sol,149:47, - ,/
+211,BinaryOpMutation,src/AgentTrumpGame.sol,149:47, - ,%
+212,BinaryOpMutation,src/AgentTrumpGame.sol,149:47, - ,**
+213,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,149:13,playerResponses[msg.sender].length - 1,1 - playerResponses[msg.sender].length
+214,DeleteExpressionMutation,src/AgentTrumpGame.sol,162:9,"require(index < playerResponses[player].length, ""Response index out of bounds"")",assert(true)
+215,RequireMutation,src/AgentTrumpGame.sol,162:17,index < playerResponses[player].length,true
+216,RequireMutation,src/AgentTrumpGame.sol,162:17,index < playerResponses[player].length,false
+217,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,162:17,index < playerResponses[player].length,playerResponses[player].length < index
+218,DeleteExpressionMutation,src/AgentTrumpGame.sol,174:9,responses = new string[](responseCount),assert(true)
+219,DeleteExpressionMutation,src/AgentTrumpGame.sol,175:9,timestamps = new uint256[](responseCount),assert(true)
+220,DeleteExpressionMutation,src/AgentTrumpGame.sol,176:9,exists = new bool[](responseCount),assert(true)
+221,DeleteExpressionMutation,src/AgentTrumpGame.sol,180:13,responses[i] = response.response,assert(true)
+222,DeleteExpressionMutation,src/AgentTrumpGame.sol,181:13,timestamps[i] = response.blockNumber,assert(true)
+223,AssignmentMutation,src/AgentTrumpGame.sol,181:29,response.blockNumber,0
+224,AssignmentMutation,src/AgentTrumpGame.sol,181:29,response.blockNumber,1
+225,DeleteExpressionMutation,src/AgentTrumpGame.sol,182:13,exists[i] = response.exists,assert(true)
+226,AssignmentMutation,src/AgentTrumpGame.sol,182:25,response.exists,true
+227,AssignmentMutation,src/AgentTrumpGame.sol,182:25,response.exists,false
+228,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,178:29,i < responseCount,responseCount < i
+229,DeleteExpressionMutation,src/AgentTrumpGame.sol,178:48,i++,assert(true)
+230,UnaryOperatorMutation,src/AgentTrumpGame.sol,178:49,++,--
+231,DeleteExpressionMutation,src/AgentTrumpGame.sol,189:9,"require(!gameWon, ""Game already won"")",assert(true)
+232,RequireMutation,src/AgentTrumpGame.sol,189:17,!gameWon,true
+233,RequireMutation,src/AgentTrumpGame.sol,189:17,!gameWon,false
+234,DeleteExpressionMutation,src/AgentTrumpGame.sol,190:9,"require(winner != address(0), ""Invalid winner address"")",assert(true)
+235,RequireMutation,src/AgentTrumpGame.sol,190:17,winner != address(0),true
+236,RequireMutation,src/AgentTrumpGame.sol,190:17,winner != address(0),false
+237,DeleteExpressionMutation,src/AgentTrumpGame.sol,191:9,"require(playerResponses[winner].length > 0, ""Winner must have submitted at least one response"")",assert(true)
+238,RequireMutation,src/AgentTrumpGame.sol,191:17,playerResponses[winner].length > 0,true
+239,RequireMutation,src/AgentTrumpGame.sol,191:17,playerResponses[winner].length > 0,false
+240,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,191:17,playerResponses[winner].length > 0,0 > playerResponses[winner].length
+241,DeleteExpressionMutation,src/AgentTrumpGame.sol,193:9,gameWon = true,assert(true)
+242,AssignmentMutation,src/AgentTrumpGame.sol,193:19,true,false
+243,DeleteExpressionMutation,src/AgentTrumpGame.sol,195:9,totalCollected = 0,assert(true)
+244,AssignmentMutation,src/AgentTrumpGame.sol,195:26,0,1
+245,DeleteExpressionMutation,src/AgentTrumpGame.sol,198:9,"require(success, ""Reward transfer failed"")",assert(true)
+246,RequireMutation,src/AgentTrumpGame.sol,198:17,success,true
+247,RequireMutation,src/AgentTrumpGame.sol,198:17,success,false
+248,IfStatementMutation,src/AgentTrumpGame.sol,204:13,block.number >= gameEndBlock,true
+249,IfStatementMutation,src/AgentTrumpGame.sol,204:13,block.number >= gameEndBlock,false
+250,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,204:13,block.number >= gameEndBlock,gameEndBlock >= block.number
+251,BinaryOpMutation,src/AgentTrumpGame.sol,206:45, * ,+
+252,BinaryOpMutation,src/AgentTrumpGame.sol,206:45, * ,-
+253,BinaryOpMutation,src/AgentTrumpGame.sol,206:45, * ,/
+254,BinaryOpMutation,src/AgentTrumpGame.sol,206:45, * ,%
+255,BinaryOpMutation,src/AgentTrumpGame.sol,206:45, * ,**
+256,BinaryOpMutation,src/AgentTrumpGame.sol,206:29, - ,+
+257,BinaryOpMutation,src/AgentTrumpGame.sol,206:29, - ,*
+258,BinaryOpMutation,src/AgentTrumpGame.sol,206:29, - ,/
+259,BinaryOpMutation,src/AgentTrumpGame.sol,206:29, - ,%
+260,BinaryOpMutation,src/AgentTrumpGame.sol,206:29, - ,**
+261,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,206:17,gameEndBlock - block.number,block.number - gameEndBlock
+262,IfStatementMutation,src/AgentTrumpGame.sol,214:13,!escalationActive,true
+263,IfStatementMutation,src/AgentTrumpGame.sol,214:13,!escalationActive,false
+264,BinaryOpMutation,src/AgentTrumpGame.sol,215:53, / ,+
+265,BinaryOpMutation,src/AgentTrumpGame.sol,215:53, / ,-
+266,BinaryOpMutation,src/AgentTrumpGame.sol,215:53, / ,*
+267,BinaryOpMutation,src/AgentTrumpGame.sol,215:53, / ,%
+268,BinaryOpMutation,src/AgentTrumpGame.sol,215:53, / ,**
+269,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,215:16,(block.number - escalationStartBlock) / ESCALATION_PERIOD,ESCALATION_PERIOD / (block.number - escalationStartBlock)
+270,BinaryOpMutation,src/AgentTrumpGame.sol,215:29, - ,+
+271,BinaryOpMutation,src/AgentTrumpGame.sol,215:29, - ,*
+272,BinaryOpMutation,src/AgentTrumpGame.sol,215:29, - ,/
+273,BinaryOpMutation,src/AgentTrumpGame.sol,215:29, - ,%
+274,BinaryOpMutation,src/AgentTrumpGame.sol,215:29, - ,**
+275,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,215:17,block.number - escalationStartBlock,escalationStartBlock - block.number
+276,DeleteExpressionMutation,src/AgentTrumpGame.sol,219:9,"require(msg.value > 0, ""Must deposit some ETH"")",assert(true)
+277,RequireMutation,src/AgentTrumpGame.sol,219:17,msg.value > 0,true
+278,RequireMutation,src/AgentTrumpGame.sol,219:17,msg.value > 0,false
+279,SwapArgumentsOperatorMutation,src/AgentTrumpGame.sol,219:17,msg.value > 0,0 > msg.value

@@ -1,0 +1,30 @@
+{
+    "CLI_package_name": "certora-cli",
+    "CLI_version": "7.22.2",
+    "branch": "01-28-2025",
+    "certora_ci_client": null,
+    "conf": {
+        "disable_local_typechecking": true,
+        "files": [
+            "./src/AgentTrumpGame.sol"
+        ],
+        "process": "emv",
+        "verify": "AgentTrumpGame:AgentTrumpGame.spec"
+    },
+    "conf_path": null,
+    "cwd_relative": ".",
+    "dirty": true,
+    "group_id": null,
+    "main_spec": "AgentTrumpGame.spec",
+    "origin": "https://github.com/Devolved-AI/AgentTrumpGame",
+    "python_version": "3.12.5",
+    "raw_args": [
+        "/Users/pavondunbar/solc/bin/certoraRun",
+        "./src/AgentTrumpGame.sol",
+        "--verify",
+        "AgentTrumpGame:AgentTrumpGame.spec",
+        "--disable_local_typechecking"
+    ],
+    "revision": "88b0f5270ee025457e371b3f4f29bf46f48fa93d",
+    "timestamp": "1738724638.698331"
+}
