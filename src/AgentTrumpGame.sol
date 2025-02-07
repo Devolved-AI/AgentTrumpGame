@@ -3,17 +3,19 @@ pragma solidity 0.8.26;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract AgentTrumpGame is ReentrancyGuard, Ownable {
+contract AgentTrumpGame is ReentrancyGuard, Ownable, Pausable {
     uint256 public gameEndBlock;
     uint256 public escalationStartBlock;
     uint256 public lastGuessBlock;
     
-    uint256 public constant BLOCKS_PER_MINUTE = 4;
-    uint256 public constant INITIAL_GAME_DURATION = 20 * BLOCKS_PER_MINUTE;
+    uint256 public constant BLOCKS_PER_MINUTE = 30;
+    uint256 public constant INITIAL_GAME_DURATION = 4320 * BLOCKS_PER_MINUTE;
     uint256 public constant ESCALATION_PERIOD = 5 * BLOCKS_PER_MINUTE;
     uint256 public constant BASE_MULTIPLIER = 200;
-    uint256 public constant GAME_FEE = 0.0009 ether;
+    uint256 public constant GAME_FEE = 0.009 ether;
+    uint256 public constant MAX_RESPONSE_LENGTH = 2000;
     
     uint256 public currentMultiplier;
     uint256 public totalCollected;
@@ -35,6 +37,9 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable {
     event GameEnded(address indexed lastPlayer, uint256 lastPlayerReward, uint256 ownerReward);
     event EscalationStarted(uint256 startBlock);
     event GameExtended(uint256 newEndBlock, uint256 newMultiplier);
+    event Deposited(address indexed owner, uint256 amount);
+    event Withdrawn(address indexed owner, uint256 amount);
+    event EmergencyWithdrawn(address indexed owner, uint256 amount);
 
     constructor() Ownable(msg.sender) {
         gameEndBlock = block.number + INITIAL_GAME_DURATION;
@@ -43,7 +48,34 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable {
         currentRequiredAmount = GAME_FEE;
     }
 
-    function endGame() external onlyOwner nonReentrant {
+    modifier validResponse(string calldata response) {
+        require(bytes(response).length > 0, "Response cannot be empty");
+        require(bytes(response).length <= MAX_RESPONSE_LENGTH, "Response too long");
+        require(_isValidString(response), "Response contains invalid characters");
+        _;
+    }
+
+    function _isValidString(string calldata str) internal pure returns (bool) {
+        bytes memory b = bytes(str);
+        for(uint i; i < b.length; i++) {
+            bytes1 char = b[i];
+            // Allow alphanumeric, spaces, and basic punctuation
+            if(!(char >= 0x20 && char <= 0x7E)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    function endGame() external onlyOwner nonReentrant whenNotPaused {
         require(totalCollected > 0, "No funds to distribute");
         require(lastPlayer != address(0), "No players participated");
         
@@ -74,12 +106,31 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable {
         emit GameEnded(paymentReceiver, lastPlayerReward, ownerReward);
     }
 
-    function withdraw() external onlyOwner {
+    function withdraw() external onlyOwner whenNotPaused {
         require(address(this).balance > 0, "No balance to withdraw");
         require(totalCollected == 0, "Must call endGame first to distribute rewards");
-        
-        (bool success, ) = payable(owner()).call{value: address(this).balance}("");
+    
+        uint256 amount = address(this).balance;
+    
+        // Emit event before external call
+        emit Withdrawn(owner(), amount);
+    
+        // Make external call last
+        (bool success, ) = payable(owner()).call{value: amount}("");
         require(success, "Withdraw failed");
+    }
+
+    function emergencyWithdraw() external onlyOwner whenPaused {
+        require(address(this).balance > 0, "No balance to withdraw");
+    
+        uint256 amount = address(this).balance;
+    
+        // Emit event before external call
+        emit EmergencyWithdrawn(owner(), amount);
+    
+        // Make external call last
+        (bool success, ) = payable(owner()).call{value: amount}("");
+        require(success, "Emergency withdraw failed");
     }
     
     function getCurrentRequiredAmount() public view returns (uint256) {
@@ -98,10 +149,8 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable {
                (block.number - lastGuessBlock) <= ESCALATION_PERIOD;
     }    
     
-    function submitGuess(string calldata response) external payable nonReentrant {
+    function submitGuess(string calldata response) external payable nonReentrant whenNotPaused validResponse(response) {
         require(!gameWon, "Game already won");
-        require(bytes(response).length > 0, "Response cannot be empty");
-        require(bytes(response).length <= 1000, "Response too long");
         
         uint256 requiredAmount = getCurrentRequiredAmount();
         require(msg.value >= requiredAmount, "Insufficient payment");
@@ -109,6 +158,7 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable {
         if (shouldStartEscalation()) {
             escalationActive = true;
             escalationStartBlock = block.number;
+            currentMultiplier = BASE_MULTIPLIER;  // Add this line
             currentRequiredAmount = GAME_FEE * BASE_MULTIPLIER / 100;
             emit EscalationStarted(escalationStartBlock);
         }
@@ -185,10 +235,11 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable {
         return (responses, timestamps, exists);
     }
     
-    function buttonPushed(address winner) external onlyOwner nonReentrant {
+    function buttonPushed(address winner) external onlyOwner nonReentrant whenNotPaused {
         require(!gameWon, "Game already won");
         require(winner != address(0), "Invalid winner address");
         require(playerResponses[winner].length > 0, "Winner must have submitted at least one response");
+        require(payable(winner).code.length == 0, "Winner cannot be a contract");
         
         gameWon = true;
         uint256 reward = totalCollected;
@@ -203,7 +254,7 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable {
     function getTimeRemaining() public view returns (uint256) {
         if (block.number >= gameEndBlock) return 0;
         // Convert blocks to seconds (approximate)
-        return (gameEndBlock - block.number) * 15;
+        return (gameEndBlock - block.number) * 2;
     }
     
     function getContractBalance() public view returns (uint256) {
@@ -215,8 +266,9 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable {
         return (block.number - escalationStartBlock) / ESCALATION_PERIOD;
     }
     
-    function deposit() external payable onlyOwner {
+    function deposit() external payable onlyOwner whenNotPaused {
         require(msg.value > 0, "Must deposit some ETH");
+        emit Deposited(msg.sender, msg.value);
     }
     
     receive() external payable {}
