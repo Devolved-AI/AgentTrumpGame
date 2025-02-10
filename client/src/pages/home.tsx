@@ -8,6 +8,7 @@ import { connectWallet, type Web3State, initialWeb3State } from "@/lib/web3";
 import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
 import { SiEthereum } from "react-icons/si";
+import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
 
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
@@ -24,6 +25,8 @@ export default function Home() {
   const [playerHistory, setPlayerHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [ethPrice, setEthPrice] = useState<number>(0);
+  const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -107,6 +110,29 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [gameContract]);
 
+  useEffect(() => {
+    async function updatePriceAndPool() {
+      if (!gameContract) return;
+
+      try {
+        const [price, totalPool] = await Promise.all([
+          getEthPriceUSD(),
+          gameContract.getTotalPrizePool()
+        ]);
+
+        setEthPrice(price);
+        setPrizePoolEth(totalPool);
+      } catch (error) {
+        console.error("Failed to fetch price or prize pool:", error);
+      }
+    }
+
+    updatePriceAndPool();
+    const interval = setInterval(updatePriceAndPool, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [gameContract]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Confetti trigger={showConfetti} />
@@ -125,11 +151,12 @@ export default function Home() {
 
       {/* Prize Pool Display */}
       <div className="mb-8 text-center">
-        <h1 className="text-5xl font-bold text-green-500 flex items-center justify-center gap-2">
-          <span>$1,500,000</span>
+        <h2 className="text-2xl font-bold mb-2">PRIZE POOL</h2>
+        <h1 className="text-5xl font-bold text-green-500 flex items-center justify-center gap-4">
+          <span>{formatUSD(parseFloat(prizePoolEth) * ethPrice)}</span>
           <span className="flex items-center gap-1">
             <SiEthereum className="inline-block" />
-            <span>{gameStatus.totalPrizePool} ETH</span>
+            <span>{formatEth(prizePoolEth)} ETH</span>
           </span>
         </h1>
       </div>
@@ -139,8 +166,8 @@ export default function Home() {
         {/* Left Column: Image */}
         <div>
           <div className="w-64 h-64 mb-6">
-            <img 
-              src="/aitubo.jpg" 
+            <img
+              src="/aitubo.jpg"
               alt="Agent Trump"
               className="w-full h-full object-cover rounded-lg shadow-lg"
             />
