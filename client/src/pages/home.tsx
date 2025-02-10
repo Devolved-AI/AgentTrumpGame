@@ -133,7 +133,8 @@ export default function Home() {
 
       if (isWinning) {
         // Submit winning response and push the button
-        await gameContract.submitResponse(response, gameStatus.currentAmount);
+        const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
+        await tx.wait(); // Wait for transaction confirmation
         await gameContract.buttonPushed(web3State.account!);
         setShowConfetti(true);
         setPersuasionScore(10); // Set to max when winning
@@ -144,7 +145,8 @@ export default function Home() {
         });
       } else {
         // Submit response but don't push button
-        await gameContract.submitResponse(response, gameStatus.currentAmount);
+        const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
+        await tx.wait(); // Wait for transaction confirmation
         // Decrease persuasion score but don't go below 0
         setPersuasionScore(prev => Math.max(0, prev - 1));
         toast({
@@ -156,11 +158,39 @@ export default function Home() {
 
       await refreshGameStatus();
     } catch (error: any) {
-      toast({
-        title: "Submission Failed",
-        description: error.message,
-        variant: "destructive"
-      });
+      // Check if the error is a user rejection
+      if (error.code === 4001) {
+        toast({
+          title: "Transaction Cancelled",
+          description: "You cancelled the transaction.",
+          variant: "destructive"
+        });
+      } 
+      // Check if it's a network error
+      else if (error.code === 'NETWORK_ERROR') {
+        toast({
+          title: "Network Error",
+          description: "Please check your internet connection and try again.",
+          variant: "destructive"
+        });
+      }
+      // Handle other specific blockchain errors
+      else if (error.reason) {
+        toast({
+          title: "Transaction Failed",
+          description: error.reason,
+          variant: "destructive"
+        });
+      }
+      // Generic error handling
+      else {
+        console.error("Submission error:", error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsLoading(false);
     }

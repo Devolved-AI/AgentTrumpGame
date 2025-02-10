@@ -814,10 +814,16 @@ export class GameContract {
   }
 
   async submitResponse(response: string, amount: string) {
-    const tx = await this.contract.submitGuess(response, {
-      value: ethers.parseEther(amount)
-    });
-    return tx.wait();
+    try {
+      const tx = await this.contract.submitGuess(response, {
+        value: ethers.parseEther(amount)
+      });
+      // Return the transaction promise so we can wait for confirmation in the component
+      return tx;
+    } catch (error) {
+      // Rethrow the error to be handled by the component
+      throw error;
+    }
   }
 
   async getPlayerHistory(address: string) {
