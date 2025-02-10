@@ -13,6 +13,32 @@ import { SiEthereum } from "react-icons/si";
 import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
 
+const PERSUASION_SCORE_KEY = 'persuasion_scores';
+
+function getStoredPersuasionScore(address: string): number {
+  try {
+    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
+    if (stored) {
+      const scores = JSON.parse(stored);
+      return scores[address] ?? 6; // Default to 6 if no score found
+    }
+  } catch (error) {
+    console.error('Error reading persuasion score:', error);
+  }
+  return 6;
+}
+
+function storePersuasionScore(address: string, score: number) {
+  try {
+    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
+    const scores = stored ? JSON.parse(stored) : {};
+    scores[address] = score;
+    localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
+  } catch (error) {
+    console.error('Error storing persuasion score:', error);
+  }
+}
+
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -30,7 +56,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [persuasionScore, setPersuasionScore] = useState<number>(6); // Initial score of 6
+  const [persuasionScore, setPersuasionScore] = useState<number>(6); 
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const { toast } = useToast();
 
@@ -40,10 +66,13 @@ export default function Home() {
     try {
       const state = await connectWallet();
       setWeb3State(state);
+      // Load stored persuasion score for this address
+      if (state.account) {
+        setPersuasionScore(getStoredPersuasionScore(state.account));
+      }
       const contract = new GameContract(state.provider!, state.signer!);
       setGameContract(contract);
 
-      // Subscribe to contract events
       contract.subscribeToEvents({
         onGuessSubmitted: () => {
           refreshGameStatus();
@@ -68,7 +97,6 @@ export default function Home() {
         }
       });
 
-      // Wait for all initial data to load
       await Promise.all([
         refreshGameStatus(),
         updatePrizePool()
@@ -130,31 +158,36 @@ export default function Home() {
     setIsLoading(true);
     setTransactionStatus('pending');
     try {
-      // Evaluate the response first
       const isWinning = await gameContract.evaluateResponse(response);
 
       if (isWinning) {
-        // Submit winning response and push the button
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
         setTransactionStatus('pending');
-        await tx.wait(); // Wait for transaction confirmation
+        await tx.wait(); 
         setTransactionStatus('success');
         await gameContract.buttonPushed(web3State.account!);
         setShowConfetti(true);
-        setPersuasionScore(10); // Set to max when winning
+        setPersuasionScore(10); 
+        if (web3State.account) {
+          storePersuasionScore(web3State.account, 10);
+        }
         toast({
           title: "🎉 Congratulations! You've Won! 🎉",
           description: "Your response was perfect! The prize pool has been transferred to your wallet!",
           variant: "default"
         });
       } else {
-        // Submit response but don't push button
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
         setTransactionStatus('pending');
-        await tx.wait(); // Wait for transaction confirmation
+        await tx.wait(); 
         setTransactionStatus('success');
-        // Decrease persuasion score but don't go below 0
-        setPersuasionScore(prev => Math.max(0, prev - 1));
+        setPersuasionScore(prev => {
+          const newScore = Math.max(0, prev - 1);
+          if (web3State.account) {
+            storePersuasionScore(web3State.account, newScore);
+          }
+          return newScore;
+        });
         toast({
           title: "Try Again",
           description: "Your response wasn't quite persuasive enough. Keep trying!",
@@ -165,7 +198,6 @@ export default function Home() {
       await refreshGameStatus();
     } catch (error: any) {
       setTransactionStatus('error');
-      // Check if the error is a user rejection
       if (error.code === 4001) {
         toast({
           title: "Transaction Cancelled",
@@ -173,7 +205,6 @@ export default function Home() {
           variant: "destructive"
         });
       } 
-      // Check if it's a network error
       else if (error.code === 'NETWORK_ERROR') {
         toast({
           title: "Network Error",
@@ -181,7 +212,6 @@ export default function Home() {
           variant: "destructive"
         });
       }
-      // Handle other specific blockchain errors
       else if (error.reason) {
         toast({
           title: "Transaction Failed",
@@ -189,7 +219,6 @@ export default function Home() {
           variant: "destructive"
         });
       }
-      // Generic error handling
       else {
         console.error("Submission error:", error);
         toast({
@@ -219,14 +248,12 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8">
         <Confetti trigger={showConfetti} />
 
-        {/* Loading Dialog */}
         <Dialog open={isUpdatingGameData} onOpenChange={setIsUpdatingGameData}>
           <DialogContent className="sm:max-w-[425px]">
             <TransactionLoader message="Updating game information..." />
           </DialogContent>
         </Dialog>
 
-        {/* Header Section */}
         <div className="flex justify-between items-start mb-8">
           <h1 className="text-4xl font-bold">Agent Trump Game</h1>
           <ConnectWallet
@@ -239,7 +266,6 @@ export default function Home() {
           />
         </div>
 
-        {/* Prize Pool Display */}
         <div className="mb-8 text-center">
           <h2 className="text-2xl font-bold mb-2">PRIZE POOL</h2>
           <h1 className="text-5xl font-bold text-green-500 flex items-center justify-center gap-4">
@@ -251,9 +277,7 @@ export default function Home() {
           </h1>
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {/* Left Column: Image */}
           <div>
             <div className="w-64 h-64 mb-6">
               <img
@@ -264,7 +288,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right Column: Response Form */}
           <div>
             <ResponseForm
               onSubmit={handleSubmitResponse}
@@ -275,9 +298,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Game Stats and History Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {/* Left Column: Game Stats Quadrant */}
           <div>
             <GameStatus
               timeRemaining={gameStatus.timeRemaining}
@@ -288,14 +309,12 @@ export default function Home() {
             />
           </div>
 
-          {/* Right Column: Transaction History */}
           <div>
             <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
             <TransactionTimeline responses={playerHistory} />
           </div>
         </div>
 
-        {/* Rules Section */}
         <div className="mt-8 bg-gray-50 rounded-lg p-6">
           <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
           <div className="prose max-w-none">
