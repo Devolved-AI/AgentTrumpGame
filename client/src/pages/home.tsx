@@ -9,6 +9,7 @@ import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
 import { SiEthereum } from "react-icons/si";
 import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
+import { Footer } from "@/components/Footer";
 
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
@@ -141,89 +142,92 @@ export default function Home() {
   }, [gameContract]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Confetti trigger={showConfetti} />
+    <>
+      <div className="container mx-auto px-4 py-8">
+        <Confetti trigger={showConfetti} />
 
-      {/* Header Section */}
-      <div className="flex justify-between items-start mb-8">
-        <h1 className="text-4xl font-bold">Agent Trump Game</h1>
-        <ConnectWallet
-          onConnect={handleConnect}
-          onDisconnect={handleDisconnect}
-          isConnected={web3State.connected}
-          account={web3State.account}
-          isConnecting={isConnecting}
-          wrongNetwork={web3State.chainId !== 84532}
-        />
-      </div>
+        {/* Header Section */}
+        <div className="flex justify-between items-start mb-8">
+          <h1 className="text-4xl font-bold">Agent Trump Game</h1>
+          <ConnectWallet
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            isConnected={web3State.connected}
+            account={web3State.account}
+            isConnecting={isConnecting}
+            wrongNetwork={web3State.chainId !== 84532}
+          />
+        </div>
 
-      {/* Prize Pool Display */}
-      <div className="mb-8 text-center">
-        <h2 className="text-2xl font-bold mb-2">PRIZE POOL</h2>
-        <h1 className="text-5xl font-bold text-green-500 flex items-center justify-center gap-4">
-          <span>{formatUSD(parseFloat(prizePoolEth) * ethPrice)}</span>
-          <span className="flex items-center gap-1">
-            <SiEthereum className="inline-block" />
-            <span>{formatEth(prizePoolEth)} ETH</span>
-          </span>
-        </h1>
-      </div>
+        {/* Prize Pool Display */}
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-bold mb-2">PRIZE POOL</h2>
+          <h1 className="text-5xl font-bold text-green-500 flex items-center justify-center gap-4">
+            <span>{formatUSD(parseFloat(prizePoolEth) * ethPrice)}</span>
+            <span className="flex items-center gap-1">
+              <SiEthereum className="inline-block" />
+              <span>{formatEth(prizePoolEth)} ETH</span>
+            </span>
+          </h1>
+        </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        {/* Left Column: Image */}
-        <div>
-          <div className="w-64 h-64 mb-6">
-            <img
-              src="/aitubo.jpg"
-              alt="Agent Trump"
-              className="w-full h-full object-cover rounded-lg shadow-lg"
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Left Column: Image */}
+          <div>
+            <div className="w-64 h-64 mb-6">
+              <img
+                src="/aitubo.jpg"
+                alt="Agent Trump"
+                className="w-full h-full object-cover rounded-lg shadow-lg"
+              />
+            </div>
+          </div>
+
+          {/* Right Column: Response Form */}
+          <div>
+            <ResponseForm
+              onSubmit={handleSubmitResponse}
+              currentAmount={gameStatus.currentAmount}
+              isLoading={isLoading}
             />
           </div>
         </div>
 
-        {/* Right Column: Response Form */}
-        <div>
-          <ResponseForm
-            onSubmit={handleSubmitResponse}
-            currentAmount={gameStatus.currentAmount}
-            isLoading={isLoading}
-          />
-        </div>
-      </div>
+        {/* Game Stats and History Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Left Column: Game Stats Quadrant */}
+          <div>
+            <GameStatus
+              timeRemaining={gameStatus.timeRemaining}
+              currentAmount={gameStatus.currentAmount}
+              lastPlayer={gameStatus.lastPlayer}
+              escalationActive={gameStatus.escalationActive}
+              persuasionScore={6} // Added placeholder score
+            />
+          </div>
 
-      {/* Game Stats and History Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        {/* Left Column: Game Stats Quadrant */}
-        <div>
-          <GameStatus
-            timeRemaining={gameStatus.timeRemaining}
-            currentAmount={gameStatus.currentAmount}
-            lastPlayer={gameStatus.lastPlayer}
-            escalationActive={gameStatus.escalationActive}
-            persuasionScore={6} // Added placeholder score
-          />
+          {/* Right Column: Transaction History */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
+            <TransactionTimeline responses={playerHistory} />
+          </div>
         </div>
 
-        {/* Right Column: Transaction History */}
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
-          <TransactionTimeline responses={playerHistory} />
+        {/* Rules Section */}
+        <div className="mt-8 bg-gray-50 rounded-lg p-6">
+          <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
+          <div className="prose max-w-none">
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            </p>
+            <p className="mt-4">
+              Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+            </p>
+          </div>
         </div>
       </div>
-
-      {/* Rules Section */}
-      <div className="mt-8 bg-gray-50 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
-        <div className="prose max-w-none">
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-          </p>
-          <p className="mt-4">
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-          </p>
-        </div>
-      </div>
-    </div>
+      <Footer />
+    </>
   );
 }
