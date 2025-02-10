@@ -828,30 +828,31 @@ export class GameContract {
       timestamps.map(async (blockNumber: bigint) => {
         try {
           const block = await this.provider.getBlock(Number(blockNumber));
-          if (!block) return { 
-            timestamp: Math.floor(Date.now() / 1000), 
-            transactionHash: null,
-            blockNumber: Number(blockNumber)
-          };
-
-          const blockWithTransactions = await this.provider.getBlockWithTransactions(Number(blockNumber));
-          if (!blockWithTransactions?.transactions) {
-            return {
-              timestamp: Number(block.timestamp),
+          if (!block) {
+            console.log('Block not found:', blockNumber);
+            return { 
+              timestamp: Math.floor(Date.now() / 1000), 
               transactionHash: null,
               blockNumber: Number(blockNumber)
             };
           }
 
-          // Find the matching transaction
-          const transaction = blockWithTransactions.transactions.find(
-            tx => tx.from?.toLowerCase() === address.toLowerCase() &&
-                 tx.to?.toLowerCase() === contractAddress.toLowerCase()
-          );
+          // Get transaction receipt directly using event logs
+          const filter = this.contract.filters.GuessSubmitted(address);
+          const events = await this.contract.queryFilter(filter, Number(blockNumber), Number(blockNumber));
+          const event = events[0];
+
+          if (event && event.transactionHash) {
+            return {
+              timestamp: Number(block.timestamp),
+              transactionHash: event.transactionHash,
+              blockNumber: Number(blockNumber)
+            };
+          }
 
           return {
             timestamp: Number(block.timestamp),
-            transactionHash: transaction?.hash || null,
+            transactionHash: null,
             blockNumber: Number(blockNumber)
           };
         } catch (error) {
