@@ -9,6 +9,7 @@ import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
 import { SiEthereum } from "react-icons/si";
 import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
+import { Leaderboard, type LeaderboardEntry } from "@/components/game/Leaderboard";
 
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
@@ -27,6 +28,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
+  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -144,6 +146,20 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [gameContract]);
 
+  useEffect(() => {
+    if (!gameContract) return;
+
+    // Initial leaderboard fetch
+    gameContract.fetchLeaderboardData().then(setLeaderboardEntries);
+
+    // Subscribe to updates
+    const unsubscribe = gameContract.subscribeToLeaderboardUpdates(setLeaderboardEntries);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [gameContract]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Confetti trigger={showConfetti} />
@@ -216,16 +232,20 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Game Rules Section */}
-      <div className="mt-8 bg-gray-50 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
-        <div className="prose max-w-none">
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-          </p>
-          <p className="mt-4">
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-          </p>
+      {/* Leaderboard and Rules Sections */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Leaderboard entries={leaderboardEntries} />
+
+        <div className="bg-gray-50 rounded-lg p-6">
+          <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
+          <div className="prose max-w-none">
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            </p>
+            <p className="mt-4">
+              Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+            </p>
+          </div>
         </div>
       </div>
     </div>

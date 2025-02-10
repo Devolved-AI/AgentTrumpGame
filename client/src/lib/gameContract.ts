@@ -778,10 +778,23 @@ const contractABI = [
 	}
 ];
 
+interface LeaderboardEntry {
+  address: string;
+  totalContributed: string;
+  attempts: number;
+  lastTimestamp: number;
+}
+
 export class GameContract {
   private contract: ethers.Contract;
   private provider: ethers.BrowserProvider;
   private signer: ethers.JsonRpcSigner;
+
+  private playerContributions = new Map<string, {
+    totalContributed: ethers.BigNumber;
+    attempts: number;
+    lastTimestamp: number;
+  }>();
 
   constructor(provider: ethers.BrowserProvider, signer: ethers.JsonRpcSigner) {
     this.provider = provider;
@@ -855,5 +868,56 @@ export class GameContract {
   async getTotalPrizePool(): Promise<string> {
     const totalCollected = await this.contract.totalCollected();
     return ethers.formatEther(totalCollected);
+  }
+
+  async fetchLeaderboardData(): Promise<LeaderboardEntry[]> {
+    try {
+      // Get all GuessSubmitted events
+      const filter = this.contract.filters.GuessSubmitted();
+      const events = await this.contract.queryFilter(filter);
+
+      // Process events to build leaderboard data
+      this.playerContributions.clear();
+      events.forEach(event => {
+        const { player, amount, blockNumber } = event.args!;
+        const current = this.playerContributions.get(player) || {
+          totalContributed: ethers.BigNumber.from(0),
+          attempts: 0,
+          lastTimestamp: 0
+        };
+
+        this.playerContributions.set(player, {
+          totalContributed: current.totalContributed.add(amount),
+          attempts: current.attempts + 1,
+          lastTimestamp: Math.max(current.lastTimestamp, blockNumber)
+        });
+      });
+
+      // Convert to leaderboard entries
+      const entries: LeaderboardEntry[] = Array.from(this.playerContributions.entries())
+        .map(([address, data]) => ({
+          address,
+          totalContributed: ethers.formatEther(data.totalContributed),
+          attempts: data.attempts,
+          lastTimestamp: data.lastTimestamp
+        }));
+
+      return entries;
+    } catch (error) {
+      console.error('Failed to fetch leaderboard data:', error);
+      return [];
+    }
+  }
+
+  subscribeToLeaderboardUpdates(callback: (entries: LeaderboardEntry[]) => void) {
+    const handleGuessSubmitted = async () => {
+      const entries = await this.fetchLeaderboardData();
+      callback(entries);
+    };
+
+    this.contract.on('GuessSubmitted', handleGuessSubmitted);
+    return () => {
+      this.contract.off('GuessSubmitted', handleGuessSubmitted);
+    };
   }
 }
