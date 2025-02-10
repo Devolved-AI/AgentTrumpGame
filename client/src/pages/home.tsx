@@ -100,7 +100,16 @@ export default function Home() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold">Agent Trump Game</h1>
+        <div>
+          <h1 className="text-4xl font-bold mb-4">Agent Trump Game</h1>
+          <div className="w-48 h-48 mb-6">
+            <img 
+              src="/attached_assets/aitubo.jpg" 
+              alt="Agent Trump"
+              className="w-full h-full object-cover rounded-lg shadow-lg"
+            />
+          </div>
+        </div>
         <ConnectWallet
           onConnect={handleConnect}
           isConnected={web3State.connected}
