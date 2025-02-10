@@ -56,7 +56,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [persuasionScore, setPersuasionScore] = useState<number>(6); 
+  const [persuasionScore, setPersuasionScore] = useState<number>(6);
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const { toast } = useToast();
 
@@ -163,11 +163,11 @@ export default function Home() {
       if (isWinning) {
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
         setTransactionStatus('pending');
-        await tx.wait(); 
+        await tx.wait();
         setTransactionStatus('success');
         await gameContract.buttonPushed(web3State.account!);
         setShowConfetti(true);
-        setPersuasionScore(10); 
+        setPersuasionScore(10);
         if (web3State.account) {
           storePersuasionScore(web3State.account, 10);
         }
@@ -179,7 +179,7 @@ export default function Home() {
       } else {
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
         setTransactionStatus('pending');
-        await tx.wait(); 
+        await tx.wait();
         setTransactionStatus('success');
         setPersuasionScore(prev => {
           const newScore = Math.max(0, prev - 1);
@@ -204,7 +204,7 @@ export default function Home() {
           description: "You cancelled the transaction.",
           variant: "destructive"
         });
-      } 
+      }
       else if (error.code === 'NETWORK_ERROR') {
         toast({
           title: "Network Error",
