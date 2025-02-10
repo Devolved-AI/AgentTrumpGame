@@ -254,12 +254,21 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        <div className="flex flex-col items-start mb-8">
-          <h1 className="text-4xl font-bold mb-4">Not Like Us</h1>
-          <p className="text-lg text-muted-foreground">
-            Kendrick Lamar has convinced the world Drake is "Not Like Us." Your job is to convince Kendrick that Drake is like us.
-          </p>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-4xl font-bold">Not Like Us</h1>
+          <ConnectWallet
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            isConnected={web3State.connected}
+            account={web3State.account}
+            isConnecting={isConnecting}
+            wrongNetwork={web3State.chainId !== 84532}
+          />
         </div>
+
+        <p className="text-lg text-muted-foreground mb-8">
+          Kendrick Lamar has convinced the world Drake is "Not Like Us." Your job is to convince Kendrick that Drake is like us.
+        </p>
 
         <div className="mb-8 text-center">
           <h2 className="text-2xl font-bold mb-2">PRIZE POOL</h2>
