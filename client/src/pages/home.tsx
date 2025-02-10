@@ -31,6 +31,7 @@ export default function Home() {
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
   const [persuasionScore, setPersuasionScore] = useState<number>(6); // Initial score of 6
+  const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -127,6 +128,7 @@ export default function Home() {
     if (!gameContract) return;
 
     setIsLoading(true);
+    setTransactionStatus('pending');
     try {
       // Evaluate the response first
       const isWinning = await gameContract.evaluateResponse(response);
@@ -134,7 +136,9 @@ export default function Home() {
       if (isWinning) {
         // Submit winning response and push the button
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
+        setTransactionStatus('pending');
         await tx.wait(); // Wait for transaction confirmation
+        setTransactionStatus('success');
         await gameContract.buttonPushed(web3State.account!);
         setShowConfetti(true);
         setPersuasionScore(10); // Set to max when winning
@@ -146,7 +150,9 @@ export default function Home() {
       } else {
         // Submit response but don't push button
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
+        setTransactionStatus('pending');
         await tx.wait(); // Wait for transaction confirmation
+        setTransactionStatus('success');
         // Decrease persuasion score but don't go below 0
         setPersuasionScore(prev => Math.max(0, prev - 1));
         toast({
@@ -158,6 +164,7 @@ export default function Home() {
 
       await refreshGameStatus();
     } catch (error: any) {
+      setTransactionStatus('error');
       // Check if the error is a user rejection
       if (error.code === 4001) {
         toast({
@@ -263,6 +270,7 @@ export default function Home() {
               onSubmit={handleSubmitResponse}
               currentAmount={gameStatus.currentAmount}
               isLoading={isLoading}
+              transactionStatus={transactionStatus}
             />
           </div>
         </div>

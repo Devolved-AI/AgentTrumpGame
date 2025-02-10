@@ -19,9 +19,15 @@ interface ResponseFormProps {
   onSubmit: (response: string) => Promise<void>;
   currentAmount: string;
   isLoading: boolean;
+  transactionStatus?: 'pending' | 'success' | 'error';
 }
 
-export function ResponseForm({ onSubmit, currentAmount, isLoading }: ResponseFormProps) {
+export function ResponseForm({ 
+  onSubmit, 
+  currentAmount, 
+  isLoading,
+  transactionStatus = 'pending'
+}: ResponseFormProps) {
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -37,6 +43,7 @@ export function ResponseForm({ onSubmit, currentAmount, isLoading }: ResponseFor
       await onSubmit(values.response);
       form.reset();
     } finally {
+      // Dialog will be closed by the parent component
       setShowLoadingDialog(false);
     }
   }
@@ -80,7 +87,16 @@ export function ResponseForm({ onSubmit, currentAmount, isLoading }: ResponseFor
 
       <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
         <DialogContent className="sm:max-w-[425px]">
-          <TransactionLoader message="Processing your blockchain transaction..." />
+          <TransactionLoader 
+            status={transactionStatus}
+            message={
+              transactionStatus === 'pending' 
+                ? "Processing your blockchain transaction..." 
+                : transactionStatus === 'success'
+                ? "Transaction confirmed successfully!"
+                : "Transaction failed"
+            }
+          />
         </DialogContent>
       </Dialog>
     </>
