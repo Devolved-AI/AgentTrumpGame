@@ -822,9 +822,16 @@ export class GameContract {
 
   async getPlayerHistory(address: string) {
     const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
+    const blockTimestamps = await Promise.all(
+      timestamps.map(async (blockNumber: number) => {
+        const block = await this.provider.getBlock(blockNumber);
+        return block ? Number(block.timestamp) : Math.floor(Date.now() / 1000);
+      })
+    );
+
     return responses.map((response: string, index: number) => ({
       response,
-      timestamp: Number(timestamps[index]),
+      timestamp: blockTimestamps[index],
       exists: exists[index]
     })).filter((item: any) => item.exists);
   }
