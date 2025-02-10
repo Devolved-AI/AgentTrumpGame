@@ -31,8 +31,55 @@ export function TransactionLoader({ message }: TransactionLoaderProps) {
           transition={{ duration: 2, repeat: Infinity }}
           className="absolute inset-0 rounded-full bg-blue-500/20"
         />
+
+        {/* Chain of blocks */}
+        <div className="absolute -top-6 -left-6 -right-6 -bottom-6">
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-3 h-3 bg-blue-500 rounded-sm"
+              initial={{ scale: 0 }}
+              animate={{
+                scale: [0, 1, 1, 0],
+                rotate: [0, 90, 180, 270],
+                opacity: [0, 1, 1, 0],
+                x: [0, 20, 0, -20],
+                y: [0, -20, 0, 20],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                delay: i * 0.5,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Data flow particles */}
+        <div className="absolute inset-0">
+          {[...Array(8)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-blue-400 rounded-full"
+              initial={{ scale: 0, x: -20, y: -20 }}
+              animate={{
+                scale: [0, 1, 0],
+                x: [0, 20, 0],
+                y: [0, 20, 0],
+                opacity: [0, 1, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                delay: i * 0.25,
+                ease: "linear",
+              }}
+            />
+          ))}
+        </div>
       </motion.div>
-      
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
