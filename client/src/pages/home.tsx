@@ -104,7 +104,7 @@ export default function Home() {
           <h1 className="text-4xl font-bold mb-4">Agent Trump Game</h1>
           <div className="w-48 h-48 mb-6">
             <img 
-              src="/attached_assets/aitubo.jpg" 
+              src="/aitubo.jpg" 
               alt="Agent Trump"
               className="w-full h-full object-cover rounded-lg shadow-lg"
             />
