@@ -16,6 +16,7 @@ interface TransactionTimelineProps {
     timestamp: number;
     exists: boolean;
     transactionHash?: string;
+    blockNumber: number;
   }[];
 }
 
@@ -80,7 +81,7 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
                       {formatPSTTime(response.timestamp)}
                     </div>
 
-                    {/* Response Preview - show only first 100 characters */}
+                    {/* Response Preview */}
                     <p className="text-sm">
                       {response.response.length > 100 
                         ? `${response.response.slice(0, 100)}...` 
@@ -117,12 +118,12 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
               <span>{selectedResponse && formatPSTTime(selectedResponse.timestamp)}</span>
             </div>
 
-            {/* Full Response */}
+            {/* Block Number */}
             <div className="space-y-2">
-              <h4 className="font-semibold">Response:</h4>
-              <p className="text-sm whitespace-pre-wrap bg-muted p-4 rounded-md">
-                {selectedResponse?.response}
-              </p>
+              <h4 className="font-semibold">Block Number:</h4>
+              <div className="font-mono text-sm bg-muted p-4 rounded-md">
+                {selectedResponse?.blockNumber}
+              </div>
             </div>
 
             {/* Transaction Hash with Link */}
@@ -140,6 +141,14 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
                 </a>
               </div>
             )}
+
+            {/* Full Response */}
+            <div className="space-y-2">
+              <h4 className="font-semibold">Response:</h4>
+              <p className="text-sm whitespace-pre-wrap bg-muted p-4 rounded-md">
+                {selectedResponse?.response}
+              </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

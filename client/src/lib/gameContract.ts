@@ -828,13 +828,18 @@ export class GameContract {
       timestamps.map(async (blockNumber: bigint) => {
         try {
           const block = await this.provider.getBlock(Number(blockNumber));
-          if (!block) return { timestamp: Math.floor(Date.now() / 1000), transactionHash: null };
+          if (!block) return { 
+            timestamp: Math.floor(Date.now() / 1000), 
+            transactionHash: null,
+            blockNumber: Number(blockNumber)
+          };
 
           const blockWithTransactions = await this.provider.getBlockWithTransactions(Number(blockNumber));
           if (!blockWithTransactions?.transactions) {
             return {
               timestamp: Number(block.timestamp),
-              transactionHash: null
+              transactionHash: null,
+              blockNumber: Number(blockNumber)
             };
           }
 
@@ -846,13 +851,15 @@ export class GameContract {
 
           return {
             timestamp: Number(block.timestamp),
-            transactionHash: transaction?.hash || null
+            transactionHash: transaction?.hash || null,
+            blockNumber: Number(blockNumber)
           };
         } catch (error) {
           console.error('Error fetching block data:', error);
           return {
             timestamp: Math.floor(Date.now() / 1000),
-            transactionHash: null
+            transactionHash: null,
+            blockNumber: Number(blockNumber)
           };
         }
       })
@@ -862,6 +869,7 @@ export class GameContract {
       response,
       timestamp: blockData[index].timestamp,
       transactionHash: blockData[index].transactionHash,
+      blockNumber: blockData[index].blockNumber,
       exists: exists[index]
     })).filter((item: any) => item.exists);
   }
