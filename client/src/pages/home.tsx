@@ -102,7 +102,7 @@ export default function Home() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold mb-4">Agent Trump Game</h1>
-          <div className="w-48 h-48 mb-6">
+          <div className="w-64 h-64 mb-6">
             <img 
               src="/aitubo.jpg" 
               alt="Agent Trump"
