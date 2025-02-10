@@ -103,6 +103,14 @@ export async function connectWallet(): Promise<Web3State> {
   }
 }
 
+export async function disconnectWallet(): Promise<Web3State> {
+  toast({
+    title: "Wallet Disconnected",
+    description: "Your wallet has been disconnected",
+  });
+  return initialWeb3State;
+}
+
 export function subscribeToAccountChanges(callback: (accounts: string[]) => void) {
   if (!window.ethereum) return;
 

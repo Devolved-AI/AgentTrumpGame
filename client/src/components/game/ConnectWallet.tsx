@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { Wallet, Loader2 } from "lucide-react";
+import { Wallet, Loader2, LogOut } from "lucide-react";
 
 interface ConnectWalletProps {
   onConnect: () => void;
+  onDisconnect: () => void;
   isConnected: boolean;
   account: string | null;
   isConnecting: boolean;
@@ -11,6 +12,7 @@ interface ConnectWalletProps {
 
 export function ConnectWallet({ 
   onConnect, 
+  onDisconnect,
   isConnected, 
   account, 
   isConnecting,
@@ -57,10 +59,19 @@ export function ConnectWallet({
           <span className="flex h-2 w-2 rounded-full bg-green-500 shadow-green-500/50 shadow-lg" />
           <span className="text-sm text-muted-foreground">Connected</span>
         </div>
-        <Button variant="outline" className="font-mono">
-          <Wallet className="mr-2 h-4 w-4" />
-          {account.slice(0, 6)}...{account.slice(-4)}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="font-mono">
+            <Wallet className="mr-2 h-4 w-4" />
+            {account.slice(0, 6)}...{account.slice(-4)}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={onDisconnect}
+            className="text-red-500 hover:bg-red-500/10"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   }

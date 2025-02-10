@@ -4,7 +4,7 @@ import { GameStatus } from "@/components/game/GameStatus";
 import { ResponseForm } from "@/components/game/ResponseForm";
 import { TransactionTimeline } from "@/components/game/TransactionTimeline";
 import { Confetti } from "@/components/game/Confetti";
-import { connectWallet, type Web3State, initialWeb3State } from "@/lib/web3";
+import { connectWallet, disconnectWallet, type Web3State, initialWeb3State } from "@/lib/web3";
 import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
 import { SiEthereum } from "react-icons/si";
@@ -39,7 +39,10 @@ export default function Home() {
 
       // Subscribe to contract events
       contract.subscribeToEvents({
-        onGuessSubmitted: () => refreshGameStatus(),
+        onGuessSubmitted: () => {
+          refreshGameStatus();
+          updatePrizePool(); // Update prize pool after each submission
+        },
         onGameWon: () => {
           setShowConfetti(true);
           toast({
@@ -47,6 +50,7 @@ export default function Home() {
             description: "Someone has won the game!",
           });
           refreshGameStatus();
+          updatePrizePool();
         },
         onEscalationStarted: () => {
           toast({
@@ -54,13 +58,23 @@ export default function Home() {
             description: "The game has entered escalation mode!",
           });
           refreshGameStatus();
+          updatePrizePool();
         }
       });
+
+      // Initial updates
+      await Promise.all([refreshGameStatus(), updatePrizePool()]);
     } catch (error) {
       console.error("Failed to connect:", error);
     } finally {
       setIsConnecting(false);
     }
+  }
+
+  async function handleDisconnect() {
+    const initialState = await disconnectWallet();
+    setWeb3State(initialState);
+    setGameContract(null);
   }
 
   async function refreshGameStatus() {
@@ -79,6 +93,20 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Failed to refresh game status:", error);
+    }
+  }
+
+  async function updatePrizePool() {
+    if (!gameContract) return;
+    try {
+      const [price, totalPool] = await Promise.all([
+        getEthPriceUSD(),
+        gameContract.getTotalPrizePool()
+      ]);
+      setEthPrice(price);
+      setPrizePoolEth(totalPool);
+    } catch (error) {
+      console.error("Failed to update prize pool:", error);
     }
   }
 
@@ -111,25 +139,8 @@ export default function Home() {
   }, [gameContract]);
 
   useEffect(() => {
-    async function updatePriceAndPool() {
-      if (!gameContract) return;
-
-      try {
-        const [price, totalPool] = await Promise.all([
-          getEthPriceUSD(),
-          gameContract.getTotalPrizePool()
-        ]);
-
-        setEthPrice(price);
-        setPrizePoolEth(totalPool);
-      } catch (error) {
-        console.error("Failed to fetch price or prize pool:", error);
-      }
-    }
-
-    updatePriceAndPool();
-    const interval = setInterval(updatePriceAndPool, 60000); // Update every minute
-
+    if (!gameContract) return;
+    const interval = setInterval(updatePrizePool, 10000);
     return () => clearInterval(interval);
   }, [gameContract]);
 
@@ -142,6 +153,7 @@ export default function Home() {
         <h1 className="text-4xl font-bold">Agent Trump Game</h1>
         <ConnectWallet
           onConnect={handleConnect}
+          onDisconnect={handleDisconnect}
           isConnected={web3State.connected}
           account={web3State.account}
           isConnecting={isConnecting}
