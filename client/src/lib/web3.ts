@@ -1,19 +1,19 @@
 import { ethers } from 'ethers';
 import { toast } from '@/hooks/use-toast';
 
-// BASE network configuration
-const BASE_CHAIN_ID = 8453;
-const BASE_RPC_URL = 'https://mainnet.base.org';
+// BASE Sepolia network configuration
+const BASE_CHAIN_ID = 84532; // Base Sepolia Chain ID
+const BASE_RPC_URL = 'https://sepolia.base.org';
 const BASE_NETWORK = {
   chainId: `0x${BASE_CHAIN_ID.toString(16)}`,
-  chainName: 'BASE',
+  chainName: 'Base Sepolia',
   nativeCurrency: {
     name: 'ETH',
     symbol: 'ETH',
     decimals: 18,
   },
   rpcUrls: [BASE_RPC_URL],
-  blockExplorerUrls: ['https://basescan.org/'],
+  blockExplorerUrls: ['https://sepolia.basescan.org/'],
 };
 
 export type Web3State = {
@@ -74,7 +74,7 @@ export async function connectWallet(): Promise<Web3State> {
     if (!switched) {
       toast({
         title: "Wrong Network",
-        description: "Please switch to the BASE network to continue",
+        description: "Please switch to the Base Sepolia network to continue",
         variant: "destructive"
       });
       throw new Error("Wrong network");
