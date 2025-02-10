@@ -1,7 +1,20 @@
 import { ethers } from 'ethers';
 
-const contractAddress = '0x1234...'; // Replace with actual contract address
-const contractABI = [/* Insert ABI here */];
+const contractAddress = '0x1234...'; // TODO: Replace with actual contract address
+const contractABI = [
+  "event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex)",
+  "event GameWon(address indexed winner, uint256 reward)",
+  "event GameEnded(address indexed lastPlayer, uint256 lastPlayerReward, uint256 ownerReward)",
+  "event EscalationStarted(uint256 startBlock)",
+  "event GameExtended(uint256 newEndBlock, uint256 newMultiplier)",
+  "function getTimeRemaining() view returns (uint256)",
+  "function getCurrentRequiredAmount() view returns (uint256)",
+  "function lastPlayer() view returns (address)",
+  "function escalationActive() view returns (bool)",
+  "function gameEndBlock() view returns (uint256)",
+  "function submitGuess(string) payable",
+  "function getAllPlayerResponses(address) view returns (string[], uint256[], bool[])"
+];
 
 export class GameContract {
   private contract: ethers.Contract;
@@ -31,7 +44,7 @@ export class GameContract {
 
     return {
       timeRemaining: Number(timeRemaining),
-      currentRequiredAmount: ethers.formatEther(currentRequiredAmount),
+      currentAmount: ethers.formatEther(currentRequiredAmount),
       lastPlayer,
       escalationActive,
       gameEndBlock: Number(gameEndBlock)
@@ -46,12 +59,12 @@ export class GameContract {
   }
 
   async getPlayerHistory(address: string) {
-    const responses = await this.contract.getAllPlayerResponses(address);
-    return {
-      responses: responses[0],
-      timestamps: responses[1].map((t: bigint) => Number(t)),
-      exists: responses[2]
-    };
+    const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
+    return responses.map((response: string, index: number) => ({
+      response,
+      timestamp: Number(timestamps[index]),
+      exists: exists[index]
+    })).filter((item: any) => item.exists);
   }
 
   subscribeToEvents(callbacks: {
