@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ConnectWallet } from "@/components/game/ConnectWallet";
 import { GameStatus } from "@/components/game/GameStatus";
 import { ResponseForm } from "@/components/game/ResponseForm";
-import { PlayerHistory } from "@/components/game/PlayerHistory";
+import { TransactionTimeline } from "@/components/game/TransactionTimeline";
 import { connectWallet, type Web3State, initialWeb3State } from "@/lib/web3";
 import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
@@ -127,7 +127,8 @@ export default function Home() {
           />
         </div>
         <div>
-          <PlayerHistory responses={playerHistory} />
+          <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
+          <TransactionTimeline responses={playerHistory} />
         </div>
       </div>
     </div>
