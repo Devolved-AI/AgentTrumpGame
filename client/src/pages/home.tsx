@@ -3,6 +3,8 @@ import { ConnectWallet } from "@/components/game/ConnectWallet";
 import { GameStatus } from "@/components/game/GameStatus";
 import { ResponseForm } from "@/components/game/ResponseForm";
 import { TransactionTimeline } from "@/components/game/TransactionTimeline";
+import { TransactionLoader } from "@/components/game/TransactionLoader";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Confetti } from "@/components/game/Confetti";
 import { connectWallet, disconnectWallet, type Web3State, initialWeb3State } from "@/lib/web3";
 import { GameContract } from "@/lib/gameContract";
@@ -14,6 +16,8 @@ import { Footer } from "@/components/Footer";
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUpdatingGameData, setIsUpdatingGameData] = useState(false);
   const [gameContract, setGameContract] = useState<GameContract | null>(null);
   const [gameStatus, setGameStatus] = useState({
     timeRemaining: 0,
@@ -23,7 +27,6 @@ export default function Home() {
     gameEndBlock: 0
   });
   const [playerHistory, setPlayerHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
@@ -31,6 +34,7 @@ export default function Home() {
 
   async function handleConnect() {
     setIsConnecting(true);
+    setIsUpdatingGameData(true);
     try {
       const state = await connectWallet();
       setWeb3State(state);
@@ -41,7 +45,7 @@ export default function Home() {
       contract.subscribeToEvents({
         onGuessSubmitted: () => {
           refreshGameStatus();
-          updatePrizePool(); // Update prize pool after each submission
+          updatePrizePool();
         },
         onGameWon: () => {
           setShowConfetti(true);
@@ -68,6 +72,7 @@ export default function Home() {
       console.error("Failed to connect:", error);
     } finally {
       setIsConnecting(false);
+      setIsUpdatingGameData(false);
     }
   }
 
@@ -75,6 +80,7 @@ export default function Home() {
     const initialState = await disconnectWallet();
     setWeb3State(initialState);
     setGameContract(null);
+    setPlayerHistory([]);
   }
 
   async function refreshGameStatus() {
@@ -145,6 +151,13 @@ export default function Home() {
     <>
       <div className="container mx-auto px-4 py-8">
         <Confetti trigger={showConfetti} />
+
+        {/* Loading Dialog */}
+        <Dialog open={isUpdatingGameData} onOpenChange={setIsUpdatingGameData}>
+          <DialogContent className="sm:max-w-[425px]">
+            <TransactionLoader message="Updating game information..." />
+          </DialogContent>
+        </Dialog>
 
         {/* Header Section */}
         <div className="flex justify-between items-start mb-8">
