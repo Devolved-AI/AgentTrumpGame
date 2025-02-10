@@ -9,6 +9,21 @@ interface GameStatusProps {
   escalationActive: boolean;
 }
 
+function formatTimeRemaining(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  const parts = [];
+  if (hours > 0) parts.push(`${hours} ${hours === 1 ? 'hour' : 'hours'}`);
+  if (minutes > 0) parts.push(`${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`);
+  if (remainingSeconds > 0 || parts.length === 0) {
+    parts.push(`${remainingSeconds} ${remainingSeconds === 1 ? 'second' : 'seconds'}`);
+  }
+
+  return parts.join(', ');
+}
+
 export function GameStatus({ 
   timeRemaining, 
   currentAmount, 
@@ -23,7 +38,7 @@ export function GameStatus({
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</div>
+          <div className="text-xl font-bold">{formatTimeRemaining(timeRemaining)}</div>
           <Progress value={(timeRemaining / 3600) * 100} className="mt-2" />
         </CardContent>
       </Card>
