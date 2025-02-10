@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [gameContract, setGameContract] = useState<GameContract | null>(null);
   const [gameStatus, setGameStatus] = useState({
     timeRemaining: 0,
@@ -21,12 +22,13 @@ export default function Home() {
   const { toast } = useToast();
 
   async function handleConnect() {
+    setIsConnecting(true);
     try {
       const state = await connectWallet();
       setWeb3State(state);
       const contract = new GameContract(state.provider!, state.signer!);
       setGameContract(contract);
-      
+
       // Subscribe to contract events
       contract.subscribeToEvents({
         onGuessSubmitted: () => refreshGameStatus(),
@@ -47,16 +49,18 @@ export default function Home() {
       });
     } catch (error) {
       console.error("Failed to connect:", error);
+    } finally {
+      setIsConnecting(false);
     }
   }
 
   async function refreshGameStatus() {
     if (!gameContract) return;
-    
+
     try {
       const status = await gameContract.getGameStatus();
       setGameStatus(status);
-      
+
       if (web3State.account) {
         const history = await gameContract.getPlayerHistory(web3State.account);
         setPlayerHistory(history);
@@ -68,7 +72,7 @@ export default function Home() {
 
   async function handleSubmitResponse(response: string) {
     if (!gameContract) return;
-    
+
     setIsLoading(true);
     try {
       await gameContract.submitResponse(response, gameStatus.currentAmount);
@@ -101,6 +105,8 @@ export default function Home() {
           onConnect={handleConnect}
           isConnected={web3State.connected}
           account={web3State.account}
+          isConnecting={isConnecting}
+          wrongNetwork={web3State.chainId !== 84532}
         />
       </div>
 
