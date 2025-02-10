@@ -66,8 +66,12 @@ export default function Home() {
         }
       });
 
-      // Initial updates - wait for all promises to resolve
-      await Promise.all([refreshGameStatus(), updatePrizePool()]);
+      // Wait for all initial data to load
+      await Promise.all([
+        refreshGameStatus(),
+        updatePrizePool()
+      ]);
+
     } catch (error) {
       console.error("Failed to connect:", error);
       toast({

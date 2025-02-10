@@ -823,36 +823,30 @@ export class GameContract {
   async getPlayerHistory(address: string) {
     const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
 
-    // Fetch blocks and transaction hashes for each response
+    // Fetch blocks and transaction details
     const blockData = await Promise.all(
-      timestamps.map(async (blockNumber: number) => {
+      timestamps.map(async (blockNumber: bigint) => {
         try {
-          const block = await this.provider.getBlock(blockNumber);
+          const block = await this.provider.getBlock(Number(blockNumber));
           if (!block) return { timestamp: Math.floor(Date.now() / 1000), transactionHash: null };
 
-          // Find the transaction from this address in the block
-          const blockWithTransactions = await this.provider.getBlock(blockNumber, true);
-          if (!blockWithTransactions?.transactions?.length) {
+          const blockWithTransactions = await this.provider.getBlockWithTransactions(Number(blockNumber));
+          if (!blockWithTransactions?.transactions) {
             return {
               timestamp: Number(block.timestamp),
               transactionHash: null
             };
           }
 
-          // Find matching transaction
+          // Find the matching transaction
           const transaction = blockWithTransactions.transactions.find(
-            (tx: any) => {
-              if (typeof tx === 'object') {
-                return tx.from?.toLowerCase() === address.toLowerCase() &&
-                       tx.to?.toLowerCase() === contractAddress.toLowerCase();
-              }
-              return false;
-            }
+            tx => tx.from?.toLowerCase() === address.toLowerCase() &&
+                 tx.to?.toLowerCase() === contractAddress.toLowerCase()
           );
 
           return {
             timestamp: Number(block.timestamp),
-            transactionHash: transaction ? (typeof transaction === 'object' ? transaction.hash : transaction) : null
+            transactionHash: transaction?.hash || null
           };
         } catch (error) {
           console.error('Error fetching block data:', error);
