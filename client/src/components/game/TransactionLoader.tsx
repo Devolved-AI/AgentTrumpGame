@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface TransactionLoaderProps {
   message?: string;
@@ -28,6 +29,22 @@ const trumpResponses = [
 ];
 
 export function TransactionLoader({ message, status = 'pending', onClose }: TransactionLoaderProps) {
+  const [showErrorMessage, setShowErrorMessage] = useState(false);
+
+  const handleInitialClose = () => {
+    if (status === 'error') {
+      setShowErrorMessage(true);
+    } else if (onClose) {
+      onClose();
+    }
+  };
+
+  const handleFinalClose = () => {
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -35,7 +52,7 @@ export function TransactionLoader({ message, status = 'pending', onClose }: Tran
       exit={{ opacity: 0, y: -20 }}
       className="flex flex-col items-center justify-center p-6 space-y-4"
     >
-      {status === 'error' && (
+      {status === 'error' && showErrorMessage && (
         <div className="w-24 h-24 mb-2">
           <img
             src="/trump-thinking.svg"
@@ -64,7 +81,7 @@ export function TransactionLoader({ message, status = 'pending', onClose }: Tran
         </motion.div>
       )}
 
-      {status === 'error' && (
+      {status === 'error' && showErrorMessage && (
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -83,7 +100,7 @@ export function TransactionLoader({ message, status = 'pending', onClose }: Tran
         <p className="text-lg font-semibold text-gray-700">
           {status === 'success'
             ? successMessages[Math.floor(Math.random() * successMessages.length)]
-            : status === 'error'
+            : status === 'error' && showErrorMessage
             ? trumpResponses[Math.floor(Math.random() * trumpResponses.length)]
             : message || messages[Math.floor(Math.random() * messages.length)]
           }
@@ -93,7 +110,7 @@ export function TransactionLoader({ message, status = 'pending', onClose }: Tran
         </p>
       </motion.div>
 
-      {status === 'success' && (
+      {((status === 'success' || status === 'error') && !showErrorMessage) && (
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -103,15 +120,22 @@ export function TransactionLoader({ message, status = 'pending', onClose }: Tran
           <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm">
             Transaction has been confirmed on the blockchain
           </div>
-          {onClose && (
-            <Button
-              onClick={onClose}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700"
-            >
-              Close
-            </Button>
-          )}
+          <Button
+            onClick={handleInitialClose}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700"
+          >
+            Close
+          </Button>
         </motion.div>
+      )}
+
+      {status === 'error' && showErrorMessage && (
+        <Button
+          onClick={handleFinalClose}
+          className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white"
+        >
+          Try Again
+        </Button>
       )}
     </motion.div>
   );
