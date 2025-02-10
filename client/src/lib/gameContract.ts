@@ -822,16 +822,31 @@ export class GameContract {
 
   async getPlayerHistory(address: string) {
     const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
-    const blockTimestamps = await Promise.all(
+
+    // Fetch blocks and transaction hashes for each response
+    const blockData = await Promise.all(
       timestamps.map(async (blockNumber: number) => {
         const block = await this.provider.getBlock(blockNumber);
-        return block ? Number(block.timestamp) : Math.floor(Date.now() / 1000);
+        if (!block) return { timestamp: Math.floor(Date.now() / 1000), transactionHash: null };
+
+        // Find the transaction from this address in the block
+        const blockWithTransactions = await this.provider.getBlock(blockNumber, true);
+        const transaction = blockWithTransactions?.transactions.find(
+          tx => tx.from.toLowerCase() === address.toLowerCase() &&
+               tx.to?.toLowerCase() === contractAddress.toLowerCase()
+        );
+
+        return {
+          timestamp: Number(block.timestamp),
+          transactionHash: transaction?.hash || null
+        };
       })
     );
 
     return responses.map((response: string, index: number) => ({
       response,
-      timestamp: blockTimestamps[index],
+      timestamp: blockData[index].timestamp,
+      transactionHash: blockData[index].transactionHash,
       exists: exists[index]
     })).filter((item: any) => item.exists);
   }

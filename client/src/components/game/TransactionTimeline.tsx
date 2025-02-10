@@ -1,13 +1,14 @@
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock, MessageSquare } from "lucide-react";
+import { Clock, MessageSquare, ExternalLink } from "lucide-react";
 
 interface TransactionTimelineProps {
   responses: {
     response: string;
     timestamp: number;
     exists: boolean;
+    transactionHash?: string;
   }[];
 }
 
@@ -60,9 +61,24 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
 
             <Card className="overflow-hidden">
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <Clock className="h-4 w-4" />
-                  {formatPSTTime(response.timestamp)}
+                <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    {formatPSTTime(response.timestamp)}
+                  </div>
+                  {response.transactionHash && (
+                    <a
+                      href={`https://sepolia.basescan.org/tx/${response.transactionHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-blue-500 hover:text-blue-600 transition-colors"
+                    >
+                      <span className="font-mono text-xs">
+                        {response.transactionHash.slice(0, 6)}...{response.transactionHash.slice(-4)}
+                      </span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
                 <div className="flex items-start gap-2">
                   <MessageSquare className="h-4 w-4 mt-1 text-blue-500" />
