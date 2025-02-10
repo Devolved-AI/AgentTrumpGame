@@ -66,10 +66,15 @@ export default function Home() {
         }
       });
 
-      // Initial updates
+      // Initial updates - wait for all promises to resolve
       await Promise.all([refreshGameStatus(), updatePrizePool()]);
     } catch (error) {
       console.error("Failed to connect:", error);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect to the game. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsConnecting(false);
       setIsUpdatingGameData(false);
