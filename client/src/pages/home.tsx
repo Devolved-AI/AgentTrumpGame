@@ -56,7 +56,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [persuasionScore, setPersuasionScore] = useState<number>(6); 
+  const [persuasionScore, setPersuasionScore] = useState<number>(6);
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const { toast } = useToast();
 
@@ -163,11 +163,11 @@ export default function Home() {
       if (isWinning) {
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
         setTransactionStatus('pending');
-        await tx.wait(); 
+        await tx.wait();
         setTransactionStatus('success');
         await gameContract.buttonPushed(web3State.account!);
         setShowConfetti(true);
-        setPersuasionScore(10); 
+        setPersuasionScore(10);
         if (web3State.account) {
           storePersuasionScore(web3State.account, 10);
         }
@@ -179,7 +179,7 @@ export default function Home() {
       } else {
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
         setTransactionStatus('pending');
-        await tx.wait(); 
+        await tx.wait();
         setTransactionStatus('success');
         setPersuasionScore(prev => {
           const newScore = Math.max(0, prev - 1);
@@ -204,7 +204,7 @@ export default function Home() {
           description: "You cancelled the transaction.",
           variant: "destructive"
         });
-      } 
+      }
       else if (error.code === 'NETWORK_ERROR') {
         toast({
           title: "Network Error",
@@ -254,16 +254,11 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        <div className="flex justify-between items-start mb-8">
-          <h1 className="text-4xl font-bold">Agent Trump Game</h1>
-          <ConnectWallet
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnect}
-            isConnected={web3State.connected}
-            account={web3State.account}
-            isConnecting={isConnecting}
-            wrongNetwork={web3State.chainId !== 84532}
-          />
+        <div className="flex flex-col items-start mb-8">
+          <h1 className="text-4xl font-bold mb-4">Not Like Us</h1>
+          <p className="text-lg text-muted-foreground">
+            Kendrick Lamar has convinced the world Drake is "Not Like Us." Your job is to convince Kendrick that Drake is like us.
+          </p>
         </div>
 
         <div className="mb-8 text-center">
@@ -279,11 +274,11 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div>
-            <div className="w-64 h-64 mb-6">
+            <div className="w-full h-auto mb-6">
               <img
-                src="/aitubo.jpg"
-                alt="Agent Trump"
-                className="w-full h-full object-cover rounded-lg shadow-lg"
+                src="/kendrick-vs-drake.jpg"
+                alt="Kendrick vs Drake"
+                className="w-full rounded-lg shadow-lg"
               />
             </div>
           </div>
