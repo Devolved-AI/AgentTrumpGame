@@ -22,6 +22,20 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
     );
   }
 
+  const formatPSTTime = (timestamp: number) => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString("en-US", {
+      timeZone: "America/Los_Angeles",
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+      timeZoneName: 'short'
+    });
+  };
+
   return (
     <ScrollArea className="h-[500px] pr-4">
       <div className="relative">
@@ -48,7 +62,7 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                   <Clock className="h-4 w-4" />
-                  {new Date(response.timestamp * 1000).toLocaleString()}
+                  {formatPSTTime(response.timestamp)}
                 </div>
                 <div className="flex items-start gap-2">
                   <MessageSquare className="h-4 w-4 mt-1 text-blue-500" />

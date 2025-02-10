@@ -853,7 +853,7 @@ export class GameContract {
     };
   }
   async getTotalPrizePool(): Promise<string> {
-    const totalCollected = await this.contract.totalCollected();
-    return ethers.formatEther(totalCollected);
+    const balance = await this.contract.getContractBalance();
+    return ethers.formatEther(balance);
   }
 }
