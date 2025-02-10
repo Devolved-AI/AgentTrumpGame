@@ -902,4 +902,30 @@ export class GameContract {
     const balance = await this.contract.getContractBalance();
     return ethers.formatEther(balance);
   }
+
+  async evaluateResponse(response: string): Promise<boolean> {
+    // Add your AI evaluation logic here
+    // For now, using a simple check:
+    const keyPhrases = [
+      "make america great",
+      "tremendous",
+      "huge",
+      "best",
+      "winning",
+      "amazing",
+      "incredible",
+      "beautiful",
+      "perfect"
+    ];
+
+    const lowerResponse = response.toLowerCase();
+    const matches = keyPhrases.filter(phrase => lowerResponse.includes(phrase));
+
+    // Require at least 2 key phrases for a winning response
+    return matches.length >= 2;
+  }
+
+  async buttonPushed(winner: string) {
+    return this.contract.buttonPushed(winner);
+  }
 }

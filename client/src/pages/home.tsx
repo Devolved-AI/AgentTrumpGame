@@ -30,6 +30,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
+  const [persuasionScore, setPersuasionScore] = useState<number>(6); // Initial score of 6
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -127,12 +128,32 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-      await gameContract.submitResponse(response, gameStatus.currentAmount);
-      setShowConfetti(true);
-      toast({
-        title: "Response Submitted",
-        description: "Your response has been successfully submitted!",
-      });
+      // Evaluate the response first
+      const isWinning = await gameContract.evaluateResponse(response);
+
+      if (isWinning) {
+        // Submit winning response and push the button
+        await gameContract.submitResponse(response, gameStatus.currentAmount);
+        await gameContract.buttonPushed(web3State.account!);
+        setShowConfetti(true);
+        setPersuasionScore(10); // Set to max when winning
+        toast({
+          title: "🎉 Congratulations! You've Won! 🎉",
+          description: "Your response was perfect! The prize pool has been transferred to your wallet!",
+          variant: "default"
+        });
+      } else {
+        // Submit response but don't push button
+        await gameContract.submitResponse(response, gameStatus.currentAmount);
+        // Decrease persuasion score but don't go below 0
+        setPersuasionScore(prev => Math.max(0, prev - 1));
+        toast({
+          title: "Try Again",
+          description: "Your response wasn't quite persuasive enough. Keep trying!",
+          variant: "destructive"
+        });
+      }
+
       await refreshGameStatus();
     } catch (error: any) {
       toast({
@@ -188,7 +209,7 @@ export default function Home() {
             <span>{formatUSD(parseFloat(prizePoolEth) * ethPrice)}</span>
             <span className="flex items-center gap-1">
               <SiEthereum className="inline-block" />
-              <span>{formatEth(prizePoolEth)} ETH</span>
+              <span>{formatEth(prizePoolEth)}</span>
             </span>
           </h1>
         </div>
@@ -225,7 +246,7 @@ export default function Home() {
               currentAmount={gameStatus.currentAmount}
               lastPlayer={gameStatus.lastPlayer}
               escalationActive={gameStatus.escalationActive}
-              persuasionScore={6} // Added placeholder score
+              persuasionScore={persuasionScore}
             />
           </div>
 
