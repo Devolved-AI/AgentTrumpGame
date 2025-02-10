@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface TransactionLoaderProps {
   message?: string;
   status?: 'pending' | 'success' | 'error';
+  onClose?: () => void;
 }
 
 const messages = [
@@ -19,7 +21,7 @@ const successMessages = [
   "Your transaction is now on-chain!"
 ];
 
-export function TransactionLoader({ message, status = 'pending' }: TransactionLoaderProps) {
+export function TransactionLoader({ message, status = 'pending', onClose }: TransactionLoaderProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -78,11 +80,19 @@ export function TransactionLoader({ message, status = 'pending' }: TransactionLo
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-4"
+          className="mt-4 space-y-4"
         >
           <div className="px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm">
             Transaction has been confirmed on the blockchain
           </div>
+          {onClose && (
+            <Button 
+              onClick={onClose}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700"
+            >
+              Close
+            </Button>
+          )}
         </motion.div>
       )}
     </motion.div>

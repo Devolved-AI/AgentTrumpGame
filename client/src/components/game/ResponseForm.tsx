@@ -43,10 +43,17 @@ export function ResponseForm({
       await onSubmit(values.response);
       form.reset();
     } finally {
-      // Dialog will be closed by the parent component
-      setShowLoadingDialog(false);
+      if (transactionStatus === 'error') {
+        setShowLoadingDialog(false);
+      }
     }
   }
+
+  const handleDialogClose = () => {
+    if (transactionStatus !== 'pending') {
+      setShowLoadingDialog(false);
+    }
+  };
 
   return (
     <>
@@ -96,6 +103,7 @@ export function ResponseForm({
                 ? "Transaction confirmed successfully!"
                 : "Transaction failed"
             }
+            onClose={handleDialogClose}
           />
         </DialogContent>
       </Dialog>
