@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "env": {
+    "VITE_BASE_CONTRACT_ADDRESS": "0x8e4e1ad63f3e9a0a1d6f78912b78183973ed7ed6"
+  }
+}
