@@ -3,6 +3,7 @@ import { ConnectWallet } from "@/components/game/ConnectWallet";
 import { GameStatus } from "@/components/game/GameStatus";
 import { ResponseForm } from "@/components/game/ResponseForm";
 import { TransactionTimeline } from "@/components/game/TransactionTimeline";
+import { Confetti } from "@/components/game/Confetti";
 import { connectWallet, type Web3State, initialWeb3State } from "@/lib/web3";
 import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ export default function Home() {
   });
   const [playerHistory, setPlayerHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -33,6 +35,7 @@ export default function Home() {
       contract.subscribeToEvents({
         onGuessSubmitted: () => refreshGameStatus(),
         onGameWon: () => {
+          setShowConfetti(true);
           toast({
             title: "Game Won!",
             description: "Someone has won the game!",
@@ -76,6 +79,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       await gameContract.submitResponse(response, gameStatus.currentAmount);
+      setShowConfetti(true);
       toast({
         title: "Response Submitted",
         description: "Your response has been successfully submitted!",
@@ -99,6 +103,8 @@ export default function Home() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <Confetti trigger={showConfetti} />
+
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-bold mb-4">Agent Trump Game</h1>
