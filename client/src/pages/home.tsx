@@ -9,7 +9,6 @@ import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
 import { SiEthereum } from "react-icons/si";
 import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
-import { Leaderboard, type LeaderboardEntry } from "@/components/game/Leaderboard";
 
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
@@ -20,15 +19,13 @@ export default function Home() {
     currentAmount: "0",
     lastPlayer: "",
     escalationActive: false,
-    gameEndBlock: 0,
-    totalPrizePool: "1000" // Mock amount for now
+    gameEndBlock: 0
   });
   const [playerHistory, setPlayerHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -84,10 +81,7 @@ export default function Home() {
 
     try {
       const status = await gameContract.getGameStatus();
-      setGameStatus({
-        ...status,
-        totalPrizePool: "1000" // Mock amount for now
-      });
+      setGameStatus(status);
 
       if (web3State.account) {
         const history = await gameContract.getPlayerHistory(web3State.account);
@@ -144,20 +138,6 @@ export default function Home() {
     if (!gameContract) return;
     const interval = setInterval(updatePrizePool, 10000);
     return () => clearInterval(interval);
-  }, [gameContract]);
-
-  useEffect(() => {
-    if (!gameContract) return;
-
-    // Initial leaderboard fetch
-    gameContract.fetchLeaderboardData().then(setLeaderboardEntries);
-
-    // Subscribe to updates
-    const unsubscribe = gameContract.subscribeToLeaderboardUpdates(setLeaderboardEntries);
-
-    return () => {
-      unsubscribe();
-    };
   }, [gameContract]);
 
   return (
@@ -232,20 +212,16 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Leaderboard and Rules Sections */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Leaderboard entries={leaderboardEntries} />
-
-        <div className="bg-gray-50 rounded-lg p-6">
-          <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
-          <div className="prose max-w-none">
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-            </p>
-            <p className="mt-4">
-              Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-            </p>
-          </div>
+      {/* Rules Section */}
+      <div className="mt-8 bg-gray-50 rounded-lg p-6">
+        <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
+        <div className="prose max-w-none">
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+          </p>
+          <p className="mt-4">
+            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+          </p>
         </div>
       </div>
     </div>
