@@ -1,12 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Clock, User, TrendingUp } from "lucide-react";
+import { Clock, User, TrendingUp, Star } from "lucide-react";
 
 interface GameStatusProps {
   timeRemaining: number;
   currentAmount: string;
   lastPlayer: string;
   escalationActive: boolean;
+  persuasionScore: number;
 }
 
 function formatTimeRemaining(seconds: number): string {
@@ -28,10 +29,11 @@ export function GameStatus({
   timeRemaining, 
   currentAmount, 
   lastPlayer, 
-  escalationActive 
+  escalationActive,
+  persuasionScore 
 }: GameStatusProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 grid-cols-2">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Time Remaining</CardTitle>
@@ -53,6 +55,17 @@ export function GameStatus({
           <p className="text-xs text-muted-foreground">
             {escalationActive ? "Escalation Active" : "Base Amount"}
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Persuasion Score</CardTitle>
+          <Star className="h-4 w-4 text-yellow-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-yellow-500">{persuasionScore}</div>
+          <Progress value={(persuasionScore / 10) * 100} className="mt-2 bg-yellow-100" />
         </CardContent>
       </Card>
 

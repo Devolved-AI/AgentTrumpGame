@@ -7,6 +7,7 @@ import { Confetti } from "@/components/game/Confetti";
 import { connectWallet, type Web3State, initialWeb3State } from "@/lib/web3";
 import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
+import { SiEthereum } from "react-icons/si";
 
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
@@ -16,7 +17,9 @@ export default function Home() {
     timeRemaining: 0,
     currentAmount: "0",
     lastPlayer: "",
-    escalationActive: false
+    escalationActive: false,
+    gameEndBlock: 0,
+    totalPrizePool: "1000" // Mock amount for now
   });
   const [playerHistory, setPlayerHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +65,10 @@ export default function Home() {
 
     try {
       const status = await gameContract.getGameStatus();
-      setGameStatus(status);
+      setGameStatus({
+        ...status,
+        totalPrizePool: "1000" // Mock amount for now
+      });
 
       if (web3State.account) {
         const history = await gameContract.getPlayerHistory(web3State.account);
@@ -105,17 +111,9 @@ export default function Home() {
     <div className="container mx-auto px-4 py-8">
       <Confetti trigger={showConfetti} />
 
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold mb-4">Agent Trump Game</h1>
-          <div className="w-64 h-64 mb-6">
-            <img 
-              src="/aitubo.jpg" 
-              alt="Agent Trump"
-              className="w-full h-full object-cover rounded-lg shadow-lg"
-            />
-          </div>
-        </div>
+      {/* Header Section */}
+      <div className="flex justify-between items-start mb-8">
+        <h1 className="text-4xl font-bold">Agent Trump Game</h1>
         <ConnectWallet
           onConnect={handleConnect}
           isConnected={web3State.connected}
@@ -125,25 +123,70 @@ export default function Home() {
         />
       </div>
 
-      <GameStatus
-        timeRemaining={gameStatus.timeRemaining}
-        currentAmount={gameStatus.currentAmount}
-        lastPlayer={gameStatus.lastPlayer}
-        escalationActive={gameStatus.escalationActive}
-      />
+      {/* Prize Pool Display */}
+      <div className="mb-8 text-center">
+        <h1 className="text-5xl font-bold text-green-500 flex items-center justify-center gap-2">
+          <span>$1,500,000</span>
+          <span className="flex items-center gap-1">
+            <SiEthereum className="inline-block" />
+            <span>{gameStatus.totalPrizePool} ETH</span>
+          </span>
+        </h1>
+      </div>
 
-      <div className="mt-8 grid gap-8 md:grid-cols-2">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        {/* Left Column: Image */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">Submit Response</h2>
+          <div className="w-64 h-64 mb-6">
+            <img 
+              src="/aitubo.jpg" 
+              alt="Agent Trump"
+              className="w-full h-full object-cover rounded-lg shadow-lg"
+            />
+          </div>
+        </div>
+
+        {/* Right Column: Response Form */}
+        <div>
           <ResponseForm
             onSubmit={handleSubmitResponse}
             currentAmount={gameStatus.currentAmount}
             isLoading={isLoading}
           />
         </div>
+      </div>
+
+      {/* Game Stats and History Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        {/* Left Column: Game Stats Quadrant */}
+        <div>
+          <GameStatus
+            timeRemaining={gameStatus.timeRemaining}
+            currentAmount={gameStatus.currentAmount}
+            lastPlayer={gameStatus.lastPlayer}
+            escalationActive={gameStatus.escalationActive}
+            persuasionScore={6} // Added placeholder score
+          />
+        </div>
+
+        {/* Right Column: Transaction History */}
         <div>
           <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
           <TransactionTimeline responses={playerHistory} />
+        </div>
+      </div>
+
+      {/* Game Rules Section */}
+      <div className="mt-8 bg-gray-50 rounded-lg p-6">
+        <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
+        <div className="prose max-w-none">
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+          </p>
+          <p className="mt-4">
+            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+          </p>
         </div>
       </div>
     </div>
