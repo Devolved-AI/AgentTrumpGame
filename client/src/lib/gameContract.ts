@@ -826,20 +826,41 @@ export class GameContract {
     // Fetch blocks and transaction hashes for each response
     const blockData = await Promise.all(
       timestamps.map(async (blockNumber: number) => {
-        const block = await this.provider.getBlock(blockNumber);
-        if (!block) return { timestamp: Math.floor(Date.now() / 1000), transactionHash: null };
+        try {
+          const block = await this.provider.getBlock(blockNumber);
+          if (!block) return { timestamp: Math.floor(Date.now() / 1000), transactionHash: null };
 
-        // Find the transaction from this address in the block
-        const blockWithTransactions = await this.provider.getBlock(blockNumber, true);
-        const transaction = blockWithTransactions?.transactions.find(
-          tx => tx.from.toLowerCase() === address.toLowerCase() &&
-               tx.to?.toLowerCase() === contractAddress.toLowerCase()
-        );
+          // Find the transaction from this address in the block
+          const blockWithTransactions = await this.provider.getBlock(blockNumber, true);
+          if (!blockWithTransactions?.transactions?.length) {
+            return {
+              timestamp: Number(block.timestamp),
+              transactionHash: null
+            };
+          }
 
-        return {
-          timestamp: Number(block.timestamp),
-          transactionHash: transaction?.hash || null
-        };
+          // Find matching transaction
+          const transaction = blockWithTransactions.transactions.find(
+            (tx: any) => {
+              if (typeof tx === 'object') {
+                return tx.from?.toLowerCase() === address.toLowerCase() &&
+                       tx.to?.toLowerCase() === contractAddress.toLowerCase();
+              }
+              return false;
+            }
+          );
+
+          return {
+            timestamp: Number(block.timestamp),
+            transactionHash: transaction ? (typeof transaction === 'object' ? transaction.hash : transaction) : null
+          };
+        } catch (error) {
+          console.error('Error fetching block data:', error);
+          return {
+            timestamp: Math.floor(Date.now() / 1000),
+            transactionHash: null
+          };
+        }
       })
     );
 
