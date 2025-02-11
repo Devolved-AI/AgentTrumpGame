@@ -62,7 +62,7 @@ export default function Home() {
     lastPlayer: "",
     escalationActive: false,
     gameEndBlock: 0,
-    isGameWon: false // Added isGameWon to the gameStatus
+    isGameWon: false 
   });
   const [playerHistory, setPlayerHistory] = useState([]);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -202,23 +202,23 @@ export default function Home() {
   async function handleSubmitResponse(response: string) {
     if (!gameContract) return;
 
-    // Check if game is already won before proceeding
-    const status = await gameContract.getGameStatus();
-    if (status.isGameWon) {
-      setGameWon(true);
-      setShowGameOver(true);
-      toast({
-        title: "Game Over",
-        description: "This game has already been won!",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    setTransactionStatus('pending');
-
+    // Double check game state before proceeding
     try {
+      const status = await gameContract.getGameStatus();
+      if (status.isGameWon) {
+        setGameWon(true);
+        setShowGameOver(true);
+        toast({
+          title: "Game Over",
+          description: "This game has already been won!",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setIsLoading(true);
+      setTransactionStatus('pending');
+
       const evaluation = await gameContract.evaluateResponse(response);
       const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
       await tx.wait();
@@ -378,7 +378,7 @@ export default function Home() {
               lastPlayer={gameStatus.lastPlayer}
               escalationActive={gameStatus.escalationActive}
               persuasionScore={persuasionScore}
-              isGameWon={gameStatus.isGameWon} // Pass isGameWon prop to GameStatus
+              isGameWon={gameStatus.isGameWon} 
             />
           </div>
 
