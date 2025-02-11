@@ -49,6 +49,7 @@ export function GameStatus({
 }: GameStatusProps) {
   // Normalize score for progress bar (between 0 and 100)
   const normalizedScore = Math.max(0, Math.min(100, persuasionScore));
+  const isGameOver = timeRemaining <= 0 || isGameWon;
 
   return (
     <div className="grid gap-4 grid-cols-2">
@@ -59,7 +60,7 @@ export function GameStatus({
         </CardHeader>
         <CardContent>
           <div className="text-xl font-bold">
-            {isGameWon ? "Game Over!" : formatTimeRemaining(timeRemaining)}
+            {isGameOver ? "Game Over!" : formatTimeRemaining(timeRemaining)}
           </div>
           <Progress value={(timeRemaining / 3600) * 100} className="mt-2" />
         </CardContent>
@@ -73,7 +74,7 @@ export function GameStatus({
         <CardContent>
           <div className="text-2xl font-bold">{currentAmount} ETH</div>
           <p className="text-xs text-muted-foreground">
-            {isGameWon ? "Game Over" : escalationActive ? "Escalation Active" : "Base Amount"}
+            {isGameOver ? "Game Over" : escalationActive ? "Escalation Active" : "Base Amount"}
           </p>
         </CardContent>
       </Card>

@@ -806,13 +806,17 @@ export class GameContract {
       this.contract.gameWon()
     ]);
 
+    // Game is over if either time has run out or someone has won
+    const isGameOver = Number(timeRemaining) <= 0 || isGameWon;
+
     return {
       timeRemaining: Number(timeRemaining),
       currentAmount: ethers.formatEther(currentRequiredAmount),
       lastPlayer,
       escalationActive,
       gameEndBlock: Number(gameEndBlock),
-      isGameWon
+      isGameWon,
+      isGameOver
     };
   }
 

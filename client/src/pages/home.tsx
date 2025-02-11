@@ -62,7 +62,8 @@ export default function Home() {
     lastPlayer: "",
     escalationActive: false,
     gameEndBlock: 0,
-    isGameWon: false 
+    isGameWon: false,
+    isGameOver: false
   });
   const [playerHistory, setPlayerHistory] = useState([]);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -98,11 +99,13 @@ export default function Home() {
       setGameStatus(status);
       setGameWon(status.isGameWon);
 
-      if (status.isGameWon) {
+      if (status.isGameOver) {
         setShowGameOver(true);
         toast({
-          title: "Game Already Won",
-          description: "This game has already been won! A new game will start soon.",
+          title: status.isGameWon ? "Game Won!" : "Game Over",
+          description: status.isGameWon 
+            ? "This game has already been won! A new game will start soon."
+            : "Time has run out! A new game will start soon.",
         });
       }
 
@@ -205,12 +208,14 @@ export default function Home() {
     // Double check game state before proceeding
     try {
       const status = await gameContract.getGameStatus();
-      if (status.isGameWon) {
-        setGameWon(true);
+      if (status.isGameOver) {
+        setGameWon(status.isGameWon);
         setShowGameOver(true);
         toast({
-          title: "Game Over",
-          description: "This game has already been won!",
+          title: status.isGameWon ? "Game Won!" : "Game Over",
+          description: status.isGameWon 
+            ? "This game has already been won!"
+            : "The game time has run out!",
           variant: "destructive"
         });
         return;
@@ -365,7 +370,7 @@ export default function Home() {
               currentAmount={gameStatus.currentAmount}
               isLoading={isLoading}
               transactionStatus={transactionStatus}
-              disabled={gameWon} 
+              disabled={gameStatus.isGameOver}
             />
           </div>
         </div>
