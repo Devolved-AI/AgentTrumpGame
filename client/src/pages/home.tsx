@@ -219,9 +219,9 @@ export default function Home() {
       await tx.wait();
       setTransactionStatus('success');
 
+      // Update persuasion score
       setPersuasionScore(prev => {
-        const scoreChange = evaluation.scoreIncrement >= 0 ? 5 : -5;
-        const newScore = Math.max(0, Math.min(100, prev + scoreChange));
+        const newScore = Math.max(0, Math.min(100, prev + evaluation.scoreIncrement));
 
         if (web3State.account) {
           storePersuasionScore(web3State.account, newScore);
@@ -229,7 +229,8 @@ export default function Home() {
         return newScore;
       });
 
-      if (persuasionScore >= 85 && evaluation.scoreIncrement > 0) {
+      // Check if score reaches win threshold
+      if (persuasionScore >= 100) {
         try {
           await gameContract.buttonPushed(web3State.account!);
           setGameWon(true);
@@ -237,27 +238,28 @@ export default function Home() {
           setShowConfetti(true);
           toast({
             title: "🎉 Congratulations! 🎉",
-            description: "Your tremendous response has won the game!",
+            description: "You have won the game!",
           });
         } catch (error) {
           console.error("Error pushing the button:", error);
         }
       } else {
+        // Provide detailed feedback based on the evaluation
         let message;
-        if (evaluation.scoreIncrement >= 2) {
-          message = "TREMENDOUS response! You gained 5 persuasion points!";
-        } else if (evaluation.scoreIncrement === 1) {
-          message = "Getting warmer! +5 persuasion points. Keep adding more Trump-style phrases!";
+        if (evaluation.scoreIncrement >= 10) {
+          message = "TREMENDOUS response! That's how you do it, believe me! +10 persuasion points!";
+        } else if (evaluation.scoreIncrement === 5) {
+          message = "Not bad, not bad at all! You gained 5 persuasion points!";
         } else if (evaluation.scoreIncrement === 0) {
-          message = "You used one phrase - but lost 5 persuasion points. We need more energy! Try harder!";
+          message = "Eh, I've heard better. No points this time. Try using more of my favorite phrases!";
         } else {
-          message = "Not quite Trump enough. Lost 5 persuasion points. Try using his famous phrases!";
+          message = "Sad! That's not how I talk at all. Lost 5 persuasion points. You need to be more tremendous!";
         }
 
         toast({
-          title: "Response Submitted",
+          title: "Agent Trump Says:",
           description: message,
-          variant: evaluation.scoreIncrement >= 0 ? "default" : "destructive"
+          variant: evaluation.scoreIncrement > 0 ? "default" : "destructive"
         });
       }
 

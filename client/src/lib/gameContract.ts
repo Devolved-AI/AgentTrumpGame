@@ -943,22 +943,34 @@ export class GameContract {
     }
 
     // Analyze sentence structure and creativity
-    const hasExclamation = response.includes('!') ? 2 : 0; // Increased value for enthusiasm
+    const hasExclamation = response.includes('!') ? 2 : 0;
     const hasEmphasis = response.toUpperCase() !== response && 
-                       response.match(/[A-Z]{2,}/) ? 2 : 0; // Increased value for emphasis
+                       response.match(/[A-Z]{2,}/) ? 2 : 0;
 
     // Add bonus points for style
     totalPoints += hasExclamation + hasEmphasis;
 
-    // Convert total points to score increment:
-    // -1 for no matches (0 points)
-    // 0 for 1-2 points
-    // +1 for 3-4 points
-    // +2 for 5-6 points
-    // +3 for 7+ points
-    let scoreIncrement = -1;
-    if (totalPoints > 0) {
-      scoreIncrement = Math.min(3, Math.floor((totalPoints - 1) / 2));
+    // More sophisticated scoring logic:
+    // - Must use at least 2 unique Trump phrases to get any points
+    // - Higher threshold for positive score increment
+    // - Emphasis on combination of phrases and style
+
+    let scoreIncrement = -5; // Default to negative score
+
+    if (usedPhrases.size >= 2) {
+      if (totalPoints >= 8) {
+        scoreIncrement = 5; // Exceptional Trump-like response
+      } else if (totalPoints >= 5) {
+        scoreIncrement = 0; // Decent attempt, but not convincing enough
+      } else {
+        scoreIncrement = -5; // Not Trump-like enough
+      }
+    }
+
+    // Special case: If response is exceptionally Trump-like
+    // (uses 4+ unique phrases and has both emphasis and exclamation)
+    if (usedPhrases.size >= 4 && hasExclamation && hasEmphasis && totalPoints >= 12) {
+      scoreIncrement = 10; // Bonus points for exceptional responses
     }
 
     console.log('Response evaluation:', {
