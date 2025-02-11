@@ -903,7 +903,8 @@ export class GameContract {
       "amazing",
       "incredible",
       "beautiful",
-      "perfect"
+      "perfect",
+      "believe me"
     ];
 
     const lowerResponse = response.toLowerCase();
