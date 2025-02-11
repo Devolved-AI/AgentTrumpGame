@@ -19,6 +19,9 @@ const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
 function getStoredPersuasionScore(address: string): number {
   try {
+    // Clear old scores first since we have a new contract
+    localStorage.removeItem(PERSUASION_SCORE_KEY);
+
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     if (stored) {
       const scores = JSON.parse(stored);
@@ -67,7 +70,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [persuasionScore, setPersuasionScore] = useState<number>(50);
+  const [persuasionScore, setPersuasionScore] = useState<number>(50); // Initialize to 50
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
   const { toast } = useToast();
