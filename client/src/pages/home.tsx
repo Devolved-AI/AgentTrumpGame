@@ -386,16 +386,25 @@ export default function Home() {
         </div>
 
         <div className="mt-8 bg-gray-50 rounded-lg p-6">
-          <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
-          <div className="prose max-w-none">
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-            </p>
-            <p className="mt-4">
-              Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-            </p>
+            <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
+            <div className="prose max-w-none">
+              <ol className="list-decimal pl-4 space-y-3">
+                <li>You have 72 hours to convince Agent Trump (AGT) to press the big red button which rewards you his prize pot.</li>
+                <li>If your persuasion score reaches 100, you win.</li>
+                <li>If no winner after 72 hours, the clock counts down in 5-minute escalation periods at 2x the previous cost to guess until a period goes without a guess.</li>
+                <li>Escalation Period Costs:
+                  <ul className="list-disc pl-6 mt-2">
+                    <li>Period 1: .0018 ETH</li>
+                    <li>Period 2: .0036 ETH</li>
+                    <li>Period 3: .0072 ETH</li>
+                    <li>Period 4: .0144 ETH</li>
+                    <li>Period 5: .0288 ETH</li>
+                  </ul>
+                </li>
+                <li>The last guess gets 10% of the pool. The rest is distributed to AGT holders by % of holding.</li>
+              </ol>
+            </div>
           </div>
-        </div>
       </div>
       <Footer />
       <GameOverDialog
