@@ -778,6 +778,13 @@ const contractABI = [
 	}
 ];
 
+// Add new type for escalation period info
+interface EscalationPeriodInfo {
+  currentAmount: string;
+  timeRemaining: number;
+  periodIndex: number;
+}
+
 export class GameContract {
   public contract: ethers.Contract;
   private provider: ethers.BrowserProvider;
@@ -809,9 +816,19 @@ export class GameContract {
     // Calculate the final status
     const isGameOver = Number(timeRemaining) <= 0 || isGameWon;
 
+    // Format the current amount based on escalation period
+    const baseAmount = "0.0018";
+    let currentAmount = baseAmount;
+
+    if (escalationActive) {
+      const escalationPeriod = await this.contract.getCurrentEscalationPeriod();
+      const multiplier = Math.pow(2, Number(escalationPeriod));
+      currentAmount = (parseFloat(baseAmount) * multiplier).toFixed(4);
+    }
+
     return {
       timeRemaining: Number(timeRemaining),
-      currentAmount: ethers.formatEther(currentRequiredAmount),
+      currentAmount: currentAmount,
       lastPlayer,
       escalationActive,
       gameEndBlock: Number(gameEndBlock),
