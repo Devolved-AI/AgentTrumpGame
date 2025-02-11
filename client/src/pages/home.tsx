@@ -161,11 +161,14 @@ export default function Home() {
     try {
       const evaluation = await gameContract.evaluateResponse(response);
 
+      // Submit transaction first
+      const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
+      setTransactionStatus('pending');
+      await tx.wait();
+      setTransactionStatus('success');
+
+      // After transaction is confirmed, handle the evaluation result
       if (evaluation.isWinning) {
-        const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
-        setTransactionStatus('pending');
-        await tx.wait();
-        setTransactionStatus('success');
         await gameContract.buttonPushed(web3State.account!);
         setShowConfetti(true);
         setPersuasionScore(10);
@@ -178,11 +181,6 @@ export default function Home() {
           variant: "default"
         });
       } else {
-        const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
-        setTransactionStatus('pending');
-        await tx.wait();
-        setTransactionStatus('success');
-
         // Update score based on evaluation
         setPersuasionScore(prev => {
           const newScore = Math.max(-10, prev + evaluation.scoreIncrement); // Allow negative scores but cap at -10
