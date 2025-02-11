@@ -5,21 +5,26 @@ export function TrumpAnimation() {
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.play();
+      videoRef.current.play().catch(error => {
+        console.error("Error playing video:", error);
+      });
     }
   }, []);
 
   return (
-    <video
-      ref={videoRef}
-      className="w-64 h-64 object-cover rounded-lg shadow-lg"
-      autoPlay
-      loop
-      muted
-      playsInline
-    >
-      <source src="/donald-trump-icegif.mp4" type="video/mp4" />
-      Your browser does not support the video tag.
-    </video>
+    <div className="relative w-full h-full rounded-lg overflow-hidden shadow-lg">
+      <video
+        ref={videoRef}
+        className="w-full h-full object-cover"
+        autoPlay
+        loop
+        muted
+        playsInline
+        controls={false}
+      >
+        <source src="/donald-trump-icegif.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+    </div>
   );
 }
