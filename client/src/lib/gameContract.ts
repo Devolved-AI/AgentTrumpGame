@@ -815,66 +815,50 @@ export class GameContract {
 
   async submitResponse(response: string, amount: string) {
     try {
+      const parsedAmount = ethers.parseEther(amount);
       const tx = await this.contract.submitGuess(response, {
-        value: ethers.parseEther(amount)
+        value: parsedAmount
       });
-      // Return the transaction promise so we can wait for confirmation in the component
       return tx;
-    } catch (error) {
-      // Rethrow the error to be handled by the component
+    } catch (error: any) {
+      console.error("Transaction error:", error);
       throw error;
     }
   }
 
   async getPlayerHistory(address: string) {
     try {
-      const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
+      const responseCount = await this.contract.getPlayerResponseCount(address);
+      const history = [];
 
-      // Fetch blocks and transaction details
-      const blockData = await Promise.all(
-        timestamps.map(async (timestamp: bigint) => {
-          try {
-            const block = await this.provider.getBlock(Number(timestamp));
-            if (!block) {
-              console.error('Block not found:', timestamp);
-              return {
-                timestamp: Math.floor(Date.now() / 1000),
-                transactionHash: null,
-                blockNumber: Number(timestamp)
-              };
-            }
+      for (let i = 0; i < Number(responseCount); i++) {
+        try {
+          const [response, blockNumber, exists] = await this.contract.getPlayerResponseByIndex(address, i);
+
+          if (exists) {
+            const block = await this.provider.getBlock(Number(blockNumber));
+            if (!block) continue;
 
             // Get transaction hash from events
             const filter = this.contract.filters.GuessSubmitted(address);
-            const events = await this.contract.queryFilter(filter, Number(timestamp), Number(timestamp));
+            const events = await this.contract.queryFilter(filter, Number(blockNumber), Number(blockNumber));
             const event = events[0];
 
-            return {
+            history.push({
+              response,
               timestamp: Number(block.timestamp),
               transactionHash: event?.transactionHash || null,
-              blockNumber: Number(timestamp)
-            };
-          } catch (error) {
-            console.error('Error fetching block data:', error);
-            return {
-              timestamp: Math.floor(Date.now() / 1000),
-              transactionHash: null,
-              blockNumber: Number(timestamp)
-            };
+              blockNumber: Number(blockNumber),
+              exists: true
+            });
           }
-        })
-      );
+        } catch (error) {
+          console.error('Error fetching response:', error);
+          continue;
+        }
+      }
 
-      // Map the responses with block data
-      return responses
-        .map((response: string, index: number) => ({
-          response,
-          timestamp: blockData[index].timestamp,
-          transactionHash: blockData[index].transactionHash,
-          blockNumber: blockData[index].blockNumber,
-          exists: exists[index]
-        }))
-        .filter((item: any) => item.exists);
+      return history;
     } catch (error) {
       console.error('Error getting player history:', error);
       return [];
@@ -910,8 +894,6 @@ export class GameContract {
   }
 
   async evaluateResponse(response: string): Promise<boolean> {
-    // Add your AI evaluation logic here
-    // For now, using a simple check:
     const keyPhrases = [
       "make america great",
       "tremendous",
@@ -926,8 +908,6 @@ export class GameContract {
 
     const lowerResponse = response.toLowerCase();
     const matches = keyPhrases.filter(phrase => lowerResponse.includes(phrase));
-
-    // Require at least 2 key phrases for a winning response
     return matches.length >= 2;
   }
 
