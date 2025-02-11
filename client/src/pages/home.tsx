@@ -22,12 +22,12 @@ function getStoredPersuasionScore(address: string): number {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     if (stored) {
       const scores = JSON.parse(stored);
-      return scores[address] ?? 6; // Default to 6 if no score found
+      return scores[address] ?? 50; // Default to 50 if no score found
     }
   } catch (error) {
     console.error('Error reading persuasion score:', error);
   }
-  return 6;
+  return 50; // Default starting score
 }
 
 function storePersuasionScore(address: string, score: number) {
@@ -172,15 +172,18 @@ export default function Home() {
 
       // Update the persuasion score based on the evaluation result
       setPersuasionScore(prev => {
-        const newScore = Math.max(-10, Math.min(10, prev + evaluation.scoreIncrement));
+        // Calculate new score with +5/-5 system
+        const scoreChange = evaluation.scoreIncrement >= 0 ? 5 : -5;
+        const newScore = Math.max(0, Math.min(100, prev + scoreChange));
+
         if (web3State.account) {
           storePersuasionScore(web3State.account, newScore);
         }
         return newScore;
       });
 
-      // Check if this response is winning (persuasion score of 8+ and positive increment)
-      if (persuasionScore >= 8 && evaluation.scoreIncrement > 0) {
+      // Check if this response is winning (persuasion score of 85+ and positive increment)
+      if (persuasionScore >= 85 && evaluation.scoreIncrement > 0) {
         try {
           // Push the button to declare the winner
           await gameContract.buttonPushed(web3State.account!);
@@ -197,13 +200,13 @@ export default function Home() {
         // Show feedback message based on score increment
         let message;
         if (evaluation.scoreIncrement >= 2) {
-          message = "TREMENDOUS response! You're getting very close!";
+          message = "TREMENDOUS response! You gained 5 persuasion points!";
         } else if (evaluation.scoreIncrement === 1) {
-          message = "Getting warmer! Keep adding more Trump-style phrases!";
+          message = "Getting warmer! +5 persuasion points. Keep adding more Trump-style phrases!";
         } else if (evaluation.scoreIncrement === 0) {
-          message = "You used one phrase - but we need more energy! Try harder!";
+          message = "You used one phrase - but lost 5 persuasion points. We need more energy! Try harder!";
         } else {
-          message = "Not quite Trump enough. Try using his famous phrases!";
+          message = "Not quite Trump enough. Lost 5 persuasion points. Try using his famous phrases!";
         }
 
         toast({

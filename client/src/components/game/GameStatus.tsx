@@ -27,14 +27,14 @@ function formatTimeRemaining(seconds: number): string {
 }
 
 function getScoreColor(score: number): string {
-  if (score < 0) return "text-red-500";
-  if (score >= 6) return "text-green-500";
+  if (score < 30) return "text-red-500";
+  if (score >= 85) return "text-green-500";
   return "text-yellow-500";
 }
 
 function getProgressColor(score: number): string {
-  if (score < 0) return "bg-red-100";
-  if (score >= 6) return "bg-green-100";
+  if (score < 30) return "bg-red-100";
+  if (score >= 85) return "bg-green-100";
   return "bg-yellow-100";
 }
 
@@ -46,7 +46,7 @@ export function GameStatus({
   persuasionScore 
 }: GameStatusProps) {
   // Normalize score for progress bar (between 0 and 100)
-  const normalizedScore = Math.max(0, Math.min(100, ((persuasionScore + 1) / 11) * 100));
+  const normalizedScore = Math.max(0, Math.min(100, persuasionScore));
 
   return (
     <div className="grid gap-4 grid-cols-2">
