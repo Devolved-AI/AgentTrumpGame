@@ -103,9 +103,7 @@ export default function Home() {
         setShowGameOver(true);
         toast({
           title: status.isGameWon ? "Game Won!" : "Game Over",
-          description: status.isGameWon 
-            ? "This game has already been won! A new game will start soon."
-            : "Time has run out! A new game will start soon.",
+          description: "Thanks for playing!",
         });
       }
 
@@ -213,10 +211,7 @@ export default function Home() {
         setShowGameOver(true);
         toast({
           title: status.isGameWon ? "Game Won!" : "Game Over",
-          description: status.isGameWon 
-            ? "This game has already been won!"
-            : "The game time has run out!",
-          variant: "destructive"
+          description: "Thanks for playing!",
         });
         return;
       }
