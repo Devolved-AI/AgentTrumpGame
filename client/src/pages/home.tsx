@@ -22,7 +22,7 @@ function getStoredPersuasionScore(address: string): number {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     if (stored) {
       const scores = JSON.parse(stored);
-      return scores[address] ?? 50; // Default to 50 if no score found
+      return scores[address] ?? 50; // Default to 50 if no score exists
     }
   } catch (error) {
     console.error('Error reading persuasion score:', error);
