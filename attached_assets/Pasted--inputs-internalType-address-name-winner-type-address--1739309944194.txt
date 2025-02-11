@@ -1,7 +1,38 @@
-import { ethers } from 'ethers';
-
-const contractAddress = '0xD54EE0dA01bDdf4485F0B85CF6FeB51A1cC6D885';
-const contractABI = [
+[
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "winner",
+				"type": "address"
+			}
+		],
+		"name": "buttonPushed",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "deposit",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "emergencyWithdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "endGame",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
 	{
 		"inputs": [],
 		"stateMutability": "nonpayable",
@@ -221,6 +252,13 @@ const contractABI = [
 		"type": "event"
 	},
 	{
+		"inputs": [],
+		"name": "pause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -232,6 +270,46 @@ const contractABI = [
 		],
 		"name": "Paused",
 		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "response",
+				"type": "string"
+			}
+		],
+		"name": "submitGuess",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "unpause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
 		"anonymous": false,
@@ -266,6 +344,21 @@ const contractABI = [
 		"type": "event"
 	},
 	{
+		"stateMutability": "payable",
+		"type": "fallback"
+	},
+	{
+		"inputs": [],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"stateMutability": "payable",
+		"type": "receive"
+	},
+	{
 		"inputs": [],
 		"name": "BASE_MULTIPLIER",
 		"outputs": [
@@ -292,19 +385,6 @@ const contractABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "winner",
-				"type": "address"
-			}
-		],
-		"name": "buttonPushed",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"name": "currentMultiplier",
 		"outputs": [
@@ -328,27 +408,6 @@ const contractABI = [
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "deposit",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "emergencyWithdraw",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "endGame",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -630,13 +689,6 @@ const contractABI = [
 	},
 	{
 		"inputs": [],
-		"name": "pause",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "paused",
 		"outputs": [
 			{
@@ -684,13 +736,6 @@ const contractABI = [
 	},
 	{
 		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "shouldExtendGame",
 		"outputs": [
 			{
@@ -716,19 +761,6 @@ const contractABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "response",
-				"type": "string"
-			}
-		],
-		"name": "submitGuess",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"name": "totalCollected",
 		"outputs": [
@@ -740,248 +772,5 @@ const contractABI = [
 		],
 		"stateMutability": "view",
 		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "unpause",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "withdraw",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"stateMutability": "payable",
-		"type": "fallback"
-	},
-	{
-		"stateMutability": "payable",
-		"type": "receive"
 	}
-];
-
-export class GameContract {
-  public contract: ethers.Contract;
-  private provider: ethers.BrowserProvider;
-  private signer: ethers.JsonRpcSigner;
-
-  constructor(provider: ethers.BrowserProvider, signer: ethers.JsonRpcSigner) {
-    this.provider = provider;
-    this.signer = signer;
-    this.contract = new ethers.Contract(contractAddress, contractABI, signer);
-  }
-
-  async getGameStatus() {
-    const [
-      timeRemaining,
-      currentRequiredAmount,
-      lastPlayer,
-      escalationActive,
-      gameEndBlock,
-      isGameWon
-    ] = await Promise.all([
-      this.contract.getTimeRemaining(),
-      this.contract.getCurrentRequiredAmount(),
-      this.contract.lastPlayer(),
-      this.contract.escalationActive(),
-      this.contract.gameEndBlock(),
-      this.contract.gameWon()
-    ]);
-
-    // Game is over if either time has run out or someone has won
-    const isGameOver = Number(timeRemaining) <= 0 || isGameWon;
-
-    return {
-      timeRemaining: Number(timeRemaining),
-      currentAmount: ethers.formatEther(currentRequiredAmount),
-      lastPlayer,
-      escalationActive,
-      gameEndBlock: Number(gameEndBlock),
-      isGameWon,
-      isGameOver
-    };
-  }
-
-  async submitResponse(response: string, amount: string) {
-    try {
-      const parsedAmount = ethers.parseEther(amount);
-      const tx = await this.contract.submitGuess(response, {
-        value: parsedAmount
-      });
-      return tx;
-    } catch (error: any) {
-      console.error("Transaction error:", error);
-      throw error;
-    }
-  }
-
-  async getPlayerHistory(address: string) {
-    try {
-      const responseCount = await this.contract.getPlayerResponseCount(address);
-      const history = [];
-
-      for (let i = 0; i < Number(responseCount); i++) {
-        try {
-          const [response, blockNumber, exists] = await this.contract.getPlayerResponseByIndex(address, i);
-
-          if (exists) {
-            const block = await this.provider.getBlock(Number(blockNumber));
-            if (!block) continue;
-
-            // Get transaction hash from events
-            const filter = this.contract.filters.GuessSubmitted(address);
-            const events = await this.contract.queryFilter(filter, Number(blockNumber), Number(blockNumber));
-            const event = events[0];
-
-            history.push({
-              response,
-              timestamp: Number(block.timestamp),
-              transactionHash: event?.transactionHash || null,
-              blockNumber: Number(blockNumber),
-              exists: true
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching response:', error);
-          continue;
-        }
-      }
-
-      return history;
-    } catch (error) {
-      console.error('Error getting player history:', error);
-      return [];
-    }
-  }
-
-  subscribeToEvents(callbacks: {
-    onGuessSubmitted?: (event: any) => void;
-    onGameWon?: (event: any) => void;
-    onGameEnded?: (event: any) => void;
-    onEscalationStarted?: (event: any) => void;
-  }) {
-    if (callbacks.onGuessSubmitted) {
-      this.contract.on('GuessSubmitted', callbacks.onGuessSubmitted);
-    }
-    if (callbacks.onGameWon) {
-      this.contract.on('GameWon', callbacks.onGameWon);
-    }
-    if (callbacks.onGameEnded) {
-      this.contract.on('GameEnded', callbacks.onGameEnded);
-    }
-    if (callbacks.onEscalationStarted) {
-      this.contract.on('EscalationStarted', callbacks.onEscalationStarted);
-    }
-
-    return () => {
-      this.contract.removeAllListeners();
-    };
-  }
-  async getTotalPrizePool(): Promise<string> {
-    const balance = await this.contract.getContractBalance();
-    return ethers.formatEther(balance);
-  }
-
-  async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
-    // Define Trump-style phrases with weighted importance
-    const keyPhrases = {
-      // High impact phrases (worth 2 points)
-      "make america great": 2,
-      "tremendous": 2,
-      "huge": 2,
-      "winning": 2,
-      "believe me": 2,
-      "bigly": 2,
-      "wall": 2,
-      "great again": 2,
-
-      // Medium impact phrases (worth 1 point)
-      "beautiful": 1,
-      "amazing": 1,
-      "incredible": 1,
-      "perfect": 1,
-      "the best": 1,
-      "nobody": 1,
-      "fake news": 1,
-      "very strongly": 1,
-      "billions and billions": 1,
-      "many people are saying": 1,
-      "like never before": 1
-    };
-
-    // Convert response to lowercase for case-insensitive matching
-    const lowerResponse = response.toLowerCase();
-
-    // Calculate total score based on unique phrases used
-    let totalPoints = 0;
-    const usedPhrases = new Set<string>();
-
-    // Check each phrase and its variations
-    for (const [phrase, points] of Object.entries(keyPhrases)) {
-      if (lowerResponse.includes(phrase) && !usedPhrases.has(phrase)) {
-        totalPoints += points;
-        usedPhrases.add(phrase);
-      }
-    }
-
-    // Analyze sentence structure and creativity
-    const hasExclamation = response.includes('!') ? 2 : 0; // Increased value for enthusiasm
-    const hasEmphasis = response.toUpperCase() !== response && 
-                       response.match(/[A-Z]{2,}/) ? 2 : 0; // Increased value for emphasis
-
-    // Add bonus points for style
-    totalPoints += hasExclamation + hasEmphasis;
-
-    // Convert total points to score increment:
-    // -1 for no matches (0 points)
-    // 0 for 1-2 points
-    // +1 for 3-4 points
-    // +2 for 5-6 points
-    // +3 for 7+ points
-    let scoreIncrement = -1;
-    if (totalPoints > 0) {
-      scoreIncrement = Math.min(3, Math.floor((totalPoints - 1) / 2));
-    }
-
-    console.log('Response evaluation:', {
-      response,
-      totalPoints,
-      scoreIncrement,
-      usedPhrases: Array.from(usedPhrases),
-      stylePoints: { hasExclamation, hasEmphasis }
-    });
-
-    return {
-      scoreIncrement
-    };
-  }
-
-  async buttonPushed(winner: string) {
-    try {
-      const tx = await this.contract.buttonPushed(winner);
-      await tx.wait();
-      return true;
-    } catch (error) {
-      console.error("Error pushing the button:", error);
-      throw error;
-    }
-  }
-}
+]
