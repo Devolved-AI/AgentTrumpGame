@@ -68,13 +68,12 @@ export default function Home() {
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
   const [persuasionScore, setPersuasionScore] = useState<number>(() => {
-    // Initialize with 50 if no wallet is connected yet
     if (!web3State.account) return 50;
     return getStoredPersuasionScore(web3State.account);
   });
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
-  const [gameWon, setGameWon] = useState(false); // Added gameWon state
+  const [gameWon, setGameWon] = useState(false); 
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -85,7 +84,6 @@ export default function Home() {
       setWeb3State(state);
 
       if (state.account) {
-        // Get the existing score or initialize to 50 if none exists
         const score = getStoredPersuasionScore(state.account);
         console.log('Retrieved persuasion score for address:', state.account, score);
         setPersuasionScore(score);
@@ -94,6 +92,18 @@ export default function Home() {
       const contract = new GameContract(state.provider!, state.signer!);
       setGameContract(contract);
 
+      // Check if game is already won
+      const isGameWon = await contract.contract.gameWon();
+      setGameWon(isGameWon);
+
+      if (isGameWon) {
+        setShowGameOver(true);
+        toast({
+          title: "Game Already Won",
+          description: "This game has already been won! A new game will start soon.",
+        });
+      }
+
       contract.subscribeToEvents({
         onGuessSubmitted: () => {
           refreshGameStatus();
@@ -101,6 +111,8 @@ export default function Home() {
         },
         onGameWon: () => {
           setShowConfetti(true);
+          setGameWon(true); 
+          setShowGameOver(true);
           toast({
             title: "Game Won!",
             description: "Someone has won the game!",
@@ -147,8 +159,13 @@ export default function Home() {
     if (!gameContract) return;
 
     try {
-      const status = await gameContract.getGameStatus();
+      const [status, isGameWon] = await Promise.all([
+        gameContract.getGameStatus(),
+        gameContract.contract.gameWon()
+      ]);
+
       setGameStatus(status);
+      setGameWon(isGameWon); 
 
       if (web3State.account) {
         const history = await gameContract.getPlayerHistory(web3State.account);
@@ -174,12 +191,31 @@ export default function Home() {
   }
 
   async function handleSubmitResponse(response: string) {
-    if (!gameContract || gameWon) return; // Prevent submissions if game is won
+    if (!gameContract || gameWon) {
+      toast({
+        title: "Game Over",
+        description: "This game has already been won!",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsLoading(true);
     setTransactionStatus('pending');
 
     try {
+      const isGameWon = await gameContract.contract.gameWon();
+      if (isGameWon) {
+        setGameWon(true);
+        setShowGameOver(true);
+        toast({
+          title: "Game Over",
+          description: "This game has already been won!",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const evaluation = await gameContract.evaluateResponse(response);
 
       const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
@@ -199,7 +235,7 @@ export default function Home() {
       if (persuasionScore >= 85 && evaluation.scoreIncrement > 0) {
         try {
           await gameContract.buttonPushed(web3State.account!);
-          setGameWon(true); // Set gameWon to true
+          setGameWon(true);
           setShowGameOver(true);
           setShowConfetti(true);
           toast({
@@ -327,7 +363,7 @@ export default function Home() {
               currentAmount={gameStatus.currentAmount}
               isLoading={isLoading}
               transactionStatus={transactionStatus}
-              disabled={gameWon} // Added disabled prop
+              disabled={gameWon} 
             />
           </div>
         </div>
