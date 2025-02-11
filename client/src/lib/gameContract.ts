@@ -902,19 +902,22 @@ export class GameContract {
       "huge": 2,
       "winning": 2,
       "believe me": 2,
+      "bigly": 2,
+      "wall": 2,
+      "great again": 2,
 
       // Medium impact phrases (worth 1 point)
       "beautiful": 1,
       "amazing": 1,
       "incredible": 1,
       "perfect": 1,
-
-      // Additional contextual phrases (worth 1 point)
-      "great again": 1,
       "the best": 1,
       "nobody": 1,
       "fake news": 1,
-      "very strongly": 1
+      "very strongly": 1,
+      "billions and billions": 1,
+      "many people are saying": 1,
+      "like never before": 1
     };
 
     // Convert response to lowercase for case-insensitive matching
@@ -933,19 +936,19 @@ export class GameContract {
     }
 
     // Analyze sentence structure and creativity
-    const hasExclamation = response.includes('!') ? 1 : 0;
+    const hasExclamation = response.includes('!') ? 2 : 0; // Increased value for enthusiasm
     const hasEmphasis = response.toUpperCase() !== response && 
-                       response.match(/[A-Z]{2,}/) ? 1 : 0;
+                       response.match(/[A-Z]{2,}/) ? 2 : 0; // Increased value for emphasis
 
     // Add bonus points for style
     totalPoints += hasExclamation + hasEmphasis;
 
     // Convert total points to score increment:
     // -1 for no matches (0 points)
-    // 0 for 1 point
-    // +1 for 2-3 points
-    // +2 for 4-5 points
-    // +3 for 6+ points
+    // 0 for 1-2 points
+    // +1 for 3-4 points
+    // +2 for 5-6 points
+    // +3 for 7+ points
     let scoreIncrement = -1;
     if (totalPoints > 0) {
       scoreIncrement = Math.min(3, Math.floor((totalPoints - 1) / 2));
@@ -955,7 +958,8 @@ export class GameContract {
       response,
       totalPoints,
       scoreIncrement,
-      usedPhrases: Array.from(usedPhrases)
+      usedPhrases: Array.from(usedPhrases),
+      stylePoints: { hasExclamation, hasEmphasis }
     });
 
     return {
