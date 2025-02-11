@@ -14,6 +14,7 @@ import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
 import { TrumpLoadingScreen } from "@/components/game/TrumpLoadingScreen";
 import { GameOverDialog } from "@/components/game/GameOverDialog";
+import {TrumpAnimation} from "@/components/game/TrumpAnimation"; //Import the new component
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
@@ -351,11 +352,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div className="flex items-center justify-center">
             <div className="w-64 h-64 mb-6">
-              <img
-                src="/aitubo.jpg"
-                alt="Agent Trump"
-                className="w-full h-full object-cover rounded-lg shadow-lg"
-              />
+              <TrumpAnimation />
             </div>
           </div>
 
