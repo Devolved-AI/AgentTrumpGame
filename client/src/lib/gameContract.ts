@@ -779,7 +779,7 @@ const contractABI = [
 ];
 
 export class GameContract {
-  private contract: ethers.Contract;
+  public contract: ethers.Contract;
   private provider: ethers.BrowserProvider;
   private signer: ethers.JsonRpcSigner;
 
@@ -795,13 +795,15 @@ export class GameContract {
       currentRequiredAmount,
       lastPlayer,
       escalationActive,
-      gameEndBlock
+      gameEndBlock,
+      isGameWon
     ] = await Promise.all([
       this.contract.getTimeRemaining(),
       this.contract.getCurrentRequiredAmount(),
       this.contract.lastPlayer(),
       this.contract.escalationActive(),
-      this.contract.gameEndBlock()
+      this.contract.gameEndBlock(),
+      this.contract.gameWon()
     ]);
 
     return {
@@ -809,7 +811,8 @@ export class GameContract {
       currentAmount: ethers.formatEther(currentRequiredAmount),
       lastPlayer,
       escalationActive,
-      gameEndBlock: Number(gameEndBlock)
+      gameEndBlock: Number(gameEndBlock),
+      isGameWon
     };
   }
 
