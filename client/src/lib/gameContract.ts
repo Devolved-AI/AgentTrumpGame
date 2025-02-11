@@ -893,7 +893,7 @@ export class GameContract {
     return ethers.formatEther(balance);
   }
 
-  async evaluateResponse(response: string): Promise<boolean> {
+  async evaluateResponse(response: string): Promise<{isWinning: boolean, scoreIncrement: number}> {
     const keyPhrases = [
       "make america great",
       "tremendous",
@@ -908,7 +908,14 @@ export class GameContract {
 
     const lowerResponse = response.toLowerCase();
     const matches = keyPhrases.filter(phrase => lowerResponse.includes(phrase));
-    return matches.length >= 2;
+
+    // Calculate score increment based on matches
+    let scoreIncrement = matches.length - 1; // -1 if no matches, 0 for 1 match, +1 for 2 matches, etc.
+
+    return {
+      isWinning: matches.length >= 2,
+      scoreIncrement: scoreIncrement
+    };
   }
 
   async buttonPushed(winner: string) {

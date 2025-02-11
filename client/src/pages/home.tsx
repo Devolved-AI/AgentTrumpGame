@@ -159,9 +159,9 @@ export default function Home() {
     setIsLoading(true);
     setTransactionStatus('pending');
     try {
-      const isWinning = await gameContract.evaluateResponse(response);
+      const evaluation = await gameContract.evaluateResponse(response);
 
-      if (isWinning) {
+      if (evaluation.isWinning) {
         const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
         setTransactionStatus('pending');
         await tx.wait();
@@ -182,16 +182,23 @@ export default function Home() {
         setTransactionStatus('pending');
         await tx.wait();
         setTransactionStatus('success');
+
+        // Update score based on evaluation
         setPersuasionScore(prev => {
-          const newScore = Math.max(0, prev - 1);
+          const newScore = Math.max(-10, prev + evaluation.scoreIncrement); // Allow negative scores but cap at -10
           if (web3State.account) {
             storePersuasionScore(web3State.account, newScore);
           }
           return newScore;
         });
+
+        const message = evaluation.scoreIncrement >= 0 
+          ? "Getting warmer! Try adding more Trump-style phrases."
+          : "Not quite persuasive enough. Try using more Trump-style language!";
+
         toast({
           title: "Try Again",
-          description: "Your response wasn't quite persuasive enough. Keep trying!",
+          description: message,
           variant: "destructive"
         });
       }
