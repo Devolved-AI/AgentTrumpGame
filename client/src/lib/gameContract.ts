@@ -960,26 +960,26 @@ export class GameContract {
     if (usedPhrases.size < 2) penalties -= 3; // Not enough Trump phrases
     if (response.toLowerCase().includes("please")) penalties -= 1; // Trump rarely says please
 
-    // Calculate final score increment
-    let scoreIncrement = -5; // Default is negative
+    // Calculate final score increment (default to -5)
+    let scoreIncrement = -5;
 
     const totalScore = totalPoints + stylePoints + penalties;
 
-    // Very strict scoring criteria
+    // Strict scoring criteria
     if (totalScore >= 12) {
-      scoreIncrement = 5; // Exceptional response
+      scoreIncrement = 5; // Good response
     } else if (totalScore >= 8) {
-      scoreIncrement = 2; // Good attempt
+      scoreIncrement = 2; // Decent attempt
     } else if (totalScore >= 6) {
-      scoreIncrement = 0; // Neutral - not bad, but not good enough
+      scoreIncrement = 0; // Neutral
     }
 
-    // Special case: Truly exceptional response
+    // Special case: Truly exceptional response triggers game win
     if (totalScore >= 15 && 
         usedPhrases.size >= 4 && 
         exclamationCount >= 3 && 
         hasStrongEmphasis) {
-      scoreIncrement = 10; // Rare bonus for truly Trump-like responses
+      scoreIncrement = 50; // Will push score to 100, triggering win condition
     }
 
     console.log('Response evaluation:', {
