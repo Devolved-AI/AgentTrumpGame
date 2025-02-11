@@ -284,7 +284,7 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        <div className="flex justify-between items-start mb-8">
+        <div className="flex justify-between items-start mb-8 pb-4 border-b">
           <h1 className="text-4xl font-bold">Agent Trump Game</h1>
           <ConnectWallet
             onConnect={handleConnect}
@@ -296,7 +296,7 @@ export default function Home() {
           />
         </div>
 
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center p-6 border-2 border-green-500 rounded-lg shadow-lg bg-white/50 backdrop-blur-sm">
           <h2 className="text-2xl font-bold mb-2">PRIZE POOL</h2>
           <h1 className="text-5xl font-bold text-green-500 flex items-center justify-center gap-4">
             <span>{formatUSD(parseFloat(prizePoolEth) * ethPrice)}</span>
