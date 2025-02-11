@@ -3,11 +3,50 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --flag-red: #B31942;
+    --flag-blue: #0A3161;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      /* Stars section */
+      linear-gradient(
+        90deg,
+        var(--flag-blue) 0%,
+        var(--flag-blue) 40%,
+        transparent 40%
+      ) 0 0/100% 40%,
+      /* Stripes */
+      repeating-linear-gradient(
+        180deg,
+        var(--flag-red) 0%,
+        var(--flag-red) 7.69%,
+        white 7.69%,
+        white 15.38%
+      ) 0 0/100% 100%;
+    opacity: 0.35;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Ensure content appears above the background */
+  #root {
+    position: relative;
+    z-index: 1;
   }
 }
