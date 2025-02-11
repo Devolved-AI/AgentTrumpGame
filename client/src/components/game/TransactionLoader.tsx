@@ -28,8 +28,13 @@ const trumpResponses = [
   "That was low energy! We need high energy responses to make blockchain great again!"
 ];
 
+function getRandomMessage(messages: string[]): string {
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
 export function TransactionLoader({ message, status = 'pending', onClose }: TransactionLoaderProps) {
   const [showErrorMessage, setShowErrorMessage] = useState(false);
+  const [errorMessage] = useState(() => getRandomMessage(trumpResponses));
 
   const handleInitialClose = () => {
     if (status === 'error') {
@@ -99,10 +104,10 @@ export function TransactionLoader({ message, status = 'pending', onClose }: Tran
       >
         <p className="text-lg font-semibold text-gray-700">
           {status === 'success'
-            ? successMessages[Math.floor(Math.random() * successMessages.length)]
+            ? getRandomMessage(successMessages)
             : status === 'error' && showErrorMessage
-            ? trumpResponses[Math.floor(Math.random() * trumpResponses.length)]
-            : message || messages[Math.floor(Math.random() * messages.length)]
+            ? errorMessage
+            : message || getRandomMessage(messages)
           }
         </p>
         <p className="text-sm text-gray-500">
