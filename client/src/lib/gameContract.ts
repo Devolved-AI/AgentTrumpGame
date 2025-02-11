@@ -894,39 +894,75 @@ export class GameContract {
   }
 
   async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
-    // Define Trump-style phrases
-    const keyPhrases = [
-      "make america great",
-      "tremendous",
-      "huge",
-      "best",
-      "winning",
-      "amazing",
-      "incredible",
-      "beautiful",
-      "perfect",
-      "believe me"
-    ];
+    // Define Trump-style phrases with weighted importance
+    const keyPhrases = {
+      // High impact phrases (worth 2 points)
+      "make america great": 2,
+      "tremendous": 2,
+      "huge": 2,
+      "winning": 2,
+      "believe me": 2,
+
+      // Medium impact phrases (worth 1 point)
+      "beautiful": 1,
+      "amazing": 1,
+      "incredible": 1,
+      "perfect": 1,
+
+      // Additional contextual phrases (worth 1 point)
+      "great again": 1,
+      "the best": 1,
+      "nobody": 1,
+      "fake news": 1,
+      "very strongly": 1
+    };
 
     // Convert response to lowercase for case-insensitive matching
     const lowerResponse = response.toLowerCase();
 
-    // Count how many unique phrases are used
-    const matches = keyPhrases.filter(phrase => lowerResponse.includes(phrase));
-    const uniqueMatches = [...new Set(matches)];
+    // Calculate total score based on unique phrases used
+    let totalPoints = 0;
+    const usedPhrases = new Set<string>();
 
-    // Calculate score increment:
-    // 0 matches: -1
-    // 1 match: 0
-    // 2+ matches: number of matches - 1
-    const scoreIncrement = uniqueMatches.length === 0 ? -1 : uniqueMatches.length - 1;
+    // Check each phrase and its variations
+    for (const [phrase, points] of Object.entries(keyPhrases)) {
+      if (lowerResponse.includes(phrase) && !usedPhrases.has(phrase)) {
+        totalPoints += points;
+        usedPhrases.add(phrase);
+      }
+    }
+
+    // Analyze sentence structure and creativity
+    const hasExclamation = response.includes('!') ? 1 : 0;
+    const hasEmphasis = response.toUpperCase() !== response && 
+                       response.match(/[A-Z]{2,}/) ? 1 : 0;
+
+    // Add bonus points for style
+    totalPoints += hasExclamation + hasEmphasis;
+
+    // Convert total points to score increment
+    // -1 for no phrases
+    // 0 for 1-2 points
+    // +1 for 3-4 points
+    // +2 for 5+ points
+    let scoreIncrement = -1;
+    if (totalPoints > 0) {
+      scoreIncrement = Math.floor((totalPoints - 1) / 2);
+    }
 
     return {
-      scoreIncrement: scoreIncrement
+      scoreIncrement: Math.min(3, scoreIncrement) // Cap at 3 points per response
     };
   }
 
   async buttonPushed(winner: string) {
-    return this.contract.buttonPushed(winner);
+    try {
+      const tx = await this.contract.buttonPushed(winner);
+      await tx.wait();
+      return true;
+    } catch (error) {
+      console.error("Error pushing the button:", error);
+      throw error;
+    }
   }
 }

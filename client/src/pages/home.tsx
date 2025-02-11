@@ -13,6 +13,7 @@ import { SiEthereum } from "react-icons/si";
 import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
 import { TrumpLoadingScreen } from "@/components/game/TrumpLoadingScreen";
+import { GameOverDialog } from "@/components/game/GameOverDialog";
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
@@ -59,6 +60,7 @@ export default function Home() {
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
   const [persuasionScore, setPersuasionScore] = useState<number>(6);
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
+  const [showGameOver, setShowGameOver] = useState(false);
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -177,16 +179,32 @@ export default function Home() {
         return newScore;
       });
 
-      // Show feedback message
-      const message = evaluation.scoreIncrement >= 0 
-        ? `Getting warmer! Used ${evaluation.scoreIncrement + 1} Trump phrases. Keep trying!`
-        : "Not quite persuasive enough. Try using Trump-style phrases!";
+      // Check if this response is winning (persuasion score of 10 and using key phrases)
+      if (persuasionScore >= 8 && evaluation.scoreIncrement > 0) {
+        try {
+          // Push the button to declare the winner
+          await gameContract.buttonPushed(web3State.account!);
+          setShowGameOver(true);
+          setShowConfetti(true);
+          toast({
+            title: "🎉 Congratulations! 🎉",
+            description: "Your tremendous response has won the game!",
+          });
+        } catch (error) {
+          console.error("Error pushing the button:", error);
+        }
+      } else {
+        // Show feedback message
+        const message = evaluation.scoreIncrement >= 0
+          ? `Getting warmer! Used ${evaluation.scoreIncrement + 1} Trump phrases. Keep trying!`
+          : "Not quite persuasive enough. Try using Trump-style phrases!";
 
-      toast({
-        title: "Response Submitted",
-        description: message,
-        variant: evaluation.scoreIncrement >= 0 ? "default" : "destructive"
-      });
+        toast({
+          title: "Response Submitted",
+          description: message,
+          variant: evaluation.scoreIncrement >= 0 ? "default" : "destructive"
+        });
+      }
 
       await refreshGameStatus();
     } catch (error: any) {
@@ -321,6 +339,12 @@ export default function Home() {
         </div>
       </div>
       <Footer />
+      <GameOverDialog
+        isOpen={showGameOver}
+        onClose={() => setShowGameOver(false)}
+        winningAmount={prizePoolEth}
+        ethPrice={ethPrice}
+      />
     </>
   );
 }
