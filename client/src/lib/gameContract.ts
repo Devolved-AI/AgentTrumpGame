@@ -827,58 +827,58 @@ export class GameContract {
   }
 
   async getPlayerHistory(address: string) {
-    const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
+    try {
+      const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
 
-    // Fetch blocks and transaction details
-    const blockData = await Promise.all(
-      timestamps.map(async (blockNumber: bigint) => {
-        try {
-          const block = await this.provider.getBlock(Number(blockNumber));
-          if (!block) {
-            console.log('Block not found:', blockNumber);
-            return { 
-              timestamp: Math.floor(Date.now() / 1000), 
-              transactionHash: null,
-              blockNumber: Number(blockNumber)
-            };
-          }
+      // Fetch blocks and transaction details
+      const blockData = await Promise.all(
+        timestamps.map(async (timestamp: bigint) => {
+          try {
+            const block = await this.provider.getBlock(Number(timestamp));
+            if (!block) {
+              console.error('Block not found:', timestamp);
+              return {
+                timestamp: Math.floor(Date.now() / 1000),
+                transactionHash: null,
+                blockNumber: Number(timestamp)
+              };
+            }
 
-          // Get transaction receipt directly using event logs
-          const filter = this.contract.filters.GuessSubmitted(address);
-          const events = await this.contract.queryFilter(filter, Number(blockNumber), Number(blockNumber));
-          const event = events[0];
+            // Get transaction hash from events
+            const filter = this.contract.filters.GuessSubmitted(address);
+            const events = await this.contract.queryFilter(filter, Number(timestamp), Number(timestamp));
+            const event = events[0];
 
-          if (event && event.transactionHash) {
             return {
               timestamp: Number(block.timestamp),
-              transactionHash: event.transactionHash,
-              blockNumber: Number(blockNumber)
+              transactionHash: event?.transactionHash || null,
+              blockNumber: Number(timestamp)
+            };
+          } catch (error) {
+            console.error('Error fetching block data:', error);
+            return {
+              timestamp: Math.floor(Date.now() / 1000),
+              transactionHash: null,
+              blockNumber: Number(timestamp)
             };
           }
+        })
+      );
 
-          return {
-            timestamp: Number(block.timestamp),
-            transactionHash: null,
-            blockNumber: Number(blockNumber)
-          };
-        } catch (error) {
-          console.error('Error fetching block data:', error);
-          return {
-            timestamp: Math.floor(Date.now() / 1000),
-            transactionHash: null,
-            blockNumber: Number(blockNumber)
-          };
-        }
-      })
-    );
-
-    return responses.map((response: string, index: number) => ({
-      response,
-      timestamp: blockData[index].timestamp,
-      transactionHash: blockData[index].transactionHash,
-      blockNumber: blockData[index].blockNumber,
-      exists: exists[index]
-    })).filter((item: any) => item.exists);
+      // Map the responses with block data
+      return responses
+        .map((response: string, index: number) => ({
+          response,
+          timestamp: blockData[index].timestamp,
+          transactionHash: blockData[index].transactionHash,
+          blockNumber: blockData[index].blockNumber,
+          exists: exists[index]
+        }))
+        .filter((item: any) => item.exists);
+    } catch (error) {
+      console.error('Error getting player history:', error);
+      return [];
+    }
   }
 
   subscribeToEvents(callbacks: {
