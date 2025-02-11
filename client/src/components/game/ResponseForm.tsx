@@ -20,7 +20,7 @@ interface ResponseFormProps {
   currentAmount: string;
   isLoading: boolean;
   transactionStatus?: 'pending' | 'success' | 'error';
-  disabled?: boolean; // Added disabled prop
+  disabled?: boolean; 
 }
 
 export function ResponseForm({ 
@@ -28,7 +28,7 @@ export function ResponseForm({
   currentAmount, 
   isLoading,
   transactionStatus = 'pending',
-  disabled = false // Default to false
+  disabled = false 
 }: ResponseFormProps) {
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
@@ -40,7 +40,7 @@ export function ResponseForm({
   });
 
   async function handleSubmit(values: z.infer<typeof formSchema>) {
-    if (disabled) return; // Prevent submission if disabled
+    if (disabled) return; 
 
     setShowLoadingDialog(true);
     try {
@@ -68,7 +68,7 @@ export function ResponseForm({
             name="response"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Your Response</FormLabel>
+                <FormLabel>Stump Agent Trump</FormLabel>
                 <FormControl>
                   <Textarea
                     placeholder={disabled ? "Game is over!" : "Enter your response..."}
