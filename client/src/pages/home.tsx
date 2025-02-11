@@ -22,20 +22,29 @@ function getStoredPersuasionScore(address: string): number {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     if (stored) {
       const scores = JSON.parse(stored);
-      return scores[address] ?? 50; // Default to 50 if no score exists
+      if (scores[address] === undefined) {
+        scores[address] = 50;
+        localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
+      }
+      return scores[address];
+    } else {
+      const initialScores = { [address]: 50 };
+      localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(initialScores));
+      return 50;
     }
   } catch (error) {
     console.error('Error reading persuasion score:', error);
+    return 50; 
   }
-  return 50; // Default starting score
 }
 
 function storePersuasionScore(address: string, score: number) {
   try {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
-    scores[address] = Math.max(0, Math.min(100, score)); // Ensure score stays within 0-100
+    scores[address] = Math.max(0, Math.min(100, score)); 
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
+    console.log(`Stored persuasion score for ${address}:`, scores[address]); 
   } catch (error) {
     console.error('Error storing persuasion score:', error);
   }
@@ -69,12 +78,14 @@ export default function Home() {
     try {
       const state = await connectWallet();
       setWeb3State(state);
-      // Load stored persuasion score for this address
+
       if (state.account) {
-        const initialScore = getStoredPersuasionScore(state.account);
-        setPersuasionScore(initialScore);
-        storePersuasionScore(state.account, initialScore);
+        const score = getStoredPersuasionScore(state.account);
+        console.log('Initial persuasion score:', score); 
+        setPersuasionScore(score);
+        storePersuasionScore(state.account, score);
       }
+
       const contract = new GameContract(state.provider!, state.signer!);
       setGameContract(contract);
 
@@ -164,17 +175,13 @@ export default function Home() {
     setTransactionStatus('pending');
 
     try {
-      // First evaluate the response for feedback purposes
       const evaluation = await gameContract.evaluateResponse(response);
 
-      // Then submit the transaction
       const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
       await tx.wait();
       setTransactionStatus('success');
 
-      // Update the persuasion score based on the evaluation result
       setPersuasionScore(prev => {
-        // Calculate new score with +5/-5 system
         const scoreChange = evaluation.scoreIncrement >= 0 ? 5 : -5;
         const newScore = Math.max(0, Math.min(100, prev + scoreChange));
 
@@ -184,10 +191,8 @@ export default function Home() {
         return newScore;
       });
 
-      // Check if this response is winning (persuasion score of 85+ and positive increment)
       if (persuasionScore >= 85 && evaluation.scoreIncrement > 0) {
         try {
-          // Push the button to declare the winner
           await gameContract.buttonPushed(web3State.account!);
           setShowGameOver(true);
           setShowConfetti(true);
@@ -199,7 +204,6 @@ export default function Home() {
           console.error("Error pushing the button:", error);
         }
       } else {
-        // Show feedback message based on score increment
         let message;
         if (evaluation.scoreIncrement >= 2) {
           message = "TREMENDOUS response! You gained 5 persuasion points!";
