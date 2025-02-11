@@ -409,8 +409,9 @@ export default function Home() {
       <GameOverDialog
         isOpen={showGameOver}
         onClose={() => setShowGameOver(false)}
-        winningAmount={prizePoolEth}
-        ethPrice={ethPrice}
+        lastBlock={gameStatus.gameEndBlock}
+        winnerAddress={gameStatus.isGameWon ? gameStatus.lastPlayer : undefined}
+        lastGuessAddress={gameStatus.lastPlayer}
       />
     </>
   );

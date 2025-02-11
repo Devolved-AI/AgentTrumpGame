@@ -1,15 +1,21 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
-import { formatEth, formatUSD } from "@/lib/utils";
 
 interface GameOverDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  winningAmount: string;
-  ethPrice: number;
+  lastBlock: number;
+  winnerAddress?: string;
+  lastGuessAddress: string;
 }
 
-export function GameOverDialog({ isOpen, onClose, winningAmount, ethPrice }: GameOverDialogProps) {
+export function GameOverDialog({ 
+  isOpen, 
+  onClose, 
+  lastBlock,
+  winnerAddress,
+  lastGuessAddress 
+}: GameOverDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -19,39 +25,39 @@ export function GameOverDialog({ isOpen, onClose, winningAmount, ethPrice }: Gam
           className="text-center space-y-6 py-6"
         >
           <motion.h2 
-            className="text-3xl font-bold bg-gradient-to-r from-red-500 via-white to-blue-500 bg-clip-text text-transparent"
+            className="text-3xl font-bold"
             initial={{ y: -20 }}
             animate={{ y: 0 }}
           >
             The Game Is Over
           </motion.h2>
-          
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="space-y-2"
+            className="space-y-4"
           >
             <p className="text-xl">Thanks For Playing!</p>
-            <p className="text-sm text-muted-foreground">
-              The winning amount was:
-            </p>
-            <p className="text-2xl font-bold text-green-500">
-              {formatUSD(parseFloat(winningAmount) * ethPrice)}
-              <span className="text-lg ml-2">
-                ({formatEth(winningAmount)} ETH)
-              </span>
-            </p>
-          </motion.div>
 
-          <motion.img
-            src="/trump-thinking.svg"
-            alt="Trump Thinking"
-            className="w-24 h-24 mx-auto"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          />
+            <div className="text-left space-y-2 mt-4">
+              <p className="text-sm">
+                <span className="font-semibold">Last Block:</span> {lastBlock}
+              </p>
+              {winnerAddress && (
+                <p className="text-sm">
+                  <span className="font-semibold">Winner Wallet Address:</span>
+                  <br />
+                  <span className="font-mono">{winnerAddress}</span>
+                </p>
+              )}
+              <p className="text-sm">
+                <span className="font-semibold">Last Guess Wallet Address:</span>
+                <br />
+                <span className="font-mono">{lastGuessAddress}</span>
+              </p>
+            </div>
+          </motion.div>
         </motion.div>
       </DialogContent>
     </Dialog>
