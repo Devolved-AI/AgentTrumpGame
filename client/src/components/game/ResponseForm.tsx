@@ -20,7 +20,8 @@ interface ResponseFormProps {
   currentAmount: string;
   isLoading: boolean;
   transactionStatus?: 'pending' | 'success' | 'error';
-  disabled?: boolean; 
+  disabled?: boolean;
+  escalationActive?: boolean; // Added escalationActive prop
 }
 
 export function ResponseForm({ 
@@ -28,7 +29,8 @@ export function ResponseForm({
   currentAmount, 
   isLoading,
   transactionStatus = 'pending',
-  disabled = false 
+  disabled = false,
+  escalationActive = false // Added default value for escalationActive
 }: ResponseFormProps) {
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
@@ -83,15 +85,24 @@ export function ResponseForm({
           />
 
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Required Amount: <span className="font-bold">{currentAmount} ETH</span>
-            </p>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                Required Amount: <span className="font-bold">{currentAmount} ETH</span>
+              </p>
+              {escalationActive && (
+                <p className="text-sm text-orange-500 mt-1">
+                  ⚠️ Escalation Active: Cost doubles every 5 minutes!
+                </p>
+              )}
+            </div>
             <Button 
               type="submit" 
               disabled={disabled || isLoading}
               className={`bg-gradient-to-r ${
                 disabled 
                   ? "from-gray-400 to-gray-500 cursor-not-allowed" 
+                  : escalationActive
+                  ? "from-orange-500 to-red-600"
                   : "from-blue-600 to-blue-700"
               }`}
             >

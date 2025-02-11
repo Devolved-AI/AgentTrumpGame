@@ -299,9 +299,19 @@ export default function Home() {
   }
 
   useEffect(() => {
-    const interval = setInterval(refreshGameStatus, 15000);
+    const interval = setInterval(refreshGameStatus, 
+      gameStatus.escalationActive ? 3000 : 15000
+    );
     return () => clearInterval(interval);
-  }, [gameContract]);
+  }, [gameContract, gameStatus.escalationActive]);
+
+  useEffect(() => {
+    if (!gameContract) return;
+    const interval = setInterval(updatePrizePool, 
+      gameStatus.escalationActive ? 5000 : 10000
+    );
+    return () => clearInterval(interval);
+  }, [gameContract, gameStatus.escalationActive]);
 
   useEffect(() => {
     if (!gameContract) return;

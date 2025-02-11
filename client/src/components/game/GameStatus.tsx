@@ -92,6 +92,11 @@ export function GameStatus({
             value={normalizedScore} 
             className={cn("mt-2", getProgressColor(persuasionScore))} 
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            {isGameOver ? "Game Over" : escalationActive ? 
+              <span className="text-orange-500 font-semibold">Escalation Active - Costs Doubled!</span> 
+              : "Standard Play Period"}
+          </p>
         </CardContent>
       </Card>
 
