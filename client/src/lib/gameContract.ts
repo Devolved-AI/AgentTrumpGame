@@ -963,9 +963,9 @@ export class GameContract {
       }
     }
 
-    // Style analysis (now more demanding)
+    // Style analysis
     const exclamationCount = (response.match(/!/g) || []).length;
-    const hasStrongEmphasis = response.match(/[A-Z]{3,}/) !== null; // Requires at least 3 caps
+    const hasStrongEmphasis = response.match(/[A-Z]{3,}/) !== null;
     const hasMultipleEmphasis = (response.match(/[A-Z]{2,}/g) || []).length > 1;
 
     // Style points (max 5)
@@ -977,41 +977,30 @@ export class GameContract {
 
     // Penalties
     let penalties = 0;
-    if (response.length < 50) penalties -= 2; // Too short
-    if (usedPhrases.size < 2) penalties -= 3; // Not enough Trump phrases
-    if (response.toLowerCase().includes("please")) penalties -= 1; // Trump rarely says please
-
-    // Calculate final score increment (default to -5)
-    let scoreIncrement = -5;
+    if (response.length < 50) penalties -= 2;
+    if (usedPhrases.size < 2) penalties -= 3;
+    if (response.toLowerCase().includes("please")) penalties -= 1;
 
     const totalScore = totalPoints + stylePoints + penalties;
+    let scoreIncrement = -5; // Default to -5
 
-    // Strict scoring criteria
+    // Adjust score based on total points
     if (totalScore >= 12) {
-      scoreIncrement = 5; // Good response
+      scoreIncrement = 10; // Increased from 5 to make progress more noticeable
     } else if (totalScore >= 8) {
-      scoreIncrement = 2; // Decent attempt
+      scoreIncrement = 5;  // Increased from 2
     } else if (totalScore >= 6) {
-      scoreIncrement = 0; // Neutral
+      scoreIncrement = 0;
     }
 
-    // Special case: Truly exceptional response triggers game win
-    if (totalScore >= 15 && 
-        usedPhrases.size >= 4 && 
-        exclamationCount >= 3 && 
-        hasStrongEmphasis) {
-      scoreIncrement = 50; // Will push score to 100, triggering win condition
-    }
-
+    // Log scoring details for debugging
     console.log('Response evaluation:', {
-      response,
       totalPoints,
       stylePoints,
       penalties,
       totalScore,
       scoreIncrement,
-      usedPhrases: Array.from(usedPhrases),
-      style: { exclamationCount, hasStrongEmphasis, hasMultipleEmphasis }
+      usedPhrases: Array.from(usedPhrases)
     });
 
     return { scoreIncrement };

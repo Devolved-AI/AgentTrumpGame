@@ -45,6 +45,14 @@ function storePersuasionScore(address: string, score: number) {
   }
 }
 
+interface PlayerHistoryItem {
+  response: string;
+  timestamp: number;
+  transactionHash: string | null;
+  blockNumber: number;
+  exists: boolean;
+}
+
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -60,7 +68,7 @@ export default function Home() {
     isGameWon: false,
     isGameOver: false
   });
-  const [playerHistory, setPlayerHistory] = useState([]);
+  const [playerHistory, setPlayerHistory] = useState<PlayerHistoryItem[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
