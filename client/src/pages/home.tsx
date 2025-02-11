@@ -160,7 +160,7 @@ export default function Home() {
     setTransactionStatus('pending');
 
     try {
-      // First evaluate the response
+      // First evaluate the response for feedback purposes
       const evaluation = await gameContract.evaluateResponse(response);
 
       // Then submit the transaction
@@ -177,30 +177,16 @@ export default function Home() {
         return newScore;
       });
 
-      // Handle winning condition
-      if (evaluation.isWinning) {
-        await gameContract.buttonPushed(web3State.account!);
-        setShowConfetti(true);
-        setPersuasionScore(10);
-        if (web3State.account) {
-          storePersuasionScore(web3State.account, 10);
-        }
-        toast({
-          title: "🎉 Congratulations! You've Won! 🎉",
-          description: "Your response was perfect! The prize pool has been transferred to your wallet!",
-          variant: "default"
-        });
-      } else {
-        const message = evaluation.scoreIncrement >= 0 
-          ? `Getting warmer! Used ${evaluation.scoreIncrement + 1} Trump phrases. Try adding more!`
-          : "Not quite persuasive enough. Try using Trump-style phrases!";
+      // Show feedback message
+      const message = evaluation.scoreIncrement >= 0 
+        ? `Getting warmer! Used ${evaluation.scoreIncrement + 1} Trump phrases. Keep trying!`
+        : "Not quite persuasive enough. Try using Trump-style phrases!";
 
-        toast({
-          title: "Response Submitted",
-          description: message,
-          variant: evaluation.scoreIncrement >= 0 ? "default" : "destructive"
-        });
-      }
+      toast({
+        title: "Response Submitted",
+        description: message,
+        variant: evaluation.scoreIncrement >= 0 ? "default" : "destructive"
+      });
 
       await refreshGameStatus();
     } catch (error: any) {

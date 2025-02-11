@@ -893,7 +893,7 @@ export class GameContract {
     return ethers.formatEther(balance);
   }
 
-  async evaluateResponse(response: string): Promise<{isWinning: boolean, scoreIncrement: number}> {
+  async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
     // Define Trump-style phrases
     const keyPhrases = [
       "make america great",
@@ -922,7 +922,6 @@ export class GameContract {
     const scoreIncrement = uniqueMatches.length === 0 ? -1 : uniqueMatches.length - 1;
 
     return {
-      isWinning: uniqueMatches.length >= 3, // Need at least 3 phrases to win
       scoreIncrement: scoreIncrement
     };
   }
