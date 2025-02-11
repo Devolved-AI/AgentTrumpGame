@@ -308,7 +308,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div>
+          <div className="flex items-center justify-center">
             <div className="w-64 h-64 mb-6">
               <img
                 src="/aitubo.jpg"
