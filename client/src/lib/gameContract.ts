@@ -817,7 +817,7 @@ export class GameContract {
     const isGameOver = Number(timeRemaining) <= 0 || isGameWon;
 
     // Format the current amount based on escalation period
-    const baseAmount = "0.0018";
+    const baseAmount = "0.0009";
     let currentAmount = baseAmount;
 
     if (escalationActive) {

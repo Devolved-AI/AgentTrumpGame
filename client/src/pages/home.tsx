@@ -402,6 +402,7 @@ export default function Home() {
                 <li>If no winner after 72 hours, the clock counts down in 5-minute escalation periods at 2x the previous cost to guess until a period goes without a guess.</li>
                 <li>Escalation Period Costs:
                   <ul className="list-disc pl-6 mt-2">
+                    <li>Base Period: .0009 ETH</li>
                     <li>Period 1: .0018 ETH</li>
                     <li>Period 2: .0036 ETH</li>
                     <li>Period 3: .0072 ETH</li>
