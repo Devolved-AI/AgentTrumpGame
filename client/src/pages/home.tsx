@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SiEthereum } from "react-icons/si";
 import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
+import { TrumpLoadingScreen } from "@/components/game/TrumpLoadingScreen";
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
@@ -245,6 +246,8 @@ export default function Home() {
 
   return (
     <>
+      {(isConnecting || isUpdatingGameData) && <TrumpLoadingScreen />}
+
       <div className="container mx-auto px-4 py-8">
         <Confetti trigger={showConfetti} />
 
