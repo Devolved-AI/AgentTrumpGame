@@ -20,13 +20,15 @@ interface ResponseFormProps {
   currentAmount: string;
   isLoading: boolean;
   transactionStatus?: 'pending' | 'success' | 'error';
+  disabled?: boolean; // Added disabled prop
 }
 
 export function ResponseForm({ 
   onSubmit, 
   currentAmount, 
   isLoading,
-  transactionStatus = 'pending'
+  transactionStatus = 'pending',
+  disabled = false // Default to false
 }: ResponseFormProps) {
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
@@ -38,6 +40,8 @@ export function ResponseForm({
   });
 
   async function handleSubmit(values: z.infer<typeof formSchema>) {
+    if (disabled) return; // Prevent submission if disabled
+
     setShowLoadingDialog(true);
     try {
       await onSubmit(values.response);
@@ -67,8 +71,9 @@ export function ResponseForm({
                 <FormLabel>Your Response</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Enter your response..."
+                    placeholder={disabled ? "Game is over!" : "Enter your response..."}
                     className="h-32"
+                    disabled={disabled || isLoading}
                     {...field}
                   />
                 </FormControl>
@@ -83,10 +88,14 @@ export function ResponseForm({
             </p>
             <Button 
               type="submit" 
-              disabled={isLoading}
-              className="bg-gradient-to-r from-blue-600 to-blue-700"
+              disabled={disabled || isLoading}
+              className={`bg-gradient-to-r ${
+                disabled 
+                  ? "from-gray-400 to-gray-500 cursor-not-allowed" 
+                  : "from-blue-600 to-blue-700"
+              }`}
             >
-              Submit Response
+              {disabled ? "Game Over" : "Submit Response"}
             </Button>
           </div>
         </form>

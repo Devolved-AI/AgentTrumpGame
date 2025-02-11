@@ -74,6 +74,7 @@ export default function Home() {
   });
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
+  const [gameWon, setGameWon] = useState(false); // Added gameWon state
   const { toast } = useToast();
 
   async function handleConnect() {
@@ -173,7 +174,7 @@ export default function Home() {
   }
 
   async function handleSubmitResponse(response: string) {
-    if (!gameContract) return;
+    if (!gameContract || gameWon) return; // Prevent submissions if game is won
 
     setIsLoading(true);
     setTransactionStatus('pending');
@@ -198,6 +199,7 @@ export default function Home() {
       if (persuasionScore >= 85 && evaluation.scoreIncrement > 0) {
         try {
           await gameContract.buttonPushed(web3State.account!);
+          setGameWon(true); // Set gameWon to true
           setShowGameOver(true);
           setShowConfetti(true);
           toast({
@@ -325,6 +327,7 @@ export default function Home() {
               currentAmount={gameStatus.currentAmount}
               isLoading={isLoading}
               transactionStatus={transactionStatus}
+              disabled={gameWon} // Added disabled prop
             />
           </div>
         </div>
