@@ -940,18 +940,26 @@ export class GameContract {
     // Add bonus points for style
     totalPoints += hasExclamation + hasEmphasis;
 
-    // Convert total points to score increment
-    // -1 for no phrases
-    // 0 for 1-2 points
-    // +1 for 3-4 points
-    // +2 for 5+ points
+    // Convert total points to score increment:
+    // -1 for no matches (0 points)
+    // 0 for 1 point
+    // +1 for 2-3 points
+    // +2 for 4-5 points
+    // +3 for 6+ points
     let scoreIncrement = -1;
     if (totalPoints > 0) {
-      scoreIncrement = Math.floor((totalPoints - 1) / 2);
+      scoreIncrement = Math.min(3, Math.floor((totalPoints - 1) / 2));
     }
 
+    console.log('Response evaluation:', {
+      response,
+      totalPoints,
+      scoreIncrement,
+      usedPhrases: Array.from(usedPhrases)
+    });
+
     return {
-      scoreIncrement: Math.min(3, scoreIncrement) // Cap at 3 points per response
+      scoreIncrement
     };
   }
 

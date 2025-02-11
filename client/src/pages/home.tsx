@@ -179,7 +179,7 @@ export default function Home() {
         return newScore;
       });
 
-      // Check if this response is winning (persuasion score of 10 and using key phrases)
+      // Check if this response is winning (persuasion score of 8+ and positive increment)
       if (persuasionScore >= 8 && evaluation.scoreIncrement > 0) {
         try {
           // Push the button to declare the winner
@@ -194,10 +194,17 @@ export default function Home() {
           console.error("Error pushing the button:", error);
         }
       } else {
-        // Show feedback message
-        const message = evaluation.scoreIncrement >= 0
-          ? `Getting warmer! Used ${evaluation.scoreIncrement + 1} Trump phrases. Keep trying!`
-          : "Not quite persuasive enough. Try using Trump-style phrases!";
+        // Show feedback message based on score increment
+        let message;
+        if (evaluation.scoreIncrement >= 2) {
+          message = "TREMENDOUS response! You're getting very close!";
+        } else if (evaluation.scoreIncrement === 1) {
+          message = "Getting warmer! Keep adding more Trump-style phrases!";
+        } else if (evaluation.scoreIncrement === 0) {
+          message = "You used one phrase - but we need more energy! Try harder!";
+        } else {
+          message = "Not quite Trump enough. Try using his famous phrases!";
+        }
 
         toast({
           title: "Response Submitted",
