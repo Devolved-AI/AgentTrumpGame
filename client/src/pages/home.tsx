@@ -20,22 +20,16 @@ const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
 function getStoredPersuasionScore(address: string): number {
   try {
-    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
-    if (stored) {
-      const scores = JSON.parse(stored);
-      if (scores[address] === undefined) {
-        scores[address] = 50;
-        localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
-      }
-      return scores[address];
-    } else {
-      const initialScores = { [address]: 50 };
-      localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(initialScores));
-      return 50;
-    }
+    // Clear existing scores since this is a new game
+    localStorage.removeItem(PERSUASION_SCORE_KEY);
+
+    // Initialize with 45 since a guess was already made
+    const initialScores = { [address]: 45 };
+    localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(initialScores));
+    return 45;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
-    return 50; 
+    return 45; // Return 45 even on error since this is a new game
   }
 }
 
