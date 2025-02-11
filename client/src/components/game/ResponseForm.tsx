@@ -102,11 +102,11 @@ export function ResponseForm({
                 disabled 
                   ? "from-gray-400 to-gray-500 cursor-not-allowed" 
                   : escalationActive
-                  ? "from-orange-500 to-red-600"
-                  : "from-blue-600 to-blue-700"
+                  ? "from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                  : "from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
               }`}
             >
-              {disabled ? "Game Over" : "Submit Response"}
+              {disabled ? "Game Over" : escalationActive ? "Submit (Double Cost!)" : "Submit Response"}
             </Button>
           </div>
         </form>

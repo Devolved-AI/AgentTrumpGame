@@ -806,7 +806,7 @@ export class GameContract {
       this.contract.gameWon()
     ]);
 
-    // Game is over if either time has run out or someone has won
+    // Calculate the final status
     const isGameOver = Number(timeRemaining) <= 0 || isGameWon;
 
     return {
@@ -1000,10 +1000,9 @@ export class GameContract {
   async buttonPushed(winner: string) {
     try {
       const tx = await this.contract.buttonPushed(winner);
-      await tx.wait();
-      return true;
-    } catch (error) {
-      console.error("Error pushing the button:", error);
+      return tx;
+    } catch (error: any) {
+      console.error("Error pushing button:", error);
       throw error;
     }
   }

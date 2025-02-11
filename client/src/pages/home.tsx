@@ -23,13 +23,13 @@ function getStoredPersuasionScore(address: string): number {
     // Clear existing scores since this is a new game
     localStorage.removeItem(PERSUASION_SCORE_KEY);
 
-    // Initialize with 45 since a guess was already made
-    const initialScores = { [address]: 45 };
+    // Initialize with 50 for new game
+    const initialScores = { [address]: 50 };
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(initialScores));
-    return 45;
+    return 50;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
-    return 45; // Return 45 even on error since this is a new game
+    return 50; // Return 50 even on error since this is a new game
   }
 }
 
@@ -220,25 +220,27 @@ export default function Home() {
       setTransactionStatus('success');
 
       // Update persuasion score
+      const previousScore = persuasionScore; // Store previous score before update
+
       setPersuasionScore(prev => {
         const newScore = Math.max(0, Math.min(100, prev + evaluation.scoreIncrement));
-
         if (web3State.account) {
           storePersuasionScore(web3State.account, newScore);
         }
         return newScore;
       });
 
-      // Check if score reaches win threshold
-      if (persuasionScore >= 100) {
+      // Handle game win condition (persuasion score reaches 100)
+      if (previousScore + evaluation.scoreIncrement >= 100) {
         try {
+          // Call buttonPushed to trigger win condition and prize distribution
           await gameContract.buttonPushed(web3State.account!);
           setGameWon(true);
           setShowGameOver(true);
           setShowConfetti(true);
           toast({
             title: "🎉 Congratulations! 🎉",
-            description: "You have won the game!",
+            description: "You've successfully convinced Agent Trump! The entire prize pool will be transferred to your wallet!",
           });
         } catch (error) {
           console.error("Error pushing the button:", error);
