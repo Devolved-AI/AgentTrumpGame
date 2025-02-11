@@ -27,15 +27,15 @@ function formatTimeRemaining(seconds: number): string {
 }
 
 function getScoreColor(score: number): string {
-  if (score < 30) return "text-red-500";
-  if (score >= 85) return "text-green-500";
-  return "text-yellow-500";
+  if (score <= 25) return "text-red-500";
+  if (score >= 76) return "text-green-500";
+  return "text-yellow-500"; // Gold for 26-75
 }
 
 function getProgressColor(score: number): string {
-  if (score < 30) return "bg-red-100";
-  if (score >= 85) return "bg-green-100";
-  return "bg-yellow-100";
+  if (score <= 25) return "bg-red-100";
+  if (score >= 76) return "bg-green-100";
+  return "bg-yellow-100"; // Gold for 26-75
 }
 
 export function GameStatus({ 
