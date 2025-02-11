@@ -34,7 +34,7 @@ function storePersuasionScore(address: string, score: number) {
   try {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
-    scores[address] = score;
+    scores[address] = Math.max(0, Math.min(100, score)); // Ensure score stays within 0-100
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
   } catch (error) {
     console.error('Error storing persuasion score:', error);
@@ -71,7 +71,9 @@ export default function Home() {
       setWeb3State(state);
       // Load stored persuasion score for this address
       if (state.account) {
-        setPersuasionScore(getStoredPersuasionScore(state.account));
+        const initialScore = getStoredPersuasionScore(state.account);
+        setPersuasionScore(initialScore);
+        storePersuasionScore(state.account, initialScore);
       }
       const contract = new GameContract(state.provider!, state.signer!);
       setGameContract(contract);
