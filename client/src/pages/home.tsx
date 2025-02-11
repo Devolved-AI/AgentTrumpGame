@@ -351,7 +351,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div className="flex items-center justify-center">
-            <div className="w-64 h-64 mb-6">
+            <div className="w-full max-w-md h-auto mb-6">
               <TrumpAnimation />
             </div>
           </div>

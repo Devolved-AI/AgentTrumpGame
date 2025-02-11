@@ -12,10 +12,10 @@ export function TrumpAnimation() {
   }, []);
 
   return (
-    <div className="relative w-full h-full rounded-lg overflow-hidden shadow-lg">
+    <div className="relative w-full pt-[56.25%] rounded-lg overflow-hidden shadow-lg">
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        className="absolute top-0 left-0 w-full h-full object-contain"
         autoPlay
         loop
         muted
