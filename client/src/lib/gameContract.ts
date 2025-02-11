@@ -196,8 +196,8 @@ const contractABI = [
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
+				"indexed": false,
+				"internalType": "uint256",
 				"name": "player",
 				"type": "address"
 			},
@@ -816,19 +816,15 @@ export class GameContract {
     // Calculate the final status
     const isGameOver = Number(timeRemaining) <= 0 || isGameWon;
 
-    // Format the current amount based on escalation period
-    const baseAmount = "0.0009";
-    let currentAmount = baseAmount;
+    // Get the exact required amount from the contract
+    const requiredAmountInWei = await this.contract.getCurrentRequiredAmount();
+    const currentAmount = ethers.formatEther(requiredAmountInWei);
 
-    if (escalationActive) {
-      const escalationPeriod = await this.contract.getCurrentEscalationPeriod();
-      const multiplier = Math.pow(2, Number(escalationPeriod));
-      currentAmount = (parseFloat(baseAmount) * multiplier).toFixed(4);
-    }
+    console.log('Current required amount:', currentAmount, 'ETH');
 
     return {
       timeRemaining: Number(timeRemaining),
-      currentAmount: currentAmount,
+      currentAmount,
       lastPlayer,
       escalationActive,
       gameEndBlock: Number(gameEndBlock),
@@ -839,13 +835,21 @@ export class GameContract {
 
   async submitResponse(response: string, amount: string) {
     try {
-      const parsedAmount = ethers.parseEther(amount);
+      // Ensure we're using the exact amount without any rounding issues
+      const parsedAmount = ethers.parseEther(amount.toString());
+      console.log('Submitting response with amount:', amount, 'ETH, parsed:', parsedAmount.toString());
+
       const tx = await this.contract.submitGuess(response, {
-        value: parsedAmount
+        value: parsedAmount,
+        gasLimit: 500000 // Add explicit gas limit
       });
+
       return tx;
     } catch (error: any) {
       console.error("Transaction error:", error);
+      if (error.data) {
+        console.error("Error data:", error.data);
+      }
       throw error;
     }
   }
