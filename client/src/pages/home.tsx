@@ -19,9 +19,6 @@ const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
 function getStoredPersuasionScore(address: string): number {
   try {
-    // Clear old scores first since we have a new contract
-    localStorage.removeItem(PERSUASION_SCORE_KEY);
-
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     if (stored) {
       const scores = JSON.parse(stored);
@@ -87,10 +84,10 @@ export default function Home() {
       setWeb3State(state);
 
       if (state.account) {
-        // Always set a fresh score of 50 for new connections
-        console.log('Initializing fresh persuasion score of 50 for new connection');
-        setPersuasionScore(50);
-        storePersuasionScore(state.account, 50);
+        // Get the existing score or initialize to 50 if none exists
+        const score = getStoredPersuasionScore(state.account);
+        console.log('Retrieved persuasion score for address:', state.account, score);
+        setPersuasionScore(score);
       }
 
       const contract = new GameContract(state.provider!, state.signer!);
