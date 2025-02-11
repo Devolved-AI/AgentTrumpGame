@@ -894,6 +894,7 @@ export class GameContract {
   }
 
   async evaluateResponse(response: string): Promise<{isWinning: boolean, scoreIncrement: number}> {
+    // Define Trump-style phrases
     const keyPhrases = [
       "make america great",
       "tremendous",
@@ -907,14 +908,21 @@ export class GameContract {
       "believe me"
     ];
 
+    // Convert response to lowercase for case-insensitive matching
     const lowerResponse = response.toLowerCase();
-    const matches = keyPhrases.filter(phrase => lowerResponse.includes(phrase));
 
-    // Calculate score increment based on matches
-    let scoreIncrement = matches.length - 1; // -1 if no matches, 0 for 1 match, +1 for 2 matches, etc.
+    // Count how many unique phrases are used
+    const matches = keyPhrases.filter(phrase => lowerResponse.includes(phrase));
+    const uniqueMatches = [...new Set(matches)];
+
+    // Calculate score increment:
+    // 0 matches: -1
+    // 1 match: 0
+    // 2+ matches: number of matches - 1
+    const scoreIncrement = uniqueMatches.length === 0 ? -1 : uniqueMatches.length - 1;
 
     return {
-      isWinning: matches.length >= 2,
+      isWinning: uniqueMatches.length >= 3, // Need at least 3 phrases to win
       scoreIncrement: scoreIncrement
     };
   }

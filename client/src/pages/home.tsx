@@ -158,17 +158,26 @@ export default function Home() {
 
     setIsLoading(true);
     setTransactionStatus('pending');
+
     try {
       // First evaluate the response
       const evaluation = await gameContract.evaluateResponse(response);
 
-      // Submit transaction
+      // Then submit the transaction
       const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
-      setTransactionStatus('pending');
       await tx.wait();
       setTransactionStatus('success');
 
-      // After successful transaction, handle the evaluation result
+      // Update the persuasion score based on the evaluation result
+      setPersuasionScore(prev => {
+        const newScore = Math.max(-10, Math.min(10, prev + evaluation.scoreIncrement));
+        if (web3State.account) {
+          storePersuasionScore(web3State.account, newScore);
+        }
+        return newScore;
+      });
+
+      // Handle winning condition
       if (evaluation.isWinning) {
         await gameContract.buttonPushed(web3State.account!);
         setShowConfetti(true);
@@ -182,52 +191,41 @@ export default function Home() {
           variant: "default"
         });
       } else {
-        // Update score based on evaluation
-        setPersuasionScore(prev => {
-          const newScore = Math.max(-10, Math.min(10, prev + evaluation.scoreIncrement));
-          if (web3State.account) {
-            storePersuasionScore(web3State.account, newScore);
-          }
-          return newScore;
-        });
-
         const message = evaluation.scoreIncrement >= 0 
-          ? "Getting warmer! Try adding more Trump-style phrases."
-          : "Not quite persuasive enough. Try using more Trump-style language!";
+          ? `Getting warmer! Used ${evaluation.scoreIncrement + 1} Trump phrases. Try adding more!`
+          : "Not quite persuasive enough. Try using Trump-style phrases!";
 
         toast({
-          title: "Try Again",
+          title: "Response Submitted",
           description: message,
-          variant: "destructive"
+          variant: evaluation.scoreIncrement >= 0 ? "default" : "destructive"
         });
       }
 
       await refreshGameStatus();
     } catch (error: any) {
       setTransactionStatus('error');
+      console.error("Submission error:", error);
+
       if (error.code === 4001) {
         toast({
           title: "Transaction Cancelled",
           description: "You cancelled the transaction.",
           variant: "destructive"
         });
-      }
-      else if (error.code === 'NETWORK_ERROR') {
+      } else if (error.code === 'NETWORK_ERROR') {
         toast({
           title: "Network Error",
           description: "Please check your internet connection and try again.",
           variant: "destructive"
         });
-      }
-      else if (error.reason) {
+      } else if (error.reason) {
         toast({
           title: "Transaction Failed",
           description: error.reason,
           variant: "destructive"
         });
-      }
-      else {
-        console.error("Submission error:", error);
+      } else {
         toast({
           title: "Error",
           description: "An unexpected error occurred. Please try again.",
