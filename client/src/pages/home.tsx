@@ -70,7 +70,11 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [persuasionScore, setPersuasionScore] = useState<number>(50); // Initialize to 50
+  const [persuasionScore, setPersuasionScore] = useState<number>(() => {
+    // Initialize with 50 if no wallet is connected yet
+    if (!web3State.account) return 50;
+    return getStoredPersuasionScore(web3State.account);
+  });
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
   const { toast } = useToast();
@@ -83,10 +87,10 @@ export default function Home() {
       setWeb3State(state);
 
       if (state.account) {
-        const score = getStoredPersuasionScore(state.account);
-        console.log('Initial persuasion score:', score); 
-        setPersuasionScore(score);
-        storePersuasionScore(state.account, score);
+        // Always set a fresh score of 50 for new connections
+        console.log('Initializing fresh persuasion score of 50 for new connection');
+        setPersuasionScore(50);
+        storePersuasionScore(state.account, 50);
       }
 
       const contract = new GameContract(state.provider!, state.signer!);
