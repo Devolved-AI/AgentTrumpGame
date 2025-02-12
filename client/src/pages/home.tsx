@@ -38,7 +38,7 @@ function getStoredPersuasionScore(address: string): number {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
     const score = scores[address.toLowerCase()];
-    return 50;
+    return score !== undefined ? score : 50; //Return stored score or default 50
   } catch (error) {
     console.error('Error reading persuasion score:', error);
     return 50;
@@ -47,7 +47,8 @@ function getStoredPersuasionScore(address: string): number {
 
 function storePersuasionScore(address: string, score: number) {
   try {
-    const scores = {};
+    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
+    const scores = stored ? JSON.parse(stored) : {};
     scores[address.toLowerCase()] = Math.max(0, Math.min(100, score));
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
   } catch (error) {
@@ -63,15 +64,22 @@ function storePlayerResponse(
   hash: string | null
 ) {
   try {
-    const responses = {};
+    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
+    const responses = stored ? JSON.parse(stored) : {};
     const normalizedAddress = address.toLowerCase();
-    responses[normalizedAddress] = [{
+
+    if (!responses[normalizedAddress]) {
+      responses[normalizedAddress] = [];
+    }
+
+    responses[normalizedAddress].push({
       response,
       timestamp,
       blockNumber,
       transactionHash: hash,
       exists: true
-    }];
+    });
+
     localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
   } catch (error) {
     console.error('Error storing player response:', error);
@@ -80,7 +88,12 @@ function storePlayerResponse(
 
 function getPlayerResponses(address: string): PlayerHistoryItem[] {
   try {
-    return [];
+    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
+    if (!stored) return [];
+
+    const responses = JSON.parse(stored);
+    const normalizedAddress = address.toLowerCase();
+    return responses[normalizedAddress] || [];
   } catch (error) {
     console.error('Error getting player responses:', error);
     return [];
@@ -127,7 +140,6 @@ export default function Home() {
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
 
   useEffect(() => {
-    clearAllGameState();
     setGameStatus({
       timeRemaining: 0,
       currentAmount: "0.0009",
@@ -211,15 +223,13 @@ export default function Home() {
 
   async function initializeGameData(contract: GameContract, account: string) {
     try {
-      // Get initial game state from contract
       const [status, totalPool] = await Promise.all([
         contract.getGameStatus(),
         contract.getTotalPrizePool()
       ]);
 
-      // Set initial game state
       setGameStatus({
-        timeRemaining: status.timeRemaining || 0, // Use contract time or 0 as default
+        timeRemaining: status.timeRemaining || 0, 
         currentAmount: status.currentAmount || "0.0009",
         lastPlayer: status.lastPlayer || "",
         escalationActive: status.escalationActive || false,
@@ -287,7 +297,6 @@ export default function Home() {
   }
 
   async function handleDisconnect() {
-    clearAllGameState();
     const initialState = await disconnectWallet();
     setWeb3State(initialState);
     setGameContract(null);
@@ -314,14 +323,12 @@ export default function Home() {
     try {
       const status = await gameContract.getGameStatus();
 
-      // Only update game status if we have actual gameplay
       if (!playerHistory.length) {
         return;
       }
 
       setGameStatus(status);
 
-      // Only check for game over if player has made at least one move
       if (playerHistory.length > 0 && (status.timeRemaining <= 0 || status.isGameWon)) {
         setGameWon(status.isGameWon);
         setShowGameOver(true);
