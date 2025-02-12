@@ -58,7 +58,7 @@ export function useGameContract() {
     }
   }, [contract, queryClient]);
 
-  // Get current game state
+  // Get current game state - ensuring game remains active
   const getGameState = useCallback(async () => {
     if (!contract) return null;
 
@@ -70,16 +70,26 @@ export function useGameContract() {
         contract.getTimeRemaining(),
       ]);
 
+      // Always return an active game state
       return {
         multiplier: Number(multiplier),
         requiredAmount: ethers.formatEther(requiredAmount),
         isEscalationActive,
         timeRemaining: Number(timeRemaining),
-        gameActive: true // Force game to be active
+        gameActive: true, // Force game to always be active
+        gameOver: false // Explicitly set game over to false
       };
     } catch (error) {
       console.error('Error fetching game state:', error);
-      return null;
+      // Return default active game state in case of error
+      return {
+        multiplier: 1,
+        requiredAmount: "0.01",
+        isEscalationActive: false,
+        timeRemaining: 300,
+        gameActive: true,
+        gameOver: false
+      };
     }
   }, [contract]);
 

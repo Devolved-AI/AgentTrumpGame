@@ -8,6 +8,7 @@ interface GameState {
   isEscalationActive: boolean;
   timeRemaining: number;
   gameActive: boolean;
+  gameOver: boolean;
 }
 
 interface GameContextType {
@@ -19,8 +20,17 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
+const DEFAULT_GAME_STATE: GameState = {
+  multiplier: 1,
+  requiredAmount: "0.01",
+  isEscalationActive: false,
+  timeRemaining: 300,
+  gameActive: true,
+  gameOver: false
+};
+
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(DEFAULT_GAME_STATE);
   const [loading, setLoading] = useState(true);
   const { getGameState, submitResponse } = useGameContract();
   const { toast } = useToast();
@@ -31,8 +41,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (state) {
         setGameState({
           ...state,
-          gameActive: true // Ensure game is always active
+          gameActive: true, // Ensure game is always active
+          gameOver: false // Ensure game over is always false
         });
+      } else {
+        setGameState(DEFAULT_GAME_STATE);
       }
     } catch (error) {
       console.error('Error refreshing game state:', error);
@@ -41,6 +54,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         description: 'Failed to refresh game state',
         variant: 'destructive',
       });
+      setGameState(DEFAULT_GAME_STATE);
     } finally {
       setLoading(false);
     }
