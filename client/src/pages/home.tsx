@@ -219,18 +219,18 @@ export default function Home() {
 
       // Set initial game state
       setGameStatus({
-        timeRemaining: status.timeRemaining,
-        currentAmount: "0.0009", // Initial bet amount
-        lastPlayer: "",
-        escalationActive: false,
+        timeRemaining: status.timeRemaining || 72 * 3600, // 72 hours in seconds
+        currentAmount: status.currentAmount || "0.0009",
+        lastPlayer: status.lastPlayer || "",
+        escalationActive: status.escalationActive || false,
         gameEndBlock: status.gameEndBlock,
-        isGameWon: false,
+        isGameWon: status.isGameWon || false,
         isGameOver: false,
-        currentMultiplier: 1,
-        escalationPeriodTimeRemaining: 0,
-        currentPeriodIndex: 0
+        currentMultiplier: status.currentMultiplier || 1,
+        escalationPeriodTimeRemaining: status.escalationPeriodTimeRemaining || 0,
+        currentPeriodIndex: status.currentPeriodIndex || 0
       });
-      setGameWon(false);
+      setGameWon(status.isGameWon || false);
       setShowGameOver(false);
       setPlayerHistory([]);
       setPrizePoolEth(totalPool);

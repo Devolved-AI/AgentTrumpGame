@@ -54,7 +54,7 @@ export function GameStatus({
   isGameWon
 }: GameStatusProps) {
   const normalizedScore = Math.max(0, Math.min(100, persuasionScore));
-  const isGameOver = timeRemaining <= 0 || isGameWon;
+  const isGameOver = isGameWon;  // Only consider game over when someone has won
 
   // Calculate progress percentage
   const progressPercentage = escalationActive 
@@ -75,7 +75,7 @@ export function GameStatus({
         </CardHeader>
         <CardContent>
           <div className="text-xl font-bold">
-            {isGameOver ? "Game Over!" : formatTimeRemaining(timeRemaining, escalationActive)}
+            {isGameWon ? "Game Over!" : formatTimeRemaining(timeRemaining, escalationActive)}
           </div>
           <Progress 
             value={progressPercentage} 
