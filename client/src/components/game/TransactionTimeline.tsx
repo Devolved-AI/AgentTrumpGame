@@ -8,7 +8,7 @@ interface TransactionTimelineProps {
     response: string;
     timestamp: number;
     exists: boolean;
-    transactionHash?: string;
+    transactionHash: string | null;
     blockNumber: number;
   }[];
 }
