@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 
-const contractAddress = '0xE5A98Bb57e7D0D749437422527Eff8f1b487e514';
+const contractAddress = '0xEE179815907C5297Cf73af5b23568ff0921604bC';
 const contractABI = [
 	{
 		"inputs": [
@@ -796,6 +796,79 @@ export class GameContract {
     this.contract = new ethers.Contract(contractAddress, contractABI, signer);
   }
 
+  // Update the evaluateResponse method to implement the new Agent Trump behavior
+  async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
+    const lowerResponse = response.toLowerCase();
+    let scoreIncrement = 0;
+
+    // Define key Trump themes and phrases to look for
+    const persuasiveThemes = {
+      // Business success and deals
+      businessAcumen: /(?:great deals?|successful business|billions|tremendous success|winning|art of the deal)/i,
+
+      // America First messaging
+      americaFirst: /(?:make america great|america first|usa|american jobs|american workers)/i,
+
+      // Strong leadership
+      leadership: /(?:strong leader|tough decisions|get things done|nobody else could|only I can)/i,
+
+      // Common Trump speech patterns
+      trumpisms: /(?:believe me|many people are saying|everybody knows|tremendous|huge|the best|like never before|very strongly)/i,
+
+      // Appeals to his base
+      baseAppeals: /(?:drain the swamp|fake news|deep state|witch hunt|no collusion)/i,
+
+      // Personal flattery
+      flattery: /(?:greatest president|smart|genius|very stable|best negotiator|true leader)/i
+    };
+
+    // Check for presence of persuasive themes
+    let themesFound = 0;
+    for (const [theme, pattern] of Object.entries(persuasiveThemes)) {
+      if (pattern.test(lowerResponse)) {
+        themesFound++;
+      }
+    }
+
+    // Style analysis
+    const hasEmphasis = (response.match(/[A-Z]{2,}/g) || []).length > 0;
+    const hasExclamation = response.includes('!');
+    const properLength = response.length >= 50 && response.length <= 280;
+
+    // Calculate base score based on themes found (max 5 points per theme)
+    scoreIncrement += themesFound * 5;
+
+    // Add style points
+    if (hasEmphasis) scoreIncrement += 2;
+    if (hasExclamation) scoreIncrement += 2;
+    if (properLength) scoreIncrement += 1;
+
+    // Check for extraordinary persuasive combinations that might warrant instant win
+    const isExtraordinary = 
+      themesFound >= 4 && // Uses multiple Trump themes
+      hasEmphasis && // Has emphasis
+      hasExclamation && // Shows enthusiasm
+      properLength && // Appropriate length
+      /tremendous|huge|believe me|many people|the best/.test(lowerResponse); // Key Trump phrases
+
+    if (isExtraordinary) {
+      return { scoreIncrement: 100 }; // Instant win condition
+    }
+
+    // Apply resistance factor (7/10 resistance)
+    // Reduce non-winning scores by 30%
+    scoreIncrement = Math.floor(scoreIncrement * 0.7);
+
+    // Ensure score increment is within bounds (-5 to +5 for normal responses)
+    if (scoreIncrement > 0 && scoreIncrement < 100) {
+      scoreIncrement = Math.min(scoreIncrement, 5);
+    } else if (scoreIncrement <= 0) {
+      scoreIncrement = -5;
+    }
+
+    return { scoreIncrement };
+  }
+
   async getGameStatus() {
     const [
       timeRemaining,
@@ -941,91 +1014,6 @@ export class GameContract {
     const balance = await this.contract.getContractBalance();
     return ethers.formatEther(balance);
   }
-
-  async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
-    // Define Trump-style phrases with weighted importance
-    const keyPhrases = {
-      // Critical phrases (worth 3 points)
-      "make america great again": 3,
-      "nobody has ever seen anything like it": 3,
-      "believe me folks": 3,
-
-      // High impact phrases (worth 2 points)
-      "tremendous": 2,
-      "bigly": 2,
-      "huge success": 2,
-      "winning like never before": 2,
-      "absolutely incredible": 2,
-      "many people are saying": 2,
-
-      // Medium impact phrases (worth 1 point)
-      "beautiful": 1,
-      "amazing": 1,
-      "perfect": 1,
-      "the best": 1,
-      "fake news": 1,
-      "very strongly": 1,
-      "billions and billions": 1
-    };
-
-    // Convert response to lowercase for case-insensitive matching
-    const lowerResponse = response.toLowerCase();
-
-    // Calculate total score based on unique phrases used
-    let totalPoints = 0;
-    const usedPhrases = new Set<string>();
-
-    // Check each phrase and its variations
-    for (const [phrase, points] of Object.entries(keyPhrases)) {
-      if (lowerResponse.includes(phrase) && !usedPhrases.has(phrase)) {
-        totalPoints += points;
-        usedPhrases.add(phrase);
-      }
-    }
-
-    // Style analysis
-    const exclamationCount = (response.match(/!/g) || []).length;
-    const hasStrongEmphasis = response.match(/[A-Z]{3,}/) !== null;
-    const hasMultipleEmphasis = (response.match(/[A-Z]{2,}/g) || []).length > 1;
-
-    // Style points (max 5)
-    let stylePoints = 0;
-    if (exclamationCount >= 3) stylePoints += 2;
-    else if (exclamationCount > 0) stylePoints += 1;
-    if (hasStrongEmphasis) stylePoints += 2;
-    else if (hasMultipleEmphasis) stylePoints += 1;
-
-    // Penalties
-    let penalties = 0;
-    if (response.length < 50) penalties -= 2;
-    if (usedPhrases.size < 2) penalties -= 3;
-    if (response.toLowerCase().includes("please")) penalties -= 1;
-
-    const totalScore = totalPoints + stylePoints + penalties;
-    let scoreIncrement = -5; // Default to -5
-
-    // Adjust score based on total points
-    if (totalScore >= 12) {
-      scoreIncrement = 10; // Increased from 5 to make progress more noticeable
-    } else if (totalScore >= 8) {
-      scoreIncrement = 5;  // Increased from 2
-    } else if (totalScore >= 6) {
-      scoreIncrement = 0;
-    }
-
-    // Log scoring details for debugging
-    console.log('Response evaluation:', {
-      totalPoints,
-      stylePoints,
-      penalties,
-      totalScore,
-      scoreIncrement,
-      usedPhrases: Array.from(usedPhrases)
-    });
-
-    return { scoreIncrement };
-  }
-
   async buttonPushed(winnerAddress: string) {
     try {
       const tx = await this.contract.buttonPushed(winnerAddress);
