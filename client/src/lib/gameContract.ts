@@ -973,19 +973,33 @@ export class GameContract {
       // Get chain history
       const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
 
-      // Convert chain data to our format
-      const chainHistory = responses.map((response: string, index: number) => ({
-        response,
-        timestamp: Number(timestamps[index]),
-        blockNumber: 0,
-        transactionHash: null,
-        exists: exists[index]
-      }));
+      // Convert chain data to our format, filtering out invalid entries
+      const chainHistory = responses
+        .map((response: string, index: number) => ({
+          response,
+          timestamp: Number(timestamps[index]),
+          blockNumber: 0,
+          transactionHash: null,
+          exists: exists[index]
+        }))
+        .filter(item => 
+          // Filter out entries with 1970 timestamps (less than year 2000)
+          item.timestamp > 946684800 && 
+          item.exists
+        );
 
-      // Merge histories, preferring local storage data
-      const allHistory = [...localHistory];
+      // Merge histories, preferring local storage data with valid transactions
+      const validLocalHistory = localHistory.filter(item => 
+        item.blockNumber !== 0 && // Must have a valid block number
+        item.transactionHash !== null && // Must have a transaction hash
+        item.timestamp > 946684800 && // After year 2000
+        item.exists
+      );
 
-      // Add chain history items that aren't in local storage
+      // Combine histories, ensuring no duplicates
+      const allHistory = [...validLocalHistory];
+
+      // Only add chain items that don't exist in local storage
       chainHistory.forEach(chainItem => {
         const exists = allHistory.some(localItem => 
           localItem.response === chainItem.response && 
@@ -1000,12 +1014,18 @@ export class GameContract {
       return allHistory.sort((a, b) => b.timestamp - a.timestamp);
     } catch (error) {
       console.error('Error getting player history:', error);
-      // If contract call fails, return local storage data
+      // If contract call fails, return filtered local storage data
       const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
       if (stored) {
         const responses = JSON.parse(stored);
         const normalizedAddress = address.toLowerCase();
-        return responses[normalizedAddress] || [];
+        const localHistory = responses[normalizedAddress] || [];
+        return localHistory.filter(item => 
+          item.blockNumber !== 0 &&
+          item.transactionHash !== null &&
+          item.timestamp > 946684800 &&
+          item.exists
+        ).sort((a, b) => b.timestamp - a.timestamp);
       }
       return [];
     }
