@@ -73,14 +73,20 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [persuasionScore, setPersuasionScore] = useState<number>(() => {
-    if (!web3State.account) return 50;
-    return getStoredPersuasionScore(web3State.account);
-  });
+  const [persuasionScore, setPersuasionScore] = useState<number>(50);
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false); 
   const { toast } = useToast();
+
+  // Effect to update persuasion score when account changes
+  useEffect(() => {
+    if (web3State.account) {
+      const score = getStoredPersuasionScore(web3State.account);
+      console.log('Updating persuasion score for account:', web3State.account, score);
+      setPersuasionScore(score);
+    }
+  }, [web3State.account]);
 
   async function handleConnect() {
     setIsConnecting(true);
