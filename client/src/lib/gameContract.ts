@@ -980,13 +980,14 @@ export class GameContract {
       // Add new response with complete transaction details
       const newResponse = {
         response,
-        timestamp: Date.now() / 1000, // Convert to seconds for consistency
+        timestamp: Math.floor(Date.now() / 1000), // Convert to seconds for consistency
         blockNumber: receipt.blockNumber,
         transactionHash: receipt.hash,
         exists: true
       };
 
-      responses[normalizedAddress].push(newResponse);
+      // Add to beginning of array to show most recent first
+      responses[normalizedAddress].unshift(newResponse);
       localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
       console.log('Stored response in localStorage:', responses[normalizedAddress]);
 
@@ -999,14 +1000,47 @@ export class GameContract {
 
   async getPlayerHistory(address: string) {
     try {
+      // First get local storage data
       const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-      const responses = stored ? JSON.parse(stored) : {};
-      const normalizedAddress = address.toLowerCase();
-      console.log('Getting history for address:', normalizedAddress, 'Stored responses:', responses);
-      const history = responses[normalizedAddress] || [];
-      return history.sort((a: any, b: any) => b.timestamp - a.timestamp); // Sort by timestamp descending
+      let localResponses: PlayerHistoryItem[] = [];
+
+      if (stored) {
+        const responses = JSON.parse(stored);
+        const normalizedAddress = address.toLowerCase();
+        localResponses = responses[normalizedAddress] || [];
+      }
+
+      // Get on-chain data
+      const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
+
+      // Merge on-chain data with local storage data
+      const onChainResponses = responses.map((response: string, index: number) => ({
+        response,
+        timestamp: Number(timestamps[index]),
+        blockNumber: 0, // We don't have this from the contract
+        transactionHash: null, // We don't have this from the contract
+        exists: exists[index]
+      }));
+
+      // Combine and deduplicate responses
+      const combinedResponses = [...localResponses, ...onChainResponses];
+      const uniqueResponses = Array.from(new Map(
+        combinedResponses.map(item => 
+          [item.response + item.timestamp, item]
+        )
+      ).values());
+
+      // Sort by timestamp, most recent first
+      return uniqueResponses.sort((a, b) => b.timestamp - a.timestamp);
     } catch (error) {
       console.error('Error getting player history:', error);
+      // If contract call fails, return local storage data
+      const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
+      if (stored) {
+        const responses = JSON.parse(stored);
+        const normalizedAddress = address.toLowerCase();
+        return responses[normalizedAddress] || [];
+      }
       return [];
     }
   }
@@ -1048,4 +1082,12 @@ export class GameContract {
       throw error;
     }
   }
+}
+
+interface PlayerHistoryItem {
+  response: string;
+  timestamp: number;
+  transactionHash: string | null;
+  blockNumber: number;
+  exists: boolean;
 }

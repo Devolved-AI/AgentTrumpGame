@@ -168,6 +168,17 @@ export default function Home() {
           setWeb3State(restored);
           const contract = new GameContract(restored.provider!, restored.signer!);
           setGameContract(contract);
+
+          // Load persuasion score from localStorage
+          if (restored.account) {
+            const score = getStoredPersuasionScore(restored.account);
+            setPersuasionScore(score);
+
+            // Load player history
+            const history = await contract.getPlayerHistory(restored.account);
+            setPlayerHistory(history);
+          }
+
           await initializeGameData(contract, restored.account!);
 
           contract.subscribeToEvents({
@@ -302,7 +313,6 @@ export default function Home() {
     setGameContract(null);
     setPlayerHistory([]);
     setShowGameOver(false);
-    setPersuasionScore(50);
     setGameStatus({
       timeRemaining: 0,
       currentAmount: "0",
