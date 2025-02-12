@@ -219,26 +219,30 @@ export default function Home() {
 
 
   // Initialize game data
-  const initializeGameData = async (contract: GameContract, account: string) => {
+  async function initializeGameData(contract: GameContract, account: string) {
     try {
       const [status, history] = await Promise.all([
         contract.getGameStatus(),
         contract.getPlayerHistory(account)
       ]);
 
-      setGameStatus(status);
-      setGameWon(status.isGameWon);
+      // Reset game status to initial state for new game
+      setGameStatus({
+        timeRemaining: 0,
+        currentAmount: "0.0009",
+        lastPlayer: "",
+        escalationActive: false,
+        gameEndBlock: 0,
+        isGameWon: false,
+        isGameOver: false,
+        currentMultiplier: 1,
+        escalationPeriodTimeRemaining: 0,
+        currentPeriodIndex: 0
+      });
+      setGameWon(false);
+      setShowGameOver(false);
       setPlayerHistory(history);
 
-      if (status.timeRemaining <= 0 || status.isGameWon) {
-        setShowGameOver(true);
-        toast({
-          title: status.isGameWon ? "Game Won!" : "Game Over",
-          description: "Thanks for playing!",
-        });
-      } else {
-        setShowGameOver(false);
-      }
     } catch (error) {
       console.error("Failed to initialize game data:", error);
       toast({
@@ -247,7 +251,7 @@ export default function Home() {
         variant: "destructive"
       });
     }
-  };
+  }
 
   async function handleConnect() {
     setIsConnecting(true);
