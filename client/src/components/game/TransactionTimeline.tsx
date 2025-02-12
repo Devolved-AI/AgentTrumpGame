@@ -17,7 +17,7 @@ interface TransactionTimelineProps {
 // Format timestamp to Pacific Time
 function formatPacificTime(timestamp: number): string {
   return formatInTimeZone(
-    new Date(timestamp),
+    new Date(timestamp * 1000),
     'America/Los_Angeles',
     'MMM dd, yyyy HH:mm:ss zzz'
   );
