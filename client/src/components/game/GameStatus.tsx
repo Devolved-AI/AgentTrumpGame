@@ -86,7 +86,7 @@ export function GameStatus({
           />
           {escalationActive && (
             <p className="text-xs text-orange-500 mt-1 font-semibold">
-              ⚠️ Escalation Period Active - Fixed Price for Next {Math.floor(timeRemaining / 60)}m {timeRemaining % 60}s
+              ⚠️ Escalation Active - Fixed Price Until Timer Ends
             </p>
           )}
         </CardContent>

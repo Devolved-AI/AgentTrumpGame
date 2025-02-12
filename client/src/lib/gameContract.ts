@@ -196,8 +196,8 @@ const contractABI = [
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
+				"indexed": false,
+				"internalType": "uint256",
 				"name": "player",
 				"type": "address"
 			},
@@ -907,11 +907,21 @@ export class GameContract {
       // Calculate remaining time in current period
       escalationPeriodTimeRemaining = ESCALATION_PERIOD - (secondsSinceEscalation % ESCALATION_PERIOD);
 
-      // Base amount is 0.0009 ETH
-      const baseAmount = 0.0009;
-      // Multiply by 2^periodIndex (1, 2, 4, 8, 16, 32)
-      const multiplier = Math.pow(2, currentPeriodIndex);
-      currentAmount = (baseAmount * multiplier).toFixed(4);
+      // Fixed prices for each escalation period (in ETH)
+      const periodPrices = [
+        0.0018, // 1st period: 0.0018 ETH
+        0.0036, // 2nd period: 0.0036 ETH
+        0.0072, // 3rd period: 0.0072 ETH
+        0.0144, // 4th period: 0.0144 ETH
+        0.0288  // 5th period: 0.0288 ETH
+      ];
+
+      // Get the price for current period (cap at last defined price if we go beyond)
+      const periodPrice = currentPeriodIndex < periodPrices.length 
+        ? periodPrices[currentPeriodIndex]
+        : periodPrices[periodPrices.length - 1];
+
+      currentAmount = periodPrice.toFixed(4);
     }
 
     // Calculate the final status
