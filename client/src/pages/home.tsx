@@ -129,7 +129,8 @@ export default function Home() {
       setGameWon(status.isGameWon);
       setPlayerHistory(history);
 
-      if (status.isGameOver) {
+      // Only show game over if time is actually up or game is won
+      if (status.timeRemaining <= 0 || status.isGameWon) {
         setShowGameOver(true);
         toast({
           title: status.isGameWon ? "Game Won!" : "Game Over",
@@ -204,15 +205,19 @@ export default function Home() {
       const status = await gameContract.getGameStatus();
       setGameStatus(status);
 
-      if (status.isGameWon !== gameWon) {
+      // Only update game over state if time is actually up or game is won
+      if (status.timeRemaining <= 0 || status.isGameWon) {
         setGameWon(status.isGameWon);
+        setShowGameOver(true);
         if (status.isGameWon) {
-          setShowGameOver(true);
           toast({
-            title: "Game Over",
+            title: "Game Won!",
             description: "This game has already been won!",
           });
         }
+      } else {
+        // Make sure game over dialog is hidden if game is still active
+        setShowGameOver(false);
       }
 
       const history = await gameContract.getPlayerHistory(web3State.account);
