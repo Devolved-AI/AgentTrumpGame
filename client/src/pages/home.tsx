@@ -211,12 +211,19 @@ export default function Home() {
 
   async function initializeGameData(contract: GameContract, account: string) {
     try {
+      // Get initial game state from contract
+      const [status, totalPool] = await Promise.all([
+        contract.getGameStatus(),
+        contract.getTotalPrizePool()
+      ]);
+
+      // Set initial game state
       setGameStatus({
-        timeRemaining: 0,
-        currentAmount: "0.0009",
+        timeRemaining: status.timeRemaining,
+        currentAmount: "0.0009", // Initial bet amount
         lastPlayer: "",
         escalationActive: false,
-        gameEndBlock: 0,
+        gameEndBlock: status.gameEndBlock,
         isGameWon: false,
         isGameOver: false,
         currentMultiplier: 1,
@@ -226,7 +233,7 @@ export default function Home() {
       setGameWon(false);
       setShowGameOver(false);
       setPlayerHistory([]);
-      setPrizePoolEth("0");
+      setPrizePoolEth(totalPool);
       setPersuasionScore(50);
 
     } catch (error) {
@@ -307,26 +314,14 @@ export default function Home() {
     try {
       const status = await gameContract.getGameStatus();
 
+      // Only update game status if we have actual gameplay
       if (!playerHistory.length) {
-        setGameStatus({
-          timeRemaining: 0,
-          currentAmount: "0.0009",
-          lastPlayer: "",
-          escalationActive: false,
-          gameEndBlock: 0,
-          isGameWon: false,
-          isGameOver: false,
-          currentMultiplier: 1,
-          escalationPeriodTimeRemaining: 0,
-          currentPeriodIndex: 0
-        });
-        setGameWon(false);
-        setShowGameOver(false);
         return;
       }
 
       setGameStatus(status);
 
+      // Only check for game over if player has made at least one move
       if (playerHistory.length > 0 && (status.timeRemaining <= 0 || status.isGameWon)) {
         setGameWon(status.isGameWon);
         setShowGameOver(true);
@@ -468,15 +463,15 @@ export default function Home() {
       gameStatus.escalationActive ? 3000 : 15000
     );
     return () => clearInterval(interval);
-  }, [gameContract, gameStatus.escalationActive]);
+  }, [gameContract, web3State.account, gameStatus.escalationActive]);
 
   useEffect(() => {
-    if (!gameContract) return;
+    if (!gameContract || !web3State.account) return;
     const interval = setInterval(updatePrizePool, 
       gameStatus.escalationActive ? 5000 : 10000
     );
     return () => clearInterval(interval);
-  }, [gameContract, gameStatus.escalationActive]);
+  }, [gameContract, web3State.account, gameStatus.escalationActive]);
 
   async function refreshPlayerHistory() {
     if (!gameContract || !web3State.account) return;
