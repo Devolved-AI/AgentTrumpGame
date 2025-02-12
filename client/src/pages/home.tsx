@@ -334,10 +334,6 @@ export default function Home() {
     try {
       const status = await gameContract.getGameStatus();
 
-      if (!playerHistory.length) {
-        return;
-      }
-
       setGameStatus(status);
 
       if (playerHistory.length > 0 && (status.timeRemaining <= 0 || status.isGameWon)) {
@@ -475,16 +471,43 @@ export default function Home() {
   }
 
   useEffect(() => {
-    const interval = setInterval(refreshGameStatus, 
-      gameStatus.escalationActive ? 3000 : 15000
-    );
+    const interval = setInterval(async () => {
+      if (!gameContract || !web3State.account) return;
+
+      try {
+        const status = await gameContract.getGameStatus();
+        setGameStatus(prevStatus => ({
+          ...prevStatus,
+          timeRemaining: status.timeRemaining,
+          currentAmount: status.currentAmount,
+          lastPlayer: status.lastPlayer,
+          escalationActive: status.escalationActive,
+          gameEndBlock: status.gameEndBlock,
+          isGameWon: status.isGameWon,
+          isGameOver: status.isGameOver,
+          currentMultiplier: status.currentMultiplier,
+          escalationPeriodTimeRemaining: status.escalationPeriodTimeRemaining,
+          currentPeriodIndex: status.currentPeriodIndex
+        }));
+
+        // Check for game over conditions
+        if (status.timeRemaining <= 0 || status.isGameWon) {
+          setGameWon(status.isGameWon);
+          setShowGameOver(true);
+        }
+      } catch (error) {
+        console.error("Failed to refresh game status:", error);
+      }
+    }, gameStatus.timeRemaining < 600 ? 3000 : 15000); // Update more frequently when less than 10 minutes remain
+
     return () => clearInterval(interval);
-  }, [gameContract, web3State.account, gameStatus.escalationActive]);
+  }, [gameContract, web3State.account, gameStatus.timeRemaining]);
 
   useEffect(() => {
     if (!gameContract || !web3State.account) return;
+
     const interval = setInterval(updatePrizePool, 
-      gameStatus.escalationActive ? 5000 : 10000
+      gameStatus.escalationActive ? 5000 : 30000
     );
     return () => clearInterval(interval);
   }, [gameContract, web3State.account, gameStatus.escalationActive]);
