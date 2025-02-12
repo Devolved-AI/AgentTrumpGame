@@ -20,16 +20,17 @@ const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
 function getStoredPersuasionScore(address: string): number {
   try {
-    // Clear existing scores since this is a new game
-    localStorage.removeItem(PERSUASION_SCORE_KEY);
-
-    // Initialize with 50 for new game
-    const initialScores = { [address]: 50 };
-    localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(initialScores));
-    return 50;
+    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
+    const scores = stored ? JSON.parse(stored) : {};
+    if (scores[address] === undefined) {
+      scores[address] = 50;
+      localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
+    }
+    console.log('Retrieved persuasion score for address:', address, scores[address]);
+    return scores[address];
   } catch (error) {
     console.error('Error reading persuasion score:', error);
-    return 50; // Return 50 even on error since this is a new game
+    return 50;
   }
 }
 
@@ -97,10 +98,15 @@ export default function Home() {
       const contract = new GameContract(state.provider!, state.signer!);
       setGameContract(contract);
 
-      // Check initial game state
-      const status = await contract.getGameStatus();
+      // Check initial game state and player history
+      const [status, history] = await Promise.all([
+        contract.getGameStatus(),
+        state.account ? contract.getPlayerHistory(state.account) : []
+      ]);
+
       setGameStatus(status);
       setGameWon(status.isGameWon);
+      setPlayerHistory(history);
 
       if (status.isGameOver) {
         setShowGameOver(true);
@@ -111,11 +117,14 @@ export default function Home() {
       }
 
       contract.subscribeToEvents({
-        onGuessSubmitted: () => {
-          refreshGameStatus();
-          updatePrizePool();
+        onGuessSubmitted: async () => {
+          await Promise.all([
+            refreshGameStatus(),
+            updatePrizePool(),
+            refreshPlayerHistory()
+          ]);
         },
-        onGameWon: () => {
+        onGameWon: async () => {
           setShowConfetti(true);
           setGameWon(true);
           setShowGameOver(true);
@@ -123,16 +132,22 @@ export default function Home() {
             title: "Game Won!",
             description: "Someone has won the game!",
           });
-          refreshGameStatus();
-          updatePrizePool();
+          await Promise.all([
+            refreshGameStatus(),
+            updatePrizePool(),
+            refreshPlayerHistory()
+          ]);
         },
-        onEscalationStarted: () => {
+        onEscalationStarted: async () => {
           toast({
             title: "Escalation Started",
             description: "The game has entered escalation mode!",
           });
-          refreshGameStatus();
-          updatePrizePool();
+          await Promise.all([
+            refreshGameStatus(),
+            updatePrizePool(),
+            refreshPlayerHistory()
+          ]);
         }
       });
 
@@ -328,6 +343,18 @@ export default function Home() {
     const interval = setInterval(updatePrizePool, 10000);
     return () => clearInterval(interval);
   }, [gameContract]);
+
+  // Add new refreshPlayerHistory function
+  async function refreshPlayerHistory() {
+    if (!gameContract || !web3State.account) return;
+    try {
+      const history = await gameContract.getPlayerHistory(web3State.account);
+      setPlayerHistory(history);
+    } catch (error) {
+      console.error('Error refreshing player history:', error);
+    }
+  }
+
 
   return (
     <>
