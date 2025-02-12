@@ -103,6 +103,38 @@ export default function Home() {
     }
   }, [web3State.account]);
 
+  // Initialize game data
+  const initializeGameData = async (contract: GameContract, account: string) => {
+    try {
+      const [status, history] = await Promise.all([
+        contract.getGameStatus(),
+        contract.getPlayerHistory(account)
+      ]);
+
+      setGameStatus(status);
+      setGameWon(status.isGameWon);
+      setPlayerHistory(history);
+
+      // Only show game over if time is actually up or game is won
+      if (status.timeRemaining <= 0 || status.isGameWon) {
+        setShowGameOver(true);
+        toast({
+          title: status.isGameWon ? "Game Won!" : "Game Over",
+          description: "Thanks for playing!",
+        });
+      } else {
+        setShowGameOver(false);
+      }
+    } catch (error) {
+      console.error("Failed to initialize game data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load game data. Please try refreshing the page.",
+        variant: "destructive"
+      });
+    }
+  };
+
   async function handleConnect() {
     setIsConnecting(true);
     setIsUpdatingGameData(true);
@@ -119,23 +151,8 @@ export default function Home() {
       const contract = new GameContract(state.provider!, state.signer!);
       setGameContract(contract);
 
-      // Check initial game state and player history
-      const [status, history] = await Promise.all([
-        contract.getGameStatus(),
-        state.account ? contract.getPlayerHistory(state.account) : []
-      ]);
-
-      setGameStatus(status);
-      setGameWon(status.isGameWon);
-      setPlayerHistory(history);
-
-      // Only show game over if time is actually up or game is won
-      if (status.timeRemaining <= 0 || status.isGameWon) {
-        setShowGameOver(true);
-        toast({
-          title: status.isGameWon ? "Game Won!" : "Game Over",
-          description: "Thanks for playing!",
-        });
+      if (state.account) {
+        await initializeGameData(contract, state.account);
       }
 
       contract.subscribeToEvents({
@@ -196,6 +213,7 @@ export default function Home() {
     setWeb3State(initialState);
     setGameContract(null);
     setPlayerHistory([]);
+    setShowGameOver(false);
   }
 
   async function refreshGameStatus() {
