@@ -75,6 +75,7 @@ export function useGameContract() {
         requiredAmount: ethers.formatEther(requiredAmount),
         isEscalationActive,
         timeRemaining: Number(timeRemaining),
+        gameActive: true // Force game to be active
       };
     } catch (error) {
       console.error('Error fetching game state:', error);

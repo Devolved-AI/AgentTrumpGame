@@ -7,6 +7,7 @@ interface GameState {
   requiredAmount: string;
   isEscalationActive: boolean;
   timeRemaining: number;
+  gameActive: boolean;
 }
 
 interface GameContextType {
@@ -28,7 +29,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     try {
       const state = await getGameState();
       if (state) {
-        setGameState(state);
+        setGameState({
+          ...state,
+          gameActive: true // Ensure game is always active
+        });
       }
     } catch (error) {
       console.error('Error refreshing game state:', error);
