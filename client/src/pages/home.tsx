@@ -27,14 +27,14 @@ function getStoredPersuasionScore(address: string): number {
     const score = scores[address];
     console.log('Retrieved score:', score);
     if (score === undefined) {
-      scores[address] = 50;
+      scores[address] = 50; // Set default score to 50
       localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
       return 50;
     }
     return score;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
-    return 50;
+    return 50; // Return default score on error
   }
 }
 

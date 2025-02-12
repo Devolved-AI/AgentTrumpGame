@@ -22,7 +22,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(playerScores)
       .where(eq(playerScores.address, address));
-    return score;
+    return score || { address, persuasionScore: 50, lastUpdated: new Date() };
   }
 
   async updatePlayerScore(address: string, score: number): Promise<PlayerScore> {
