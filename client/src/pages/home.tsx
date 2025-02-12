@@ -15,71 +15,82 @@ import { Footer } from "@/components/Footer";
 import { TrumpLoadingScreen } from "@/components/game/TrumpLoadingScreen";
 import { GameOverDialog } from "@/components/game/GameOverDialog";
 import {TrumpAnimation} from "@/components/game/TrumpAnimation";
+import { formatInTimeZone } from 'date-fns-tz';
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 const PLAYER_RESPONSES_KEY = 'player_responses';
 
-// Updated localStorage functions for better clarity
+// Format timestamp to Pacific Time
+function formatPacificTime(timestamp: number): string {
+  return formatInTimeZone(
+    new Date(timestamp),
+    'America/Los_Angeles',
+    'MMM dd, yyyy HH:mm:ss zzz'
+  );
+}
+
+// Updated localStorage functions with better persistence
 function getStoredPersuasionScore(address: string): number {
   try {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
-    console.log('Current stored scores:', scores);
-    console.log('Looking up score for address:', address);
-    const score = scores[address];
-    console.log('Retrieved score:', score);
-    if (score === undefined) {
-      scores[address] = 50; // Set default score to 50
-      localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
-      return 50;
-    }
-    return score;
+    const score = scores[address.toLowerCase()];
+    return typeof score === 'number' ? score : 50;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
-    return 50; // Return default score on error
+    return 50;
   }
 }
 
 function storePersuasionScore(address: string, score: number) {
   try {
-    console.log(`Storing score ${score} for address ${address}`);
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
-    scores[address] = Math.max(0, Math.min(100, score));
+    scores[address.toLowerCase()] = Math.max(0, Math.min(100, score));
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
-    console.log('Updated stored scores:', scores);
   } catch (error) {
     console.error('Error storing persuasion score:', error);
   }
 }
 
-// New function to store player responses
-function storePlayerResponse(address: string, response: string, timestamp: number, blockNumber: number, hash: string | null) {
+function storePlayerResponse(
+  address: string, 
+  response: string, 
+  timestamp: number, 
+  blockNumber: number, 
+  hash: string | null
+) {
   try {
     const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
     const responses = stored ? JSON.parse(stored) : {};
-    if (!responses[address]) {
-      responses[address] = [];
+    const normalizedAddress = address.toLowerCase();
+
+    if (!responses[normalizedAddress]) {
+      responses[normalizedAddress] = [];
     }
-    responses[address].push({
+
+    responses[normalizedAddress].push({
       response,
       timestamp,
       blockNumber,
       transactionHash: hash,
       exists: true
     });
+
     localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
   } catch (error) {
     console.error('Error storing player response:', error);
   }
 }
 
-// New function to get player responses
 function getPlayerResponses(address: string): PlayerHistoryItem[] {
   try {
     const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
     const responses = stored ? JSON.parse(stored) : {};
-    return responses[address] || [];
+    const normalizedAddress = address.toLowerCase();
+    return (responses[normalizedAddress] || []).sort((a: PlayerHistoryItem, b: PlayerHistoryItem) => 
+      b.timestamp - a.timestamp
+    );
   } catch (error) {
     console.error('Error getting player responses:', error);
     return [];
@@ -122,13 +133,12 @@ export default function Home() {
 
   // Reset all persuasion scores
   useEffect(() => {
-    // Clear existing scores and set new default
     localStorage.removeItem(PERSUASION_SCORE_KEY);
     if (web3State.account) {
       setPersuasionScore(50);
       storePersuasionScore(web3State.account, 50);
     }
-  }, []); // Run once on component mount
+  }, []); 
 
   // Attempt to restore wallet connection on mount
   useEffect(() => {
@@ -141,7 +151,6 @@ export default function Home() {
           setGameContract(contract);
           await initializeGameData(contract, restored.account!);
 
-          // Set up event subscriptions
           contract.subscribeToEvents({
             onGuessSubmitted: async () => {
               await Promise.all([
@@ -189,7 +198,6 @@ export default function Home() {
   useEffect(() => {
     if (web3State.account) {
       const score = getStoredPersuasionScore(web3State.account);
-      console.log('Initial persuasion score loaded for account:', web3State.account, score);
       setPersuasionScore(score);
     }
   }, []);
@@ -198,7 +206,6 @@ export default function Home() {
   useEffect(() => {
     if (web3State.account) {
       const score = getStoredPersuasionScore(web3State.account);
-      console.log('Updating persuasion score for new account:', web3State.account, score);
       setPersuasionScore(score);
     }
   }, [web3State.account]);
@@ -215,7 +222,6 @@ export default function Home() {
       setGameWon(status.isGameWon);
       setPlayerHistory(history);
 
-      // Only show game over if time is actually up or game is won
       if (status.timeRemaining <= 0 || status.isGameWon) {
         setShowGameOver(true);
         toast({
@@ -243,9 +249,11 @@ export default function Home() {
       setWeb3State(state);
 
       if (state.account) {
-        const score = getStoredPersuasionScore(state.account);
-        console.log('Retrieved persuasion score for address:', state.account, score);
-        setPersuasionScore(score);
+        const storedScore = getStoredPersuasionScore(state.account);
+        setPersuasionScore(storedScore);
+
+        const storedResponses = getPlayerResponses(state.account);
+        setPlayerHistory(storedResponses);
       }
 
       const contract = new GameContract(state.provider!, state.signer!);
@@ -288,7 +296,6 @@ export default function Home() {
       const status = await gameContract.getGameStatus();
       setGameStatus(status);
 
-      // Only update game over state if time is actually up or game is won
       if (status.timeRemaining <= 0 || status.isGameWon) {
         setGameWon(status.isGameWon);
         setShowGameOver(true);
@@ -299,7 +306,6 @@ export default function Home() {
           });
         }
       } else {
-        // Make sure game over dialog is hidden if game is still active
         setShowGameOver(false);
       }
 
@@ -348,14 +354,11 @@ export default function Home() {
       await tx.wait();
       setTransactionStatus('success');
 
-      // Update persuasion score
       const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
-      console.log(`Updating score from ${persuasionScore} to ${newScore} for address ${web3State.account}`);
       setPersuasionScore(newScore);
       storePersuasionScore(web3State.account, newScore);
       storePlayerResponse(web3State.account, response, Date.now(), blockNumber, tx.hash);
 
-      // Handle game win condition (persuasion score reaches 100)
       if (newScore >= 100) {
         try {
           await gameContract.buttonPushed(web3State.account);

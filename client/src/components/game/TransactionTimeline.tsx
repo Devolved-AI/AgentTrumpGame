@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock, ExternalLink } from "lucide-react";
+import { formatInTimeZone } from 'date-fns-tz';
 
 interface TransactionTimelineProps {
   responses: {
@@ -11,6 +12,15 @@ interface TransactionTimelineProps {
     transactionHash: string | null;
     blockNumber: number;
   }[];
+}
+
+// Format timestamp to Pacific Time
+function formatPacificTime(timestamp: number): string {
+  return formatInTimeZone(
+    new Date(timestamp),
+    'America/Los_Angeles',
+    'MMM dd, yyyy HH:mm:ss zzz'
+  );
 }
 
 export function TransactionTimeline({ responses }: TransactionTimelineProps) {
@@ -23,20 +33,6 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
       </Card>
     );
   }
-
-  const formatPSTTime = (timestamp: number) => {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleString("en-US", {
-      timeZone: "America/Los_Angeles",
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true,
-      timeZoneName: 'short'
-    });
-  };
 
   return (
     <ScrollArea className="h-[500px] pr-4">
@@ -64,8 +60,9 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
               <CardContent className="p-4">
                 <div className="space-y-3">
                   {/* Timestamp */}
-                  <div className="text-sm text-muted-foreground">
-                    {formatPSTTime(response.timestamp)}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    {formatPacificTime(response.timestamp)}
                   </div>
 
                   {/* Response */}
