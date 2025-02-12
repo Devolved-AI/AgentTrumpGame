@@ -1,39 +1,69 @@
-import { users, type User, type InsertUser } from "@shared/schema";
-
-// modify the interface with any CRUD methods
-// you might need
+import { 
+  playerScores, 
+  playerResponses,
+  type InsertPlayerScore,
+  type InsertPlayerResponse,
+  type PlayerScore,
+  type PlayerResponse
+} from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getPlayerScore(address: string): Promise<PlayerScore | undefined>;
+  updatePlayerScore(address: string, score: number): Promise<PlayerScore>;
+  addPlayerResponse(data: InsertPlayerResponse): Promise<PlayerResponse>;
+  getPlayerResponses(address: string): Promise<PlayerResponse[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  currentId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.currentId = 1;
+export class DatabaseStorage implements IStorage {
+  async getPlayerScore(address: string): Promise<PlayerScore | undefined> {
+    const [score] = await db
+      .select()
+      .from(playerScores)
+      .where(eq(playerScores.address, address));
+    return score;
   }
 
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+  async updatePlayerScore(address: string, score: number): Promise<PlayerScore> {
+    const existingScore = await this.getPlayerScore(address);
+
+    if (existingScore) {
+      const [updated] = await db
+        .update(playerScores)
+        .set({ 
+          persuasionScore: score,
+          lastUpdated: new Date()
+        })
+        .where(eq(playerScores.address, address))
+        .returning();
+      return updated;
+    } else {
+      const [newScore] = await db
+        .insert(playerScores)
+        .values({
+          address,
+          persuasionScore: score
+        })
+        .returning();
+      return newScore;
+    }
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async addPlayerResponse(data: InsertPlayerResponse): Promise<PlayerResponse> {
+    const [response] = await db
+      .insert(playerResponses)
+      .values(data)
+      .returning();
+    return response;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getPlayerResponses(address: string): Promise<PlayerResponse[]> {
+    return db
+      .select()
+      .from(playerResponses)
+      .where(eq(playerResponses.address, address));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

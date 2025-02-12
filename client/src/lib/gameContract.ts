@@ -838,60 +838,72 @@ export class GameContract {
     };
   }
 
+  private async updatePersuasionScore(address: string, score: number): Promise<void> {
+    try {
+      await fetch('/api/scores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ address, score })
+      });
+    } catch (error) {
+      console.error('Failed to update persuasion score:', error);
+    }
+  }
+
+  private async getPersuasionScore(address: string): Promise<number> {
+    try {
+      const response = await fetch(`/api/scores/${address}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.score;
+      }
+      return 50; // Default score if not found
+    } catch (error) {
+      console.error('Failed to get persuasion score:', error);
+      return 50;
+    }
+  }
+
   async submitResponse(response: string, amount: string) {
     try {
-      // Ensure we're using the exact amount without any rounding issues
       const parsedAmount = ethers.parseEther(amount.toString());
       console.log('Submitting response with amount:', amount, 'ETH, parsed:', parsedAmount.toString());
 
       const tx = await this.contract.submitGuess(response, {
         value: parsedAmount,
-        gasLimit: 500000 // Add explicit gas limit
+        gasLimit: 500000
+      });
+
+      // Store the response in the database
+      await fetch('/api/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: await this.signer.getAddress(),
+          response,
+          blockNumber: tx.blockNumber,
+          transactionHash: tx.hash
+        })
       });
 
       return tx;
     } catch (error: any) {
       console.error("Transaction error:", error);
-      if (error.data) {
-        console.error("Error data:", error.data);
-      }
       throw error;
     }
   }
 
   async getPlayerHistory(address: string) {
     try {
-      const responseCount = await this.contract.getPlayerResponseCount(address);
-      const history = [];
-
-      for (let i = 0; i < Number(responseCount); i++) {
-        try {
-          const [response, blockNumber, exists] = await this.contract.getPlayerResponseByIndex(address, i);
-
-          if (exists) {
-            const block = await this.provider.getBlock(Number(blockNumber));
-            if (!block) continue;
-
-            // Get transaction hash from events
-            const filter = this.contract.filters.GuessSubmitted(address);
-            const events = await this.contract.queryFilter(filter, Number(blockNumber), Number(blockNumber));
-            const event = events[0];
-
-            history.push({
-              response,
-              timestamp: Number(block.timestamp),
-              transactionHash: event?.transactionHash || null,
-              blockNumber: Number(blockNumber),
-              exists: true
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching response:', error);
-          continue;
-        }
+      const response = await fetch(`/api/responses/${address}`);
+      if (response.ok) {
+        return await response.json();
       }
-
-      return history;
+      return [];
     } catch (error) {
       console.error('Error getting player history:', error);
       return [];
