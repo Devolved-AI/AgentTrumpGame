@@ -958,25 +958,27 @@ export class GameContract {
       // Wait for the transaction to be mined
       const receipt = await tx.wait();
       const address = await this.signer.getAddress();
+      const normalizedAddress = address.toLowerCase();
 
       // Store response in localStorage
       const stored = localStorage.getItem(PLAYER_RESPONSES_KEY) || '{}';
       const responses = JSON.parse(stored);
-      if (!responses[address]) {
-        responses[address] = [];
+      if (!responses[normalizedAddress]) {
+        responses[normalizedAddress] = [];
       }
 
       // Add new response with complete transaction details
-      responses[address].push({
+      const newResponse = {
         response,
-        timestamp: Date.now(),
+        timestamp: Date.now() / 1000, // Convert to seconds for consistency
         blockNumber: receipt.blockNumber,
-        transactionHash: tx.hash,
+        transactionHash: receipt.hash,
         exists: true
-      });
+      };
 
+      responses[normalizedAddress].push(newResponse);
       localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
-      console.log('Stored response in localStorage:', responses[address]);
+      console.log('Stored response in localStorage:', responses[normalizedAddress]);
 
       return tx;
     } catch (error: any) {
@@ -990,7 +992,9 @@ export class GameContract {
       const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
       const responses = stored ? JSON.parse(stored) : {};
       const normalizedAddress = address.toLowerCase();
-      return responses[normalizedAddress] || [];
+      console.log('Getting history for address:', normalizedAddress, 'Stored responses:', responses);
+      const history = responses[normalizedAddress] || [];
+      return history.sort((a: any, b: any) => b.timestamp - a.timestamp); // Sort by timestamp descending
     } catch (error) {
       console.error('Error getting player history:', error);
       return [];

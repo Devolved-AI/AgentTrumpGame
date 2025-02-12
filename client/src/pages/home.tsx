@@ -354,14 +354,12 @@ export default function Home() {
 
       const evaluation = await gameContract.evaluateResponse(response);
       const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
-      const blockNumber = (await tx.wait()).blockNumber;
       await tx.wait();
       setTransactionStatus('success');
 
       const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
       setPersuasionScore(newScore);
       storePersuasionScore(web3State.account, newScore);
-      storePlayerResponse(web3State.account, response, Date.now(), blockNumber, tx.hash);
 
       // Show transaction confirmation first
       toast({
@@ -369,10 +367,11 @@ export default function Home() {
         description: "Your submission was successfully recorded on the blockchain.",
       });
 
-      // Update player history immediately after transaction
-      await refreshPlayerHistory();
+      // Force refresh player history immediately
+      const updatedHistory = await gameContract.getPlayerHistory(web3State.account);
+      setPlayerHistory(updatedHistory);
 
-      // Prepare Trump's message
+      // Prepare Trump's message and update game state
       if (newScore >= 100) {
         try {
           await gameContract.buttonPushed(web3State.account);
@@ -404,9 +403,12 @@ export default function Home() {
         setShowTrumpDialog(true);
       }, 1000);
 
-      // Refresh game status and player history again
-      await refreshGameStatus();
-      await refreshPlayerHistory();
+      // Final refresh of game status and player history
+      await Promise.all([
+        refreshGameStatus(),
+        refreshPlayerHistory()
+      ]);
+
     } catch (error: any) {
       setTransactionStatus('error');
       console.error("Submission error:", error);
@@ -460,6 +462,7 @@ export default function Home() {
     if (!gameContract || !web3State.account) return;
     try {
       const history = await gameContract.getPlayerHistory(web3State.account);
+      console.log('Refreshed player history:', history);
       setPlayerHistory(history);
     } catch (error) {
       console.error('Error refreshing player history:', error);
