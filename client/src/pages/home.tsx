@@ -108,7 +108,7 @@ export default function Home() {
   const [gameContract, setGameContract] = useState<GameContract | null>(null);
   const [gameStatus, setGameStatus] = useState({
     timeRemaining: 0,
-    currentAmount: "0",
+    currentAmount: "0.0009", // Set to initial game amount
     lastPlayer: "",
     escalationActive: false,
     gameEndBlock: 0,
@@ -134,6 +134,25 @@ export default function Home() {
   // Clear all game state on component mount
   useEffect(() => {
     clearAllGameState();
+    // Reset all game states to initial values
+    setGameStatus({
+      timeRemaining: 0,
+      currentAmount: "0.0009",
+      lastPlayer: "",
+      escalationActive: false,
+      gameEndBlock: 0,
+      isGameWon: false,
+      isGameOver: false,
+      currentMultiplier: 1,
+      escalationPeriodTimeRemaining: 0,
+      currentPeriodIndex: 0
+    });
+    setPlayerHistory([]);
+    setShowGameOver(false);
+    setGameWon(false);
+    setShowConfetti(false);
+    setPrizePoolEth("0");
+    setPersuasionScore(50);
   }, []);
 
   // Attempt to restore wallet connection on mount
