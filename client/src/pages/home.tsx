@@ -18,99 +18,7 @@ import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
-function clearAllGameState() {
-  localStorage.clear(); 
-}
-
-const PERSUASION_SCORE_KEY = 'persuasion_scores';
-const PLAYER_RESPONSES_KEY = 'player_responses';
-
-function formatPacificTime(timestamp: number): string {
-  return formatInTimeZone(
-    new Date(timestamp),
-    'America/Los_Angeles',
-    'MMM dd, yyyy HH:mm:ss zzz'
-  );
-}
-
-function getStoredPersuasionScore(address: string): number {
-  try {
-    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
-    if (!stored) return 50;
-
-    const scores = JSON.parse(stored);
-    const normalizedAddress = address.toLowerCase();
-    return scores[normalizedAddress] ?? 50;
-  } catch (error) {
-    console.error('Error reading persuasion score:', error);
-    return 50;
-  }
-}
-
-function storePersuasionScore(address: string, score: number) {
-  try {
-    const normalizedAddress = address.toLowerCase();
-    const stored = localStorage.getItem(PERSUASION_SCORE_KEY) || '{}';
-    const scores = JSON.parse(stored);
-    scores[normalizedAddress] = Math.max(0, Math.min(100, score));
-    localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
-    console.log('Stored persuasion score:', scores[normalizedAddress]);
-  } catch (error) {
-    console.error('Error storing persuasion score:', error);
-  }
-}
-
-function storePlayerResponse(
-  address: string, 
-  response: string, 
-  timestamp: number, 
-  blockNumber: number, 
-  hash: string | null
-) {
-  try {
-    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-    const responses = stored ? JSON.parse(stored) : {};
-    const normalizedAddress = address.toLowerCase();
-
-    if (!responses[normalizedAddress]) {
-      responses[normalizedAddress] = [];
-    }
-
-    responses[normalizedAddress].push({
-      response,
-      timestamp,
-      blockNumber,
-      transactionHash: hash,
-      exists: true
-    });
-
-    localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
-  } catch (error) {
-    console.error('Error storing player response:', error);
-  }
-}
-
-function getPlayerResponses(address: string): PlayerHistoryItem[] {
-  try {
-    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-    if (!stored) return [];
-
-    const responses = JSON.parse(stored);
-    const normalizedAddress = address.toLowerCase();
-    return responses[normalizedAddress] || [];
-  } catch (error) {
-    console.error('Error getting player responses:', error);
-    return [];
-  }
-}
-
-interface PlayerHistoryItem {
-  response: string;
-  timestamp: number;
-  transactionHash: string | null;
-  blockNumber: number;
-  exists: boolean;
-}
+// ... [Previous code remains unchanged until the component state] ...
 
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
@@ -138,11 +46,24 @@ export default function Home() {
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false);
-  const [hasSeenGameOver, setHasSeenGameOver] = useState(false);
   const { toast } = useToast();
   const [showTrumpDialog, setShowTrumpDialog] = useState(false);
   const [trumpMessage, setTrumpMessage] = useState("");
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
+
+  // Initial check for game status
+  useEffect(() => {
+    async function checkInitialGameStatus() {
+      if (gameContract) {
+        const status = await gameContract.getGameStatus();
+        if (status.timeRemaining <= 0 || status.isGameWon) {
+          setGameWon(status.isGameWon);
+          setShowGameOver(true);
+        }
+      }
+    }
+    checkInitialGameStatus();
+  }, [gameContract]);
 
   useEffect(() => {
     setGameStatus({
@@ -163,7 +84,6 @@ export default function Home() {
     setShowConfetti(false);
     setPrizePoolEth("0");
     setPersuasionScore(50);
-    setHasSeenGameOver(false);
   }, []);
 
   useEffect(() => {
@@ -493,7 +413,7 @@ export default function Home() {
         }));
 
         // Check for game over conditions and show popup only if not seen before
-        if ((status.timeRemaining <= 0 || status.isGameWon) && !hasSeenGameOver) {
+        if (status.timeRemaining <= 0 || status.isGameWon) {
           setGameWon(status.isGameWon);
           setShowGameOver(true);
         }
@@ -503,7 +423,7 @@ export default function Home() {
     }, gameStatus.timeRemaining < 600 ? 3000 : 15000);
 
     return () => clearInterval(interval);
-  }, [gameContract, web3State.account, gameStatus.timeRemaining, hasSeenGameOver]);
+  }, [gameContract, web3State.account, gameStatus.timeRemaining]);
 
   useEffect(() => {
     if (!gameContract || !web3State.account) return;
@@ -528,6 +448,11 @@ export default function Home() {
   return (
     <>
       {(isConnecting || isUpdatingGameData) && <TrumpLoadingScreen />}
+
+      {/* Dark overlay when game is over */}
+      {showGameOver && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
+      )}
 
       <div className="container mx-auto px-4 py-8">
         <Confetti trigger={showConfetti} />
@@ -622,13 +547,11 @@ export default function Home() {
       <Footer />
       <GameOverDialog
         isOpen={showGameOver}
-        onClose={() => {
-          setShowGameOver(false);
-          setHasSeenGameOver(true);
-        }}
+        onClose={() => {}} // Empty function since we don't want to close it
         lastBlock={gameStatus.gameEndBlock}
         winnerAddress={gameStatus.isGameWon ? gameStatus.lastPlayer : undefined}
         lastGuessAddress={gameStatus.lastPlayer}
+        hideCloseButton={true} // Add this prop to hide the close button
       />
       <AgentTrumpDialog
         isOpen={showTrumpDialog}
@@ -638,4 +561,98 @@ export default function Home() {
       />
     </>
   );
+}
+
+interface PlayerHistoryItem {
+  response: string;
+  timestamp: number;
+  transactionHash: string | null;
+  blockNumber: number;
+  exists: boolean;
+}
+
+function clearAllGameState() {
+  localStorage.clear(); 
+}
+
+const PERSUASION_SCORE_KEY = 'persuasion_scores';
+const PLAYER_RESPONSES_KEY = 'player_responses';
+
+function formatPacificTime(timestamp: number): string {
+  return formatInTimeZone(
+    new Date(timestamp),
+    'America/Los_Angeles',
+    'MMM dd, yyyy HH:mm:ss zzz'
+  );
+}
+
+function getStoredPersuasionScore(address: string): number {
+  try {
+    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
+    if (!stored) return 50;
+
+    const scores = JSON.parse(stored);
+    const normalizedAddress = address.toLowerCase();
+    return scores[normalizedAddress] ?? 50;
+  } catch (error) {
+    console.error('Error reading persuasion score:', error);
+    return 50;
+  }
+}
+
+function storePersuasionScore(address: string, score: number) {
+  try {
+    const normalizedAddress = address.toLowerCase();
+    const stored = localStorage.getItem(PERSUASION_SCORE_KEY) || '{}';
+    const scores = JSON.parse(stored);
+    scores[normalizedAddress] = Math.max(0, Math.min(100, score));
+    localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
+    console.log('Stored persuasion score:', scores[normalizedAddress]);
+  } catch (error) {
+    console.error('Error storing persuasion score:', error);
+  }
+}
+
+function storePlayerResponse(
+  address: string, 
+  response: string, 
+  timestamp: number, 
+  blockNumber: number, 
+  hash: string | null
+) {
+  try {
+    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
+    const responses = stored ? JSON.parse(stored) : {};
+    const normalizedAddress = address.toLowerCase();
+
+    if (!responses[normalizedAddress]) {
+      responses[normalizedAddress] = [];
+    }
+
+    responses[normalizedAddress].push({
+      response,
+      timestamp,
+      blockNumber,
+      transactionHash: hash,
+      exists: true
+    });
+
+    localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
+  } catch (error) {
+    console.error('Error storing player response:', error);
+  }
+}
+
+function getPlayerResponses(address: string): PlayerHistoryItem[] {
+  try {
+    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
+    if (!stored) return [];
+
+    const responses = JSON.parse(stored);
+    const normalizedAddress = address.toLowerCase();
+    return responses[normalizedAddress] || [];
+  } catch (error) {
+    console.error('Error getting player responses:', error);
+    return [];
+  }
 }
