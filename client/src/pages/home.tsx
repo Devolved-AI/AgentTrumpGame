@@ -79,8 +79,8 @@ export default function Home() {
     checkInitialGameStatus();
   }, [gameContract]);
 
-  // Reset the game state when the component mounts
-  useEffect(() => {
+  // Only reset game state when explicitly requested, not on every mount
+  const resetGame = () => {
     clearAllGameState();
     setGameStatus({
       timeRemaining: 0,
@@ -100,8 +100,9 @@ export default function Home() {
     setShowConfetti(false);
     setPrizePoolEth("0");
     setPersuasionScore(50);
-  }, []);
+  };
 
+  // Restore connection and state
   useEffect(() => {
     async function restoreConnection() {
       try {
@@ -121,9 +122,11 @@ export default function Home() {
             const history = await contract.getPlayerHistory(restored.account);
             setPlayerHistory(history);
             console.log('Restored transaction history:', history);
+
+            // Initialize game data without resetting state
+            await initializeGameData(contract, restored.account);
           }
 
-          await initializeGameData(contract, restored.account!);
           contract.subscribeToEvents({
             onGuessSubmitted: async () => {
               await Promise.all([
@@ -165,6 +168,18 @@ export default function Home() {
     }
 
     restoreConnection();
+  }, []);
+
+  useEffect(() => {
+    async function fetchEthPrice() {
+      try {
+        const price = await getEthPriceUSD();
+        setEthPrice(price);
+      } catch (error) {
+        console.error("Failed to fetch ETH price:", error);
+      }
+    }
+    fetchEthPrice();
   }, []);
 
   useEffect(() => {
@@ -250,20 +265,7 @@ export default function Home() {
     const initialState = await disconnectWallet();
     setWeb3State(initialState);
     setGameContract(null);
-    setPlayerHistory([]);
-    setShowGameOver(false);
-    setGameStatus({
-      timeRemaining: 0,
-      currentAmount: "0",
-      lastPlayer: "",
-      escalationActive: false,
-      gameEndBlock: 0,
-      isGameWon: false,
-      isGameOver: false,
-      currentMultiplier: 1,
-      escalationPeriodTimeRemaining: 0,
-      currentPeriodIndex: 0
-    });
+    resetGame();
   }
 
   async function refreshGameStatus() {

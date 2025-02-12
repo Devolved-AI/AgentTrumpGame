@@ -26,7 +26,7 @@ const DEFAULT_GAME_STATE: GameState = {
 };
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [gameState, setGameState] = useState<GameState | null>(DEFAULT_GAME_STATE);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const { getGameState, submitResponse } = useGameContract();
   const { toast } = useToast();
@@ -41,8 +41,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
           isEscalationActive: state.isEscalationActive,
           timeRemaining: state.timeRemaining
         });
-      } else {
-        setGameState(DEFAULT_GAME_STATE);
       }
     } catch (error) {
       console.error('Error refreshing game state:', error);
@@ -51,13 +49,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         description: 'Failed to refresh game state',
         variant: 'destructive',
       });
-      setGameState(DEFAULT_GAME_STATE);
     } finally {
       setLoading(false);
     }
   };
 
-  // Refresh game state every 15 seconds
   useEffect(() => {
     refreshGameState();
     const interval = setInterval(refreshGameState, 15000);
