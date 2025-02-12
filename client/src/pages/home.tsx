@@ -138,6 +138,7 @@ export default function Home() {
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false);
+  const [hasSeenGameOver, setHasSeenGameOver] = useState(false);
   const { toast } = useToast();
   const [showTrumpDialog, setShowTrumpDialog] = useState(false);
   const [trumpMessage, setTrumpMessage] = useState("");
@@ -162,6 +163,7 @@ export default function Home() {
     setShowConfetti(false);
     setPrizePoolEth("0");
     setPersuasionScore(50);
+    setHasSeenGameOver(false);
   }, []);
 
   useEffect(() => {
@@ -490,18 +492,18 @@ export default function Home() {
           currentPeriodIndex: status.currentPeriodIndex
         }));
 
-        // Check for game over conditions
-        if (status.timeRemaining <= 0 || status.isGameWon) {
+        // Check for game over conditions and show popup only if not seen before
+        if ((status.timeRemaining <= 0 || status.isGameWon) && !hasSeenGameOver) {
           setGameWon(status.isGameWon);
           setShowGameOver(true);
         }
       } catch (error) {
         console.error("Failed to refresh game status:", error);
       }
-    }, gameStatus.timeRemaining < 600 ? 3000 : 15000); // Update more frequently when less than 10 minutes remain
+    }, gameStatus.timeRemaining < 600 ? 3000 : 15000);
 
     return () => clearInterval(interval);
-  }, [gameContract, web3State.account, gameStatus.timeRemaining]);
+  }, [gameContract, web3State.account, gameStatus.timeRemaining, hasSeenGameOver]);
 
   useEffect(() => {
     if (!gameContract || !web3State.account) return;
@@ -620,7 +622,10 @@ export default function Home() {
       <Footer />
       <GameOverDialog
         isOpen={showGameOver}
-        onClose={() => setShowGameOver(false)}
+        onClose={() => {
+          setShowGameOver(false);
+          setHasSeenGameOver(true);
+        }}
         lastBlock={gameStatus.gameEndBlock}
         winnerAddress={gameStatus.isGameWon ? gameStatus.lastPlayer : undefined}
         lastGuessAddress={gameStatus.lastPlayer}
