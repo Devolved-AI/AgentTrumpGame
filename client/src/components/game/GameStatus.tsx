@@ -12,7 +12,13 @@ interface GameStatusProps {
   isGameWon: boolean;
 }
 
-function formatTimeRemaining(seconds: number): string {
+function formatTimeRemaining(seconds: number, escalationActive: boolean): string {
+  if (escalationActive) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')} minutes`;
+  }
+
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = seconds % 60;
@@ -50,33 +56,63 @@ export function GameStatus({
   const normalizedScore = Math.max(0, Math.min(100, persuasionScore));
   const isGameOver = timeRemaining <= 0 || isGameWon;
 
+  // Calculate progress percentage based on whether we're in escalation period
+  const progressPercentage = escalationActive 
+    ? (timeRemaining / 300) * 100  // 5 minutes = 300 seconds
+    : (timeRemaining / (72 * 3600)) * 100; // 72 hours in seconds
+
   return (
     <div className="grid gap-4 grid-cols-2">
-      <Card>
+      <Card className={cn(
+        escalationActive && "border-orange-500 shadow-orange-500/20 shadow-lg"
+      )}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Time Remaining</CardTitle>
-          <Clock className="h-4 w-4 text-muted-foreground" />
+          <Clock className={cn(
+            "h-4 w-4",
+            escalationActive ? "text-orange-500" : "text-muted-foreground"
+          )} />
         </CardHeader>
         <CardContent>
           <div className="text-xl font-bold">
-            {isGameOver ? "Game Over!" : formatTimeRemaining(timeRemaining)}
+            {isGameOver ? "Game Over!" : formatTimeRemaining(timeRemaining, escalationActive)}
           </div>
-          <Progress value={(timeRemaining / (escalationActive ? 300 : 3600)) * 100} className="mt-2" />
+          <Progress 
+            value={progressPercentage} 
+            className={cn(
+              "mt-2",
+              escalationActive && "bg-orange-100"
+            )} 
+          />
           {escalationActive && (
-            <p className="text-xs text-orange-500 mt-1">⚠️ Escalation Period Active</p>
+            <p className="text-xs text-orange-500 mt-1 font-semibold">
+              ⚠️ Escalation Period Active - 5 Minute Timer!
+            </p>
           )}
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className={cn(
+        escalationActive && "border-orange-500 shadow-orange-500/20 shadow-lg"
+      )}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Required Amount</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <TrendingUp className={cn(
+            "h-4 w-4",
+            escalationActive ? "text-orange-500" : "text-muted-foreground"
+          )} />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{currentAmount} ETH</div>
-          <p className="text-xs text-muted-foreground">
-            {isGameOver ? "Game Over" : escalationActive ? "Escalation Active" : "Base Amount"}
+          <p className={cn(
+            "text-xs",
+            escalationActive ? "text-orange-500 font-semibold" : "text-muted-foreground"
+          )}>
+            {isGameOver 
+              ? "Game Over" 
+              : escalationActive 
+                ? "Escalated Fee (2x Base Amount)" 
+                : "Base Amount (0.0009 ETH)"}
           </p>
         </CardContent>
       </Card>
@@ -95,9 +131,7 @@ export function GameStatus({
             className={cn("mt-2", getProgressColor(persuasionScore))} 
           />
           <p className="text-xs text-muted-foreground mt-1">
-            {isGameOver ? "Game Over" : escalationActive ? 
-              <span className="text-orange-500 font-semibold">Escalation Active - Costs Doubled!</span> 
-              : "Standard Play Period"}
+            {isGameOver ? "Game Over" : "Score needed: 100"}
           </p>
         </CardContent>
       </Card>
@@ -111,6 +145,11 @@ export function GameStatus({
           <div className="font-mono text-sm">
             {lastPlayer ? `${lastPlayer.slice(0, 6)}...${lastPlayer.slice(-4)}` : 'No players yet'}
           </div>
+          {escalationActive && lastPlayer && (
+            <p className="text-xs text-orange-500 mt-1">
+              Last guess started escalation period
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

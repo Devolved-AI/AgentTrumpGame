@@ -803,14 +803,16 @@ export class GameContract {
       lastPlayer,
       escalationActive,
       gameEndBlock,
-      isGameWon
+      isGameWon,
+      currentMultiplier
     ] = await Promise.all([
       this.contract.getTimeRemaining(),
       this.contract.getCurrentRequiredAmount(),
       this.contract.lastPlayer(),
       this.contract.escalationActive(),
       this.contract.gameEndBlock(),
-      this.contract.gameWon()
+      this.contract.gameWon(),
+      this.contract.currentMultiplier()
     ]);
 
     // Calculate the final status
@@ -821,6 +823,8 @@ export class GameContract {
     const currentAmount = ethers.formatEther(requiredAmountInWei);
 
     console.log('Current required amount:', currentAmount, 'ETH');
+    console.log('Current multiplier:', currentMultiplier.toString());
+    console.log('Escalation active:', escalationActive);
 
     return {
       timeRemaining: Number(timeRemaining),
@@ -829,7 +833,8 @@ export class GameContract {
       escalationActive,
       gameEndBlock: Number(gameEndBlock),
       isGameWon,
-      isGameOver
+      isGameOver,
+      currentMultiplier: Number(currentMultiplier)
     };
   }
 
