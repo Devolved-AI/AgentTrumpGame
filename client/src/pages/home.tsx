@@ -19,14 +19,12 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
 function clearAllGameState() {
-  // Clear all game-related localStorage items
-  localStorage.clear(); // This will remove ALL localStorage items
+  localStorage.clear(); 
 }
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 const PLAYER_RESPONSES_KEY = 'player_responses';
 
-// Format timestamp to Pacific Time
 function formatPacificTime(timestamp: number): string {
   return formatInTimeZone(
     new Date(timestamp),
@@ -35,13 +33,11 @@ function formatPacificTime(timestamp: number): string {
   );
 }
 
-// Updated localStorage functions with better persistence
 function getStoredPersuasionScore(address: string): number {
   try {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
     const score = scores[address.toLowerCase()];
-    // Always return 50 as default score for new game
     return 50;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
@@ -84,7 +80,6 @@ function storePlayerResponse(
 
 function getPlayerResponses(address: string): PlayerHistoryItem[] {
   try {
-    // Always return empty array for new game
     return [];
   } catch (error) {
     console.error('Error getting player responses:', error);
@@ -108,7 +103,7 @@ export default function Home() {
   const [gameContract, setGameContract] = useState<GameContract | null>(null);
   const [gameStatus, setGameStatus] = useState({
     timeRemaining: 0,
-    currentAmount: "0.0009", // Set to initial game amount
+    currentAmount: "0.0009", 
     lastPlayer: "",
     escalationActive: false,
     gameEndBlock: 0,
@@ -131,10 +126,8 @@ export default function Home() {
   const [trumpMessage, setTrumpMessage] = useState("");
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
 
-  // Clear all game state on component mount
   useEffect(() => {
     clearAllGameState();
-    // Reset all game states to initial values
     setGameStatus({
       timeRemaining: 0,
       currentAmount: "0.0009",
@@ -155,7 +148,6 @@ export default function Home() {
     setPersuasionScore(50);
   }, []);
 
-  // Attempt to restore wallet connection on mount
   useEffect(() => {
     async function restoreConnection() {
       try {
@@ -209,7 +201,6 @@ export default function Home() {
     restoreConnection();
   }, []);
 
-  // Load initial persuasion score when component mounts
   useEffect(() => {
     if (web3State.account) {
       const score = getStoredPersuasionScore(web3State.account);
@@ -218,15 +209,8 @@ export default function Home() {
   }, [web3State.account]);
 
 
-  // Initialize game data
   async function initializeGameData(contract: GameContract, account: string) {
     try {
-      const [status, history] = await Promise.all([
-        contract.getGameStatus(),
-        contract.getPlayerHistory(account)
-      ]);
-
-      // Reset game status to initial state for new game
       setGameStatus({
         timeRemaining: 0,
         currentAmount: "0.0009",
@@ -241,7 +225,9 @@ export default function Home() {
       });
       setGameWon(false);
       setShowGameOver(false);
-      setPlayerHistory(history);
+      setPlayerHistory([]);
+      setPrizePoolEth("0");
+      setPersuasionScore(50);
 
     } catch (error) {
       console.error("Failed to initialize game data:", error);
@@ -320,9 +306,28 @@ export default function Home() {
 
     try {
       const status = await gameContract.getGameStatus();
+
+      if (!playerHistory.length) {
+        setGameStatus({
+          timeRemaining: 0,
+          currentAmount: "0.0009",
+          lastPlayer: "",
+          escalationActive: false,
+          gameEndBlock: 0,
+          isGameWon: false,
+          isGameOver: false,
+          currentMultiplier: 1,
+          escalationPeriodTimeRemaining: 0,
+          currentPeriodIndex: 0
+        });
+        setGameWon(false);
+        setShowGameOver(false);
+        return;
+      }
+
       setGameStatus(status);
 
-      if (status.timeRemaining <= 0 || status.isGameWon) {
+      if (playerHistory.length > 0 && (status.timeRemaining <= 0 || status.isGameWon)) {
         setGameWon(status.isGameWon);
         setShowGameOver(true);
         if (status.isGameWon) {
@@ -331,8 +336,6 @@ export default function Home() {
             description: "This game has already been won!",
           });
         }
-      } else {
-        setShowGameOver(false);
       }
 
       const history = await gameContract.getPlayerHistory(web3State.account);
@@ -361,7 +364,7 @@ export default function Home() {
 
     try {
       const status = await gameContract.getGameStatus();
-      if (status.isGameOver) {
+      if (playerHistory.length > 0 && status.isGameOver) {
         setGameWon(status.isGameWon);
         setShowGameOver(true);
         toast({
@@ -383,17 +386,14 @@ export default function Home() {
       setPersuasionScore(newScore);
       storePersuasionScore(web3State.account, newScore);
 
-      // Show transaction confirmation first
       toast({
         title: "Transaction Confirmed",
         description: "Your submission was successfully recorded on the blockchain.",
       });
 
-      // Force refresh player history immediately
       const updatedHistory = await gameContract.getPlayerHistory(web3State.account);
       setPlayerHistory(updatedHistory);
 
-      // Prepare Trump's message and update game state
       if (newScore >= 100) {
         try {
           await gameContract.buttonPushed(web3State.account);
@@ -420,12 +420,10 @@ export default function Home() {
         setTrumpMessageVariant(evaluation.scoreIncrement > 0 ? 'success' : 'error');
       }
 
-      // Show Trump's response dialog after a short delay
       setTimeout(() => {
         setShowTrumpDialog(true);
       }, 1000);
 
-      // Final refresh of game status and player history
       await Promise.all([
         refreshGameStatus(),
         refreshPlayerHistory()
