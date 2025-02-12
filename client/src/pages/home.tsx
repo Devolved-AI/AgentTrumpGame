@@ -219,7 +219,7 @@ export default function Home() {
 
       // Set initial game state
       setGameStatus({
-        timeRemaining: status.timeRemaining || 72 * 3600, // 72 hours in seconds
+        timeRemaining: status.timeRemaining || 0, // Use contract time or 0 as default
         currentAmount: status.currentAmount || "0.0009",
         lastPlayer: status.lastPlayer || "",
         escalationActive: status.escalationActive || false,
