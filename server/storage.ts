@@ -7,7 +7,7 @@ import {
   type PlayerResponse
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 
 export interface IStorage {
   getPlayerScore(address: string): Promise<PlayerScore | undefined>;
@@ -21,8 +21,8 @@ export class DatabaseStorage implements IStorage {
     const [score] = await db
       .select()
       .from(playerScores)
-      .where(eq(playerScores.address, address));
-    return score || { address, persuasionScore: 50, lastUpdated: new Date() };
+      .where(eq(playerScores.address, address.toLowerCase()));
+    return score || { address: address.toLowerCase(), persuasionScore: 50, lastUpdated: new Date() };
   }
 
   async updatePlayerScore(address: string, score: number): Promise<PlayerScore> {
@@ -35,14 +35,14 @@ export class DatabaseStorage implements IStorage {
           persuasionScore: score,
           lastUpdated: new Date()
         })
-        .where(eq(playerScores.address, address))
+        .where(eq(playerScores.address, address.toLowerCase()))
         .returning();
       return updated;
     } else {
       const [newScore] = await db
         .insert(playerScores)
         .values({
-          address,
+          address: address.toLowerCase(),
           persuasionScore: score
         })
         .returning();
@@ -53,7 +53,10 @@ export class DatabaseStorage implements IStorage {
   async addPlayerResponse(data: InsertPlayerResponse): Promise<PlayerResponse> {
     const [response] = await db
       .insert(playerResponses)
-      .values(data)
+      .values({
+        ...data,
+        address: data.address.toLowerCase()
+      })
       .returning();
     return response;
   }
@@ -62,7 +65,8 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(playerResponses)
-      .where(eq(playerResponses.address, address));
+      .where(ilike(playerResponses.address, address))
+      .orderBy(playerResponses.timestamp);
   }
 }
 
