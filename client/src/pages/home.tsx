@@ -85,6 +85,16 @@ export default function Home() {
   const [gameWon, setGameWon] = useState(false); 
   const { toast } = useToast();
 
+  // Reset all persuasion scores
+  useEffect(() => {
+    // Clear existing scores and set new default
+    localStorage.removeItem(PERSUASION_SCORE_KEY);
+    if (web3State.account) {
+      setPersuasionScore(50);
+      storePersuasionScore(web3State.account, 50);
+    }
+  }, []); // Run once on component mount
+
   // Attempt to restore wallet connection on mount
   useEffect(() => {
     async function restoreConnection() {
