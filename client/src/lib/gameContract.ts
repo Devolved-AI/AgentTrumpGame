@@ -951,20 +951,31 @@ export class GameContract {
 
       // Wait for the transaction to be mined to get the block number
       const receipt = await tx.wait();
+      const address = await this.signer.getAddress();
+
+      console.log('Transaction receipt:', receipt);
+      console.log('Storing response for address:', address);
 
       // Store the response in the database after we have the block number
-      await fetch('/api/responses', {
+      const apiResponse = await fetch('/api/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          address: await this.signer.getAddress(),
+          address: address,
           response,
           blockNumber: receipt.blockNumber,
           transactionHash: tx.hash
         })
       });
+
+      if (!apiResponse.ok) {
+        throw new Error('Failed to store response in database');
+      }
+
+      const responseData = await apiResponse.json();
+      console.log('Stored response:', responseData);
 
       return tx;
     } catch (error: any) {
