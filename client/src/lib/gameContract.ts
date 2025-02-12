@@ -907,10 +907,11 @@ export class GameContract {
       // Calculate remaining time in current period
       escalationPeriodTimeRemaining = ESCALATION_PERIOD - (secondsSinceEscalation % ESCALATION_PERIOD);
 
-      // Use the period index to determine the current multiplier (2^periodIndex)
-      const periodMultiplier = Math.pow(2, currentPeriodIndex);
-      const baseAmount = 0.0009; // Base amount in ETH
-      currentAmount = (baseAmount * periodMultiplier).toFixed(4);
+      // Base amount is 0.0009 ETH
+      const baseAmount = 0.0009;
+      // Multiply by 2^periodIndex (1, 2, 4, 8, 16, 32)
+      const multiplier = Math.pow(2, currentPeriodIndex);
+      currentAmount = (baseAmount * multiplier).toFixed(4);
     }
 
     // Calculate the final status
