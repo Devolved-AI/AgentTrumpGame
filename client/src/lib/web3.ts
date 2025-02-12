@@ -32,6 +32,8 @@ export const initialWeb3State: Web3State = {
   connected: false,
 };
 
+const WALLET_STATE_KEY = 'wallet_connected';
+
 async function switchToBaseNetwork() {
   if (!window.ethereum) return false;
 
@@ -85,13 +87,22 @@ export async function connectWallet(): Promise<Web3State> {
     const signer = await provider.getSigner();
     const network = await provider.getNetwork();
 
-    return {
+    const state = {
       provider,
       signer,
       account: accounts[0],
       chainId: Number(network.chainId),
       connected: true
     };
+
+    // Store wallet state in localStorage
+    localStorage.setItem(WALLET_STATE_KEY, JSON.stringify({
+      account: accounts[0],
+      chainId: Number(network.chainId),
+      connected: true
+    }));
+
+    return state;
   } catch (error) {
     console.error("Failed to connect wallet:", error);
     toast({
@@ -104,11 +115,42 @@ export async function connectWallet(): Promise<Web3State> {
 }
 
 export async function disconnectWallet(): Promise<Web3State> {
+  localStorage.removeItem(WALLET_STATE_KEY);
   toast({
     title: "Wallet Disconnected",
     description: "Your wallet has been disconnected",
   });
   return initialWeb3State;
+}
+
+// Function to check if wallet was previously connected
+export async function restoreWalletConnection(): Promise<Web3State | null> {
+  try {
+    const stored = localStorage.getItem(WALLET_STATE_KEY);
+    if (!stored) return null;
+
+    const { account, chainId } = JSON.parse(stored);
+    if (!window.ethereum) return null;
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.listAccounts();
+
+    // Verify the stored account is still connected
+    if (accounts.length > 0 && accounts[0].toLowerCase() === account.toLowerCase()) {
+      const signer = await provider.getSigner();
+      return {
+        provider,
+        signer,
+        account,
+        chainId,
+        connected: true
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to restore wallet connection:', error);
+    return null;
+  }
 }
 
 export function subscribeToAccountChanges(callback: (accounts: string[]) => void) {

@@ -6,7 +6,7 @@ import { TransactionTimeline } from "@/components/game/TransactionTimeline";
 import { TransactionLoader } from "@/components/game/TransactionLoader";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Confetti } from "@/components/game/Confetti";
-import { connectWallet, disconnectWallet, type Web3State, initialWeb3State } from "@/lib/web3";
+import { connectWallet, disconnectWallet, restoreWalletConnection, type Web3State, initialWeb3State } from "@/lib/web3";
 import { GameContract } from "@/lib/gameContract";
 import { useToast } from "@/hooks/use-toast";
 import { SiEthereum } from "react-icons/si";
@@ -85,6 +85,61 @@ export default function Home() {
   const [gameWon, setGameWon] = useState(false); 
   const { toast } = useToast();
 
+  // Attempt to restore wallet connection on mount
+  useEffect(() => {
+    async function restoreConnection() {
+      try {
+        const restored = await restoreWalletConnection();
+        if (restored) {
+          setWeb3State(restored);
+          const contract = new GameContract(restored.provider!, restored.signer!);
+          setGameContract(contract);
+          await initializeGameData(contract, restored.account!);
+
+          // Set up event subscriptions
+          contract.subscribeToEvents({
+            onGuessSubmitted: async () => {
+              await Promise.all([
+                refreshGameStatus(),
+                updatePrizePool(),
+                refreshPlayerHistory()
+              ]);
+            },
+            onGameWon: async () => {
+              setShowConfetti(true);
+              setGameWon(true);
+              setShowGameOver(true);
+              toast({
+                title: "Game Won!",
+                description: "Someone has won the game!",
+              });
+              await Promise.all([
+                refreshGameStatus(),
+                updatePrizePool(),
+                refreshPlayerHistory()
+              ]);
+            },
+            onEscalationStarted: async () => {
+              toast({
+                title: "Escalation Started",
+                description: "The game has entered escalation mode!",
+              });
+              await Promise.all([
+                refreshGameStatus(),
+                updatePrizePool(),
+                refreshPlayerHistory()
+              ]);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to restore connection:', error);
+      }
+    }
+
+    restoreConnection();
+  }, []);
+
   // Load initial persuasion score when component mounts
   useEffect(() => {
     if (web3State.account) {
@@ -154,41 +209,6 @@ export default function Home() {
       if (state.account) {
         await initializeGameData(contract, state.account);
       }
-
-      contract.subscribeToEvents({
-        onGuessSubmitted: async () => {
-          await Promise.all([
-            refreshGameStatus(),
-            updatePrizePool(),
-            refreshPlayerHistory()
-          ]);
-        },
-        onGameWon: async () => {
-          setShowConfetti(true);
-          setGameWon(true);
-          setShowGameOver(true);
-          toast({
-            title: "Game Won!",
-            description: "Someone has won the game!",
-          });
-          await Promise.all([
-            refreshGameStatus(),
-            updatePrizePool(),
-            refreshPlayerHistory()
-          ]);
-        },
-        onEscalationStarted: async () => {
-          toast({
-            title: "Escalation Started",
-            description: "The game has entered escalation mode!",
-          });
-          await Promise.all([
-            refreshGameStatus(),
-            updatePrizePool(),
-            refreshPlayerHistory()
-          ]);
-        }
-      });
 
       await Promise.all([
         refreshGameStatus(),

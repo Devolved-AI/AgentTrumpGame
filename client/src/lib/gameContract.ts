@@ -876,7 +876,10 @@ export class GameContract {
         gasLimit: 500000
       });
 
-      // Store the response in the database
+      // Wait for the transaction to be mined to get the block number
+      const receipt = await tx.wait();
+
+      // Store the response in the database after we have the block number
       await fetch('/api/responses', {
         method: 'POST',
         headers: {
@@ -885,7 +888,7 @@ export class GameContract {
         body: JSON.stringify({
           address: await this.signer.getAddress(),
           response,
-          blockNumber: tx.blockNumber,
+          blockNumber: receipt.blockNumber,
           transactionHash: tx.hash
         })
       });
