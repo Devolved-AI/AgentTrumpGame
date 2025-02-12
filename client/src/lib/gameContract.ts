@@ -880,7 +880,8 @@ export class GameContract {
       gameEndBlock,
       isGameWon,
       currentMultiplier,
-      escalationStartBlock
+      escalationStartBlock,
+      lastGuessBlock
     ] = await Promise.all([
       this.contract.getTimeRemaining(),
       this.contract.getCurrentRequiredAmount(),
@@ -889,7 +890,8 @@ export class GameContract {
       this.contract.gameEndBlock(),
       this.contract.gameWon(),
       this.contract.currentMultiplier(),
-      this.contract.escalationStartBlock()
+      this.contract.escalationStartBlock(),
+      this.contract.lastGuessBlock()
     ]);
 
     // Calculate escalation period information
@@ -897,10 +899,12 @@ export class GameContract {
     let escalationPeriodTimeRemaining = 0;
     let currentPeriodIndex = 0;
 
+    // Escalation mode calculations
     if (escalationActive) {
-      // Each escalation period is 5 minutes (300 seconds)
+      // Each escalation period is exactly 5 minutes (300 seconds)
       const ESCALATION_PERIOD = 300;
-      const blocksSinceEscalation = await this.getCurrentBlock() - Number(escalationStartBlock);
+      const currentBlock = await this.getCurrentBlock();
+      const blocksSinceEscalation = currentBlock - Number(escalationStartBlock);
       const secondsSinceEscalation = blocksSinceEscalation * 12; // Assuming 12 second block time
       currentPeriodIndex = Math.floor(secondsSinceEscalation / ESCALATION_PERIOD);
 
@@ -924,8 +928,14 @@ export class GameContract {
       currentAmount = periodPrice.toFixed(4);
     }
 
-    // Calculate the final status
-    const isGameOver = Number(timeRemaining) <= 0 || isGameWon;
+    // Calculate if the game is over
+    // Game is over if:
+    // 1. Time has run out AND we're not in escalation mode
+    // 2. Time has run out in escalation mode AND no guesses in the last period
+    // 3. Someone has won the game
+    const isGameOver = isGameWon || 
+      (Number(timeRemaining) <= 0 && !escalationActive) ||
+      (escalationActive && escalationPeriodTimeRemaining <= 0 && !lastGuessBlock);
 
     return {
       timeRemaining: Number(timeRemaining),
