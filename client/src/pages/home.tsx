@@ -19,8 +19,8 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
 function clearAllGameState() {
-  localStorage.removeItem(PERSUASION_SCORE_KEY);
-  localStorage.removeItem(PLAYER_RESPONSES_KEY);
+  // Clear all game-related localStorage items
+  localStorage.clear(); // This will remove ALL localStorage items
 }
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
@@ -41,7 +41,8 @@ function getStoredPersuasionScore(address: string): number {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
     const score = scores[address.toLowerCase()];
-    return typeof score === 'number' ? score : 50;
+    // Always return 50 as default score for new game
+    return 50;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
     return 50;
@@ -50,8 +51,7 @@ function getStoredPersuasionScore(address: string): number {
 
 function storePersuasionScore(address: string, score: number) {
   try {
-    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
-    const scores = stored ? JSON.parse(stored) : {};
+    const scores = {};
     scores[address.toLowerCase()] = Math.max(0, Math.min(100, score));
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
   } catch (error) {
@@ -67,22 +67,15 @@ function storePlayerResponse(
   hash: string | null
 ) {
   try {
-    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-    const responses = stored ? JSON.parse(stored) : {};
+    const responses = {};
     const normalizedAddress = address.toLowerCase();
-
-    if (!responses[normalizedAddress]) {
-      responses[normalizedAddress] = [];
-    }
-
-    responses[normalizedAddress].push({
+    responses[normalizedAddress] = [{
       response,
       timestamp,
       blockNumber,
       transactionHash: hash,
       exists: true
-    });
-
+    }];
     localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
   } catch (error) {
     console.error('Error storing player response:', error);
@@ -91,12 +84,8 @@ function storePlayerResponse(
 
 function getPlayerResponses(address: string): PlayerHistoryItem[] {
   try {
-    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-    const responses = stored ? JSON.parse(stored) : {};
-    const normalizedAddress = address.toLowerCase();
-    return (responses[normalizedAddress] || []).sort((a: PlayerHistoryItem, b: PlayerHistoryItem) => 
-      b.timestamp - a.timestamp
-    );
+    // Always return empty array for new game
+    return [];
   } catch (error) {
     console.error('Error getting player responses:', error);
     return [];
@@ -125,7 +114,9 @@ export default function Home() {
     gameEndBlock: 0,
     isGameWon: false,
     isGameOver: false,
-    currentMultiplier: 1
+    currentMultiplier: 1,
+    escalationPeriodTimeRemaining: 0,
+    currentPeriodIndex: 0
   });
   const [playerHistory, setPlayerHistory] = useState<PlayerHistoryItem[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -134,7 +125,7 @@ export default function Home() {
   const [persuasionScore, setPersuasionScore] = useState<number>(50);
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
-  const [gameWon, setGameWon] = useState(false); 
+  const [gameWon, setGameWon] = useState(false);
   const { toast } = useToast();
   const [showTrumpDialog, setShowTrumpDialog] = useState(false);
   const [trumpMessage, setTrumpMessage] = useState("");
@@ -280,11 +271,25 @@ export default function Home() {
   }
 
   async function handleDisconnect() {
+    clearAllGameState();
     const initialState = await disconnectWallet();
     setWeb3State(initialState);
     setGameContract(null);
     setPlayerHistory([]);
     setShowGameOver(false);
+    setPersuasionScore(50);
+    setGameStatus({
+      timeRemaining: 0,
+      currentAmount: "0",
+      lastPlayer: "",
+      escalationActive: false,
+      gameEndBlock: 0,
+      isGameWon: false,
+      isGameOver: false,
+      currentMultiplier: 1,
+      escalationPeriodTimeRemaining: 0,
+      currentPeriodIndex: 0
+    });
   }
 
   async function refreshGameStatus() {
