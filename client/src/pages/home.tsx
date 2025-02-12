@@ -14,7 +14,7 @@ import { getEthPriceUSD, formatUSD, formatEth } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
 import { TrumpLoadingScreen } from "@/components/game/TrumpLoadingScreen";
 import { GameOverDialog } from "@/components/game/GameOverDialog";
-import {TrumpAnimation} from "@/components/game/TrumpAnimation"; //Import the new component
+import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
@@ -22,12 +22,16 @@ function getStoredPersuasionScore(address: string): number {
   try {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
-    if (scores[address] === undefined) {
+    console.log('Current stored scores:', scores);
+    console.log('Looking up score for address:', address);
+    const score = scores[address];
+    console.log('Retrieved score:', score);
+    if (score === undefined) {
       scores[address] = 50;
       localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
+      return 50;
     }
-    console.log('Retrieved persuasion score for address:', address, scores[address]);
-    return scores[address];
+    return score;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
     return 50;
@@ -36,11 +40,12 @@ function getStoredPersuasionScore(address: string): number {
 
 function storePersuasionScore(address: string, score: number) {
   try {
+    console.log(`Storing score ${score} for address ${address}`);
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
     const scores = stored ? JSON.parse(stored) : {};
-    scores[address] = Math.max(0, Math.min(100, score)); 
+    scores[address] = Math.max(0, Math.min(100, score));
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
-    console.log(`Stored persuasion score for ${address}:`, scores[address]); 
+    console.log('Updated stored scores:', scores);
   } catch (error) {
     console.error('Error storing persuasion score:', error);
   }
@@ -67,7 +72,8 @@ export default function Home() {
     escalationActive: false,
     gameEndBlock: 0,
     isGameWon: false,
-    isGameOver: false
+    isGameOver: false,
+    currentMultiplier: 1
   });
   const [playerHistory, setPlayerHistory] = useState<PlayerHistoryItem[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -79,11 +85,20 @@ export default function Home() {
   const [gameWon, setGameWon] = useState(false); 
   const { toast } = useToast();
 
-  // Effect to update persuasion score when account changes
+  // Load initial persuasion score when component mounts
   useEffect(() => {
     if (web3State.account) {
       const score = getStoredPersuasionScore(web3State.account);
-      console.log('Updating persuasion score for account:', web3State.account, score);
+      console.log('Initial persuasion score loaded for account:', web3State.account, score);
+      setPersuasionScore(score);
+    }
+  }, []);
+
+  // Update persuasion score when account changes
+  useEffect(() => {
+    if (web3State.account) {
+      const score = getStoredPersuasionScore(web3State.account);
+      console.log('Updating persuasion score for new account:', web3State.account, score);
       setPersuasionScore(score);
     }
   }, [web3State.account]);
@@ -183,13 +198,12 @@ export default function Home() {
   }
 
   async function refreshGameStatus() {
-    if (!gameContract) return;
+    if (!gameContract || !web3State.account) return;
 
     try {
       const status = await gameContract.getGameStatus();
       setGameStatus(status);
 
-      // Update game won state
       if (status.isGameWon !== gameWon) {
         setGameWon(status.isGameWon);
         if (status.isGameWon) {
@@ -201,10 +215,8 @@ export default function Home() {
         }
       }
 
-      if (web3State.account) {
-        const history = await gameContract.getPlayerHistory(web3State.account);
-        setPlayerHistory(history);
-      }
+      const history = await gameContract.getPlayerHistory(web3State.account);
+      setPlayerHistory(history);
     } catch (error) {
       console.error("Failed to refresh game status:", error);
     }
@@ -225,9 +237,8 @@ export default function Home() {
   }
 
   async function handleSubmitResponse(response: string) {
-    if (!gameContract) return;
+    if (!gameContract || !web3State.account) return;
 
-    // Double check game state before proceeding
     try {
       const status = await gameContract.getGameStatus();
       if (status.isGameOver) {
@@ -249,21 +260,15 @@ export default function Home() {
       setTransactionStatus('success');
 
       // Update persuasion score
-      const previousScore = persuasionScore; // Store previous score before update
-
-      setPersuasionScore(prev => {
-        const newScore = Math.max(0, Math.min(100, prev + evaluation.scoreIncrement));
-        if (web3State.account) {
-          storePersuasionScore(web3State.account, newScore);
-        }
-        return newScore;
-      });
+      const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
+      console.log(`Updating score from ${persuasionScore} to ${newScore} for address ${web3State.account}`);
+      setPersuasionScore(newScore);
+      storePersuasionScore(web3State.account, newScore);
 
       // Handle game win condition (persuasion score reaches 100)
-      if (previousScore + evaluation.scoreIncrement >= 100) {
+      if (newScore >= 100) {
         try {
-          // Call buttonPushed to trigger win condition and prize distribution
-          await gameContract.buttonPushed(web3State.account!);
+          await gameContract.buttonPushed(web3State.account);
           setGameWon(true);
           setShowGameOver(true);
           setShowConfetti(true);
@@ -275,7 +280,6 @@ export default function Home() {
           console.error("Error pushing the button:", error);
         }
       } else {
-        // Provide detailed feedback based on the evaluation
         let message;
         if (evaluation.scoreIncrement >= 10) {
           message = "TREMENDOUS response! That's how you do it, believe me! +10 persuasion points!";
@@ -295,6 +299,7 @@ export default function Home() {
       }
 
       await refreshGameStatus();
+      await refreshPlayerHistory();
     } catch (error: any) {
       setTransactionStatus('error');
       console.error("Submission error:", error);
@@ -344,13 +349,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [gameContract, gameStatus.escalationActive]);
 
-  useEffect(() => {
-    if (!gameContract) return;
-    const interval = setInterval(updatePrizePool, 10000);
-    return () => clearInterval(interval);
-  }, [gameContract]);
-
-  // Add new refreshPlayerHistory function
   async function refreshPlayerHistory() {
     if (!gameContract || !web3State.account) return;
     try {
@@ -360,7 +358,6 @@ export default function Home() {
       console.error('Error refreshing player history:', error);
     }
   }
-
 
   return (
     <>
