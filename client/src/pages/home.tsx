@@ -135,15 +135,6 @@ export default function Home() {
   const [trumpMessage, setTrumpMessage] = useState("");
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
 
-  // Reset all persuasion scores
-  useEffect(() => {
-    localStorage.removeItem(PERSUASION_SCORE_KEY);
-    if (web3State.account) {
-      setPersuasionScore(50);
-      storePersuasionScore(web3State.account, 50);
-    }
-  }, []); 
-
   // Attempt to restore wallet connection on mount
   useEffect(() => {
     async function restoreConnection() {
@@ -204,15 +195,8 @@ export default function Home() {
       const score = getStoredPersuasionScore(web3State.account);
       setPersuasionScore(score);
     }
-  }, []);
-
-  // Update persuasion score when account changes
-  useEffect(() => {
-    if (web3State.account) {
-      const score = getStoredPersuasionScore(web3State.account);
-      setPersuasionScore(score);
-    }
   }, [web3State.account]);
+
 
   // Initialize game data
   const initializeGameData = async (contract: GameContract, account: string) => {
