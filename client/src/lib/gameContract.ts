@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { toast } from '@/hooks/use-toast';
 
-const contractAddress = '0x533a60f2F8746AA983fA3BBFa3aFd45175735504';
+const contractAddress = '0x0D1e5ebB1833CE85A540327459E0aC8717155D89';
 const contractABI = [
 	{
 		"inputs": [
