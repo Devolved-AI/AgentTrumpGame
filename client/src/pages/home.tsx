@@ -18,6 +18,11 @@ import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
+function clearAllGameState() {
+  localStorage.removeItem(PERSUASION_SCORE_KEY);
+  localStorage.removeItem(PLAYER_RESPONSES_KEY);
+}
+
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 const PLAYER_RESPONSES_KEY = 'player_responses';
 
@@ -134,6 +139,11 @@ export default function Home() {
   const [showTrumpDialog, setShowTrumpDialog] = useState(false);
   const [trumpMessage, setTrumpMessage] = useState("");
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
+
+  // Clear all game state on component mount
+  useEffect(() => {
+    clearAllGameState();
+  }, []);
 
   // Attempt to restore wallet connection on mount
   useEffect(() => {

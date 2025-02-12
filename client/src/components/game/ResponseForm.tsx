@@ -21,7 +21,7 @@ interface ResponseFormProps {
   isLoading: boolean;
   transactionStatus?: 'pending' | 'success' | 'error';
   disabled?: boolean;
-  escalationActive?: boolean; // Added escalationActive prop
+  escalationActive?: boolean;
 }
 
 export function ResponseForm({ 
@@ -30,7 +30,7 @@ export function ResponseForm({
   isLoading,
   transactionStatus = 'pending',
   disabled = false,
-  escalationActive = false // Added default value for escalationActive
+  escalationActive = false
 }: ResponseFormProps) {
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
@@ -42,7 +42,7 @@ export function ResponseForm({
   });
 
   async function handleSubmit(values: z.infer<typeof formSchema>) {
-    if (disabled) return; 
+    if (disabled) return;
 
     setShowLoadingDialog(true);
     try {
@@ -72,12 +72,20 @@ export function ResponseForm({
               <FormItem>
                 <FormLabel>Stump Agent Trump</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder={disabled ? "Game is over!" : "Enter your response..."}
-                    className="h-32"
-                    disabled={disabled || isLoading}
-                    {...field}
-                  />
+                  <div className="relative message-bubble">
+                    <Textarea
+                      placeholder={disabled ? "Game is over!" : "Enter your response..."}
+                      className="min-h-[120px] bg-blue-50 rounded-lg p-4 relative"
+                      disabled={disabled || isLoading}
+                      {...field}
+                    />
+                    <div 
+                      className="absolute left-[-8px] bottom-[15px] w-4 h-4 bg-blue-50 transform rotate-45"
+                      style={{
+                        clipPath: 'polygon(0 0, 100% 100%, 0 100%)'
+                      }}
+                    />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -112,7 +120,7 @@ export function ResponseForm({
         </form>
       </Form>
 
-      <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
+      <Dialog open={showLoadingDialog} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[425px]">
           <TransactionLoader 
             status={transactionStatus}
