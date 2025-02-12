@@ -36,9 +36,11 @@ function formatPacificTime(timestamp: number): string {
 function getStoredPersuasionScore(address: string): number {
   try {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
-    const scores = stored ? JSON.parse(stored) : {};
-    const score = scores[address.toLowerCase()];
-    return score !== undefined ? score : 50; //Return stored score or default 50
+    if (!stored) return 50;
+
+    const scores = JSON.parse(stored);
+    const normalizedAddress = address.toLowerCase();
+    return scores[normalizedAddress] ?? 50;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
     return 50;
@@ -47,10 +49,12 @@ function getStoredPersuasionScore(address: string): number {
 
 function storePersuasionScore(address: string, score: number) {
   try {
-    const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
-    const scores = stored ? JSON.parse(stored) : {};
-    scores[address.toLowerCase()] = Math.max(0, Math.min(100, score));
+    const normalizedAddress = address.toLowerCase();
+    const stored = localStorage.getItem(PERSUASION_SCORE_KEY) || '{}';
+    const scores = JSON.parse(stored);
+    scores[normalizedAddress] = Math.max(0, Math.min(100, score));
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
+    console.log('Stored persuasion score:', scores[normalizedAddress]);
   } catch (error) {
     console.error('Error storing persuasion score:', error);
   }
@@ -169,18 +173,19 @@ export default function Home() {
           const contract = new GameContract(restored.provider!, restored.signer!);
           setGameContract(contract);
 
-          // Load persuasion score from localStorage
           if (restored.account) {
+            // Load persuasion score
             const score = getStoredPersuasionScore(restored.account);
             setPersuasionScore(score);
+            console.log('Restored persuasion score:', score);
 
-            // Load player history
+            // Load transaction history
             const history = await contract.getPlayerHistory(restored.account);
             setPlayerHistory(history);
+            console.log('Restored transaction history:', history);
           }
 
           await initializeGameData(contract, restored.account!);
-
           contract.subscribeToEvents({
             onGuessSubmitted: async () => {
               await Promise.all([
@@ -275,25 +280,21 @@ export default function Home() {
       setWeb3State(state);
 
       if (state.account) {
-        const storedScore = getStoredPersuasionScore(state.account);
-        setPersuasionScore(storedScore);
+        const contract = new GameContract(state.provider!, state.signer!);
+        setGameContract(contract);
 
-        const storedResponses = getPlayerResponses(state.account);
-        setPlayerHistory(storedResponses);
-      }
+        // Load persuasion score
+        const score = getStoredPersuasionScore(state.account);
+        setPersuasionScore(score);
+        console.log('Loaded persuasion score:', score);
 
-      const contract = new GameContract(state.provider!, state.signer!);
-      setGameContract(contract);
+        // Load transaction history
+        const history = await contract.getPlayerHistory(state.account);
+        setPlayerHistory(history);
+        console.log('Loaded transaction history:', history);
 
-      if (state.account) {
         await initializeGameData(contract, state.account);
       }
-
-      await Promise.all([
-        refreshGameStatus(),
-        updatePrizePool()
-      ]);
-
     } catch (error) {
       console.error("Failed to connect:", error);
       toast({
@@ -389,22 +390,20 @@ export default function Home() {
       setIsLoading(true);
       setTransactionStatus('pending');
 
-      const evaluation = await gameContract.evaluateResponse(response);
-      const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
-      await tx.wait();
-      setTransactionStatus('success');
+      const { tx, evaluation } = await gameContract.submitResponse(response, gameStatus.currentAmount);
 
+      // Update persuasion score
       const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
       setPersuasionScore(newScore);
       storePersuasionScore(web3State.account, newScore);
+      console.log('Updated persuasion score:', newScore);
 
-      toast({
-        title: "Transaction Confirmed",
-        description: "Your submission was successfully recorded on the blockchain.",
-      });
+      setTransactionStatus('success');
 
+      // Refresh transaction history
       const updatedHistory = await gameContract.getPlayerHistory(web3State.account);
       setPlayerHistory(updatedHistory);
+      console.log('Updated transaction history:', updatedHistory);
 
       if (newScore >= 100) {
         try {

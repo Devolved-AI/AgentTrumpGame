@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { toast } from '@/hooks/use-toast';
 
 const contractAddress = '0x533a60f2F8746AA983fA3BBFa3aFd45175735504';
 const contractABI = [
@@ -778,14 +779,16 @@ const contractABI = [
 	}
 ];
 
-// Add new type for escalation period info
-interface EscalationPeriodInfo {
-  currentAmount: string;
-  timeRemaining: number;
-  periodIndex: number;
-}
-
 const PLAYER_RESPONSES_KEY = 'playerResponses';
+
+export interface PlayerHistoryItem {
+  response: string;
+  timestamp: number;
+  transactionHash: string | null;
+  blockNumber: number;
+  exists: boolean;
+  scoreChange?: number;
+}
 
 export class GameContract {
   public contract: ethers.Contract;
@@ -955,83 +958,46 @@ export class GameContract {
     return await this.provider.getBlockNumber();
   }
 
-  async submitResponse(response: string, amount: string) {
+  async getPlayerHistory(address: string): Promise<PlayerHistoryItem[]> {
     try {
-      const parsedAmount = ethers.parseEther(amount.toString());
-      console.log('Submitting response with amount:', amount, 'ETH, parsed:', parsedAmount.toString());
-
-      const tx = await this.contract.submitGuess(response, {
-        value: parsedAmount,
-        gasLimit: 500000
-      });
-
-      // Wait for the transaction to be mined
-      const receipt = await tx.wait();
-      const address = await this.signer.getAddress();
       const normalizedAddress = address.toLowerCase();
 
-      // Store response in localStorage
-      const stored = localStorage.getItem(PLAYER_RESPONSES_KEY) || '{}';
-      const responses = JSON.parse(stored);
-      if (!responses[normalizedAddress]) {
-        responses[normalizedAddress] = [];
-      }
-
-      // Add new response with complete transaction details
-      const newResponse = {
-        response,
-        timestamp: Math.floor(Date.now() / 1000), // Convert to seconds for consistency
-        blockNumber: receipt.blockNumber,
-        transactionHash: receipt.hash,
-        exists: true
-      };
-
-      // Add to beginning of array to show most recent first
-      responses[normalizedAddress].unshift(newResponse);
-      localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
-      console.log('Stored response in localStorage:', responses[normalizedAddress]);
-
-      return tx;
-    } catch (error: any) {
-      console.error("Transaction error:", error);
-      throw error;
-    }
-  }
-
-  async getPlayerHistory(address: string) {
-    try {
-      // First get local storage data
+      // Get local storage history
       const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-      let localResponses: PlayerHistoryItem[] = [];
-
+      let localHistory: PlayerHistoryItem[] = [];
       if (stored) {
-        const responses = JSON.parse(stored);
-        const normalizedAddress = address.toLowerCase();
-        localResponses = responses[normalizedAddress] || [];
+        const parsedStorage = JSON.parse(stored);
+        localHistory = parsedStorage[normalizedAddress] || [];
       }
 
-      // Get on-chain data
+      // Get chain history
       const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
 
-      // Merge on-chain data with local storage data
-      const onChainResponses = responses.map((response: string, index: number) => ({
+      // Convert chain data to our format
+      const chainHistory = responses.map((response: string, index: number) => ({
         response,
         timestamp: Number(timestamps[index]),
-        blockNumber: 0, // We don't have this from the contract
-        transactionHash: null, // We don't have this from the contract
+        blockNumber: 0,
+        transactionHash: null,
         exists: exists[index]
       }));
 
-      // Combine and deduplicate responses
-      const combinedResponses = [...localResponses, ...onChainResponses];
-      const uniqueResponses = Array.from(new Map(
-        combinedResponses.map(item => 
-          [item.response + item.timestamp, item]
-        )
-      ).values());
+      // Merge histories, preferring local storage data
+      const allHistory = [...localHistory];
+
+      // Add chain history items that aren't in local storage
+      chainHistory.forEach(chainItem => {
+        const exists = allHistory.some(localItem => 
+          localItem.response === chainItem.response && 
+          localItem.timestamp === chainItem.timestamp
+        );
+        if (!exists) {
+          allHistory.push(chainItem);
+        }
+      });
 
       // Sort by timestamp, most recent first
-      return uniqueResponses.sort((a, b) => b.timestamp - a.timestamp);
+      return allHistory.sort((a, b) => b.timestamp - a.timestamp);
     } catch (error) {
       console.error('Error getting player history:', error);
       // If contract call fails, return local storage data
@@ -1042,6 +1008,56 @@ export class GameContract {
         return responses[normalizedAddress] || [];
       }
       return [];
+    }
+  }
+
+  async submitResponse(response: string, amount: string) {
+    if (!this.signer) throw new Error("No signer available");
+
+    try {
+      const parsedAmount = ethers.parseEther(amount.toString());
+      console.log('Submitting response with amount:', amount, 'ETH, parsed:', parsedAmount.toString());
+
+      const tx = await this.contract.submitGuess(response, {
+        value: parsedAmount,
+        gasLimit: 500000
+      });
+
+      const receipt = await tx.wait();
+      const address = await this.signer.getAddress();
+      const normalizedAddress = address.toLowerCase();
+
+      // Evaluate response before storing
+      const evaluation = await this.evaluateResponse(response);
+
+      // Store response in localStorage
+      const stored = localStorage.getItem(PLAYER_RESPONSES_KEY) || '{}';
+      const responses = JSON.parse(stored);
+
+      if (!responses[normalizedAddress]) {
+        responses[normalizedAddress] = [];
+      }
+
+      // Create new response entry
+      const newResponse: PlayerHistoryItem = {
+        response,
+        timestamp: Math.floor(Date.now() / 1000),
+        blockNumber: receipt.blockNumber,
+        transactionHash: receipt.hash,
+        exists: true,
+        scoreChange: evaluation.scoreIncrement
+      };
+
+      // Add to beginning of array to show most recent first
+      responses[normalizedAddress].unshift(newResponse);
+
+      // Save to localStorage
+      localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
+
+      return { tx, evaluation };
+    } catch (error: any) {
+      console.error("Transaction error:", error);
+      throw error;
     }
   }
 
@@ -1082,12 +1098,4 @@ export class GameContract {
       throw error;
     }
   }
-}
-
-interface PlayerHistoryItem {
-  response: string;
-  timestamp: number;
-  transactionHash: string | null;
-  blockNumber: number;
-  exists: boolean;
 }
