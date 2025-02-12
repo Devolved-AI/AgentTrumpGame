@@ -16,6 +16,7 @@ import { TrumpLoadingScreen } from "@/components/game/TrumpLoadingScreen";
 import { GameOverDialog } from "@/components/game/GameOverDialog";
 import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 import { formatInTimeZone } from 'date-fns-tz';
+import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 const PLAYER_RESPONSES_KEY = 'player_responses';
@@ -130,6 +131,9 @@ export default function Home() {
   const [showGameOver, setShowGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false); 
   const { toast } = useToast();
+  const [showTrumpDialog, setShowTrumpDialog] = useState(false);
+  const [trumpMessage, setTrumpMessage] = useState("");
+  const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
 
   // Reset all persuasion scores
   useEffect(() => {
@@ -359,16 +363,21 @@ export default function Home() {
       storePersuasionScore(web3State.account, newScore);
       storePlayerResponse(web3State.account, response, Date.now(), blockNumber, tx.hash);
 
+      // Show transaction confirmation first
+      toast({
+        title: "Transaction Confirmed",
+        description: "Your submission was successfully recorded on the blockchain.",
+      });
+
+      // Prepare Trump's message
       if (newScore >= 100) {
         try {
           await gameContract.buttonPushed(web3State.account);
           setGameWon(true);
           setShowGameOver(true);
           setShowConfetti(true);
-          toast({
-            title: "🎉 Congratulations! 🎉",
-            description: "You've successfully convinced Agent Trump! The entire prize pool will be transferred to your wallet!",
-          });
+          setTrumpMessage("🎉 Congratulations! You've successfully convinced me! The entire prize pool will be transferred to your wallet!");
+          setTrumpMessageVariant('success');
         } catch (error) {
           console.error("Error pushing the button:", error);
         }
@@ -383,13 +392,14 @@ export default function Home() {
         } else {
           message = "Sad! That's not how I talk at all. Lost 5 persuasion points. You need to be more tremendous!";
         }
-
-        toast({
-          title: "Agent Trump Says:",
-          description: message,
-          variant: evaluation.scoreIncrement > 0 ? "default" : "destructive"
-        });
+        setTrumpMessage(message);
+        setTrumpMessageVariant(evaluation.scoreIncrement > 0 ? 'success' : 'error');
       }
+
+      // Show Trump's response dialog after a short delay
+      setTimeout(() => {
+        setShowTrumpDialog(true);
+      }, 1000);
 
       await refreshGameStatus();
       await refreshPlayerHistory();
@@ -553,6 +563,12 @@ export default function Home() {
         lastBlock={gameStatus.gameEndBlock}
         winnerAddress={gameStatus.isGameWon ? gameStatus.lastPlayer : undefined}
         lastGuessAddress={gameStatus.lastPlayer}
+      />
+      <AgentTrumpDialog
+        isOpen={showTrumpDialog}
+        onClose={() => setShowTrumpDialog(false)}
+        message={trumpMessage}
+        variant={trumpMessageVariant}
       />
     </>
   );
