@@ -369,6 +369,9 @@ export default function Home() {
         description: "Your submission was successfully recorded on the blockchain.",
       });
 
+      // Update player history immediately after transaction
+      await refreshPlayerHistory();
+
       // Prepare Trump's message
       if (newScore >= 100) {
         try {
@@ -401,6 +404,7 @@ export default function Home() {
         setShowTrumpDialog(true);
       }, 1000);
 
+      // Refresh game status and player history again
       await refreshGameStatus();
       await refreshPlayerHistory();
     } catch (error: any) {

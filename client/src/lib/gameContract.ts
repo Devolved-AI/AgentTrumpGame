@@ -955,7 +955,7 @@ export class GameContract {
         gasLimit: 500000
       });
 
-      // Wait for the transaction to be mined to get the block number
+      // Wait for the transaction to be mined
       const receipt = await tx.wait();
       const address = await this.signer.getAddress();
 
@@ -966,6 +966,7 @@ export class GameContract {
         responses[address] = [];
       }
 
+      // Add new response with complete transaction details
       responses[address].push({
         response,
         timestamp: Date.now(),
@@ -988,7 +989,8 @@ export class GameContract {
     try {
       const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
       const responses = stored ? JSON.parse(stored) : {};
-      return responses[address] || [];
+      const normalizedAddress = address.toLowerCase();
+      return responses[normalizedAddress] || [];
     } catch (error) {
       console.error('Error getting player history:', error);
       return [];
