@@ -911,33 +911,6 @@ export class GameContract {
     };
   }
 
-  private async updatePersuasionScore(address: string, score: number): Promise<void> {
-    try {
-      await fetch('/api/scores', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ address, score })
-      });
-    } catch (error) {
-      console.error('Failed to update persuasion score:', error);
-    }
-  }
-
-  private async getPersuasionScore(address: string): Promise<number> {
-    try {
-      const response = await fetch(`/api/scores/${address}`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.score;
-      }
-      return 50; // Default score if not found
-    } catch (error) {
-      console.error('Failed to get persuasion score:', error);
-      return 50;
-    }
-  }
 
   async submitResponse(response: string, amount: string) {
     try {
@@ -951,31 +924,7 @@ export class GameContract {
 
       // Wait for the transaction to be mined to get the block number
       const receipt = await tx.wait();
-      const address = await this.signer.getAddress();
-
       console.log('Transaction receipt:', receipt);
-      console.log('Storing response for address:', address);
-
-      // Store the response in the database after we have the block number
-      const apiResponse = await fetch('/api/responses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address: address,
-          response,
-          blockNumber: receipt.blockNumber,
-          transactionHash: tx.hash
-        })
-      });
-
-      if (!apiResponse.ok) {
-        throw new Error('Failed to store response in database');
-      }
-
-      const responseData = await apiResponse.json();
-      console.log('Stored response:', responseData);
 
       return tx;
     } catch (error: any) {
@@ -986,11 +935,14 @@ export class GameContract {
 
   async getPlayerHistory(address: string) {
     try {
-      const response = await fetch(`/api/responses/${address}`);
-      if (response.ok) {
-        return await response.json();
-      }
-      return [];
+      const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
+      return responses.map((response: string, index: number) => ({
+        response,
+        timestamp: Number(timestamps[index]) * 1000, // Convert to milliseconds
+        exists: exists[index],
+        blockNumber: 0, // We'll get this from the chain
+        transactionHash: null // We'll get this from the chain
+      }));
     } catch (error) {
       console.error('Error getting player history:', error);
       return [];

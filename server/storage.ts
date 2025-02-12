@@ -1,73 +1,62 @@
-import { 
-  playerScores, 
-  playerResponses,
-  type InsertPlayerScore,
-  type InsertPlayerResponse,
-  type PlayerScore,
-  type PlayerResponse
-} from "@shared/schema";
-import { db } from "./db";
-import { eq, ilike } from "drizzle-orm";
+interface PlayerScore {
+  address: string;
+  persuasionScore: number;
+  lastUpdated: Date;
+}
+
+interface PlayerResponse {
+  address: string;
+  response: string;
+  timestamp: Date;
+  blockNumber: number;
+  transactionHash: string | null;
+  exists: boolean;
+}
 
 export interface IStorage {
   getPlayerScore(address: string): Promise<PlayerScore | undefined>;
   updatePlayerScore(address: string, score: number): Promise<PlayerScore>;
-  addPlayerResponse(data: InsertPlayerResponse): Promise<PlayerResponse>;
+  addPlayerResponse(data: PlayerResponse): Promise<PlayerResponse>;
   getPlayerResponses(address: string): Promise<PlayerResponse[]>;
 }
 
-export class DatabaseStorage implements IStorage {
+class MemoryStorage implements IStorage {
+  private scores: Map<string, PlayerScore> = new Map();
+  private responses: PlayerResponse[] = [];
+
   async getPlayerScore(address: string): Promise<PlayerScore | undefined> {
-    const [score] = await db
-      .select()
-      .from(playerScores)
-      .where(eq(playerScores.address, address.toLowerCase()));
-    return score || { address: address.toLowerCase(), persuasionScore: 50, lastUpdated: new Date() };
+    return this.scores.get(address.toLowerCase()) || {
+      address: address.toLowerCase(),
+      persuasionScore: 50,
+      lastUpdated: new Date()
+    };
   }
 
   async updatePlayerScore(address: string, score: number): Promise<PlayerScore> {
-    const existingScore = await this.getPlayerScore(address);
-
-    if (existingScore) {
-      const [updated] = await db
-        .update(playerScores)
-        .set({ 
-          persuasionScore: score,
-          lastUpdated: new Date()
-        })
-        .where(eq(playerScores.address, address.toLowerCase()))
-        .returning();
-      return updated;
-    } else {
-      const [newScore] = await db
-        .insert(playerScores)
-        .values({
-          address: address.toLowerCase(),
-          persuasionScore: score
-        })
-        .returning();
-      return newScore;
-    }
+    const newScore = {
+      address: address.toLowerCase(),
+      persuasionScore: score,
+      lastUpdated: new Date()
+    };
+    this.scores.set(address.toLowerCase(), newScore);
+    return newScore;
   }
 
-  async addPlayerResponse(data: InsertPlayerResponse): Promise<PlayerResponse> {
-    const [response] = await db
-      .insert(playerResponses)
-      .values({
-        ...data,
-        address: data.address.toLowerCase()
-      })
-      .returning();
+  async addPlayerResponse(data: PlayerResponse): Promise<PlayerResponse> {
+    const response = {
+      ...data,
+      address: data.address.toLowerCase(),
+      timestamp: new Date()
+    };
+    this.responses.push(response);
     return response;
   }
 
   async getPlayerResponses(address: string): Promise<PlayerResponse[]> {
-    return db
-      .select()
-      .from(playerResponses)
-      .where(ilike(playerResponses.address, address))
-      .orderBy(playerResponses.timestamp);
+    return this.responses
+      .filter(r => r.address.toLowerCase() === address.toLowerCase())
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemoryStorage();
