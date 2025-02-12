@@ -16,7 +16,7 @@ function formatTimeRemaining(seconds: number, escalationActive: boolean): string
   if (escalationActive) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')} minutes`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')} left in period`;
   }
 
   const hours = Math.floor(seconds / 3600);
@@ -56,9 +56,9 @@ export function GameStatus({
   const normalizedScore = Math.max(0, Math.min(100, persuasionScore));
   const isGameOver = timeRemaining <= 0 || isGameWon;
 
-  // Calculate progress percentage based on whether we're in escalation period
+  // Calculate progress percentage
   const progressPercentage = escalationActive 
-    ? (timeRemaining / 300) * 100  // 5 minutes = 300 seconds
+    ? (timeRemaining / 300) * 100  // 5 minutes (300 seconds) per escalation period
     : (timeRemaining / (72 * 3600)) * 100; // 72 hours in seconds
 
   return (
@@ -86,7 +86,7 @@ export function GameStatus({
           />
           {escalationActive && (
             <p className="text-xs text-orange-500 mt-1 font-semibold">
-              ⚠️ Escalation Period Active - 5 Minute Timer!
+              ⚠️ Escalation Period Active - Fixed Price for Next {Math.floor(timeRemaining / 60)}m {timeRemaining % 60}s
             </p>
           )}
         </CardContent>
@@ -111,7 +111,7 @@ export function GameStatus({
             {isGameOver 
               ? "Game Over" 
               : escalationActive 
-                ? "Escalated Fee (2x Base Amount)" 
+                ? "Current Period's Fixed Price" 
                 : "Base Amount (0.0009 ETH)"}
           </p>
         </CardContent>

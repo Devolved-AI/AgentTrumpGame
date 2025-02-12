@@ -879,7 +879,8 @@ export class GameContract {
       escalationActive,
       gameEndBlock,
       isGameWon,
-      currentMultiplier
+      currentMultiplier,
+      escalationStartBlock
     ] = await Promise.all([
       this.contract.getTimeRemaining(),
       this.contract.getCurrentRequiredAmount(),
@@ -887,19 +888,33 @@ export class GameContract {
       this.contract.escalationActive(),
       this.contract.gameEndBlock(),
       this.contract.gameWon(),
-      this.contract.currentMultiplier()
+      this.contract.currentMultiplier(),
+      this.contract.escalationStartBlock()
     ]);
+
+    // Calculate escalation period information
+    let currentAmount = ethers.formatEther(currentRequiredAmount);
+    let escalationPeriodTimeRemaining = 0;
+    let currentPeriodIndex = 0;
+
+    if (escalationActive) {
+      // Each escalation period is 5 minutes (300 seconds)
+      const ESCALATION_PERIOD = 300;
+      const blocksSinceEscalation = await this.getCurrentBlock() - Number(escalationStartBlock);
+      const secondsSinceEscalation = blocksSinceEscalation * 12; // Assuming 12 second block time
+      currentPeriodIndex = Math.floor(secondsSinceEscalation / ESCALATION_PERIOD);
+
+      // Calculate remaining time in current period
+      escalationPeriodTimeRemaining = ESCALATION_PERIOD - (secondsSinceEscalation % ESCALATION_PERIOD);
+
+      // Use the period index to determine the current multiplier (2^periodIndex)
+      const periodMultiplier = Math.pow(2, currentPeriodIndex);
+      const baseAmount = 0.0009; // Base amount in ETH
+      currentAmount = (baseAmount * periodMultiplier).toFixed(4);
+    }
 
     // Calculate the final status
     const isGameOver = Number(timeRemaining) <= 0 || isGameWon;
-
-    // Get the exact required amount from the contract
-    const requiredAmountInWei = await this.contract.getCurrentRequiredAmount();
-    const currentAmount = ethers.formatEther(requiredAmountInWei);
-
-    console.log('Current required amount:', currentAmount, 'ETH');
-    console.log('Current multiplier:', currentMultiplier.toString());
-    console.log('Escalation active:', escalationActive);
 
     return {
       timeRemaining: Number(timeRemaining),
@@ -909,10 +924,15 @@ export class GameContract {
       gameEndBlock: Number(gameEndBlock),
       isGameWon,
       isGameOver,
-      currentMultiplier: Number(currentMultiplier)
+      currentMultiplier: Number(currentMultiplier),
+      escalationPeriodTimeRemaining: escalationActive ? escalationPeriodTimeRemaining : 0,
+      currentPeriodIndex
     };
   }
 
+  async getCurrentBlock() {
+    return await this.provider.getBlockNumber();
+  }
 
   async submitResponse(response: string, amount: string) {
     try {
