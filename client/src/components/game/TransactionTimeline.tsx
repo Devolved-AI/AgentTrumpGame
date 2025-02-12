@@ -66,7 +66,10 @@ export function TransactionTimeline({ responses }: TransactionTimelineProps) {
                   </div>
 
                   {/* Response */}
-                  <p className="text-sm">{response.response}</p>
+                  <div className="bg-blue-50 p-3 rounded-lg relative message-bubble">
+                    <p className="text-sm">{response.response}</p>
+                    <div className="absolute left-[-8px] bottom-[15px] w-4 h-4 bg-blue-50 transform rotate-45"></div>
+                  </div>
 
                   {/* Block Number & Transaction Hash */}
                   <div className="flex flex-col gap-2 text-sm text-muted-foreground">
