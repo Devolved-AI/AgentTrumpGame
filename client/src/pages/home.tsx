@@ -18,7 +18,21 @@ import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
-// ... [Previous code remains unchanged until the component state] ...
+// Update the clearAllGameState function to be more thorough
+function clearAllGameState() {
+  localStorage.clear();
+  // Clear all game-specific keys
+  localStorage.removeItem(PERSUASION_SCORE_KEY);
+  localStorage.removeItem(PLAYER_RESPONSES_KEY);
+}
+
+interface PlayerHistoryItem {
+  response: string;
+  timestamp: number;
+  transactionHash: string | null;
+  blockNumber: number;
+  exists: boolean;
+}
 
 export default function Home() {
   const [web3State, setWeb3State] = useState<Web3State>(initialWeb3State);
@@ -65,7 +79,9 @@ export default function Home() {
     checkInitialGameStatus();
   }, [gameContract]);
 
+  // Reset the game state when the component mounts
   useEffect(() => {
+    clearAllGameState();
     setGameStatus({
       timeRemaining: 0,
       currentAmount: "0.0009",
@@ -547,11 +563,11 @@ export default function Home() {
       <Footer />
       <GameOverDialog
         isOpen={showGameOver}
-        onClose={() => {}} // Empty function since we don't want to close it
+        onClose={() => {}} 
         lastBlock={gameStatus.gameEndBlock}
         winnerAddress={gameStatus.isGameWon ? gameStatus.lastPlayer : undefined}
         lastGuessAddress={gameStatus.lastPlayer}
-        hideCloseButton={true} // Add this prop to hide the close button
+        hideCloseButton={true} 
       />
       <AgentTrumpDialog
         isOpen={showTrumpDialog}
@@ -561,18 +577,6 @@ export default function Home() {
       />
     </>
   );
-}
-
-interface PlayerHistoryItem {
-  response: string;
-  timestamp: number;
-  transactionHash: string | null;
-  blockNumber: number;
-  exists: boolean;
-}
-
-function clearAllGameState() {
-  localStorage.clear(); 
 }
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
