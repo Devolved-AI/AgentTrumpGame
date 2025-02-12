@@ -17,7 +17,9 @@ import { GameOverDialog } from "@/components/game/GameOverDialog";
 import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
+const PLAYER_RESPONSES_KEY = 'player_responses';
 
+// Updated localStorage functions for better clarity
 function getStoredPersuasionScore(address: string): number {
   try {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
@@ -48,6 +50,39 @@ function storePersuasionScore(address: string, score: number) {
     console.log('Updated stored scores:', scores);
   } catch (error) {
     console.error('Error storing persuasion score:', error);
+  }
+}
+
+// New function to store player responses
+function storePlayerResponse(address: string, response: string, timestamp: number, blockNumber: number, hash: string | null) {
+  try {
+    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
+    const responses = stored ? JSON.parse(stored) : {};
+    if (!responses[address]) {
+      responses[address] = [];
+    }
+    responses[address].push({
+      response,
+      timestamp,
+      blockNumber,
+      transactionHash: hash,
+      exists: true
+    });
+    localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
+  } catch (error) {
+    console.error('Error storing player response:', error);
+  }
+}
+
+// New function to get player responses
+function getPlayerResponses(address: string): PlayerHistoryItem[] {
+  try {
+    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
+    const responses = stored ? JSON.parse(stored) : {};
+    return responses[address] || [];
+  } catch (error) {
+    console.error('Error getting player responses:', error);
+    return [];
   }
 }
 
@@ -309,6 +344,7 @@ export default function Home() {
 
       const evaluation = await gameContract.evaluateResponse(response);
       const tx = await gameContract.submitResponse(response, gameStatus.currentAmount);
+      const blockNumber = (await tx.wait()).blockNumber;
       await tx.wait();
       setTransactionStatus('success');
 
@@ -317,6 +353,7 @@ export default function Home() {
       console.log(`Updating score from ${persuasionScore} to ${newScore} for address ${web3State.account}`);
       setPersuasionScore(newScore);
       storePersuasionScore(web3State.account, newScore);
+      storePlayerResponse(web3State.account, response, Date.now(), blockNumber, tx.hash);
 
       // Handle game win condition (persuasion score reaches 100)
       if (newScore >= 100) {

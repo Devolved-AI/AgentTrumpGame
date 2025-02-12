@@ -785,6 +785,8 @@ interface EscalationPeriodInfo {
   periodIndex: number;
 }
 
+const PLAYER_RESPONSES_KEY = 'playerResponses';
+
 export class GameContract {
   public contract: ethers.Contract;
   private provider: ethers.BrowserProvider;
@@ -924,7 +926,25 @@ export class GameContract {
 
       // Wait for the transaction to be mined to get the block number
       const receipt = await tx.wait();
-      console.log('Transaction receipt:', receipt);
+      const address = await this.signer.getAddress();
+
+      // Store response in localStorage
+      const stored = localStorage.getItem(PLAYER_RESPONSES_KEY) || '{}';
+      const responses = JSON.parse(stored);
+      if (!responses[address]) {
+        responses[address] = [];
+      }
+
+      responses[address].push({
+        response,
+        timestamp: Date.now(),
+        blockNumber: receipt.blockNumber,
+        transactionHash: tx.hash,
+        exists: true
+      });
+
+      localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
+      console.log('Stored response in localStorage:', responses[address]);
 
       return tx;
     } catch (error: any) {
@@ -935,14 +955,9 @@ export class GameContract {
 
   async getPlayerHistory(address: string) {
     try {
-      const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
-      return responses.map((response: string, index: number) => ({
-        response,
-        timestamp: Number(timestamps[index]) * 1000, // Convert to milliseconds
-        exists: exists[index],
-        blockNumber: 0, // We'll get this from the chain
-        transactionHash: null // We'll get this from the chain
-      }));
+      const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
+      const responses = stored ? JSON.parse(stored) : {};
+      return responses[address] || [];
     } catch (error) {
       console.error('Error getting player history:', error);
       return [];
