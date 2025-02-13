@@ -108,33 +108,20 @@ export class GameContract {
     this.contract = new ethers.Contract(contractAddress, contractABI, signer);
   }
 
-  // Update the evaluateResponse method to implement the new Agent Trump behavior
   async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
     const lowerResponse = response.toLowerCase();
     let scoreIncrement = 0;
 
     // Define key Trump themes and phrases to look for
     const persuasiveThemes = {
-      // Business success and deals
       businessAcumen: /(?:great deals?|successful business|billions|tremendous success|winning|art of the deal)/i,
-
-      // America First messaging
       americaFirst: /(?:make america great|america first|usa|american jobs|american workers)/i,
-
-      // Strong leadership
       leadership: /(?:strong leader|tough decisions|get things done|nobody else could|only I can)/i,
-
-      // Common Trump speech patterns
       trumpisms: /(?:believe me|many people are saying|everybody knows|tremendous|huge|the best|like never before|very strongly)/i,
-
-      // Appeals to his base
       baseAppeals: /(?:drain the swamp|fake news|deep state|witch hunt|no collusion)/i,
-
-      // Personal flattery
       flattery: /(?:greatest president|smart|genius|very stable|best negotiator|true leader)/i
     };
 
-    // Check for presence of persuasive themes
     let themesFound = 0;
     for (const [theme, pattern] of Object.entries(persuasiveThemes)) {
       if (pattern.test(lowerResponse)) {
@@ -142,36 +129,29 @@ export class GameContract {
       }
     }
 
-    // Style analysis
     const hasEmphasis = (response.match(/[A-Z]{2,}/g) || []).length > 0;
     const hasExclamation = response.includes('!');
     const properLength = response.length >= 50 && response.length <= 280;
 
-    // Calculate base score based on themes found (max 5 points per theme)
     scoreIncrement += themesFound * 5;
 
-    // Add style points
     if (hasEmphasis) scoreIncrement += 2;
     if (hasExclamation) scoreIncrement += 2;
     if (properLength) scoreIncrement += 1;
 
-    // Check for extraordinary persuasive combinations that might warrant instant win
     const isExtraordinary = 
-      themesFound >= 4 && // Uses multiple Trump themes
-      hasEmphasis && // Has emphasis
-      hasExclamation && // Shows enthusiasm
-      properLength && // Appropriate length
-      /tremendous|huge|believe me|many people|the best/.test(lowerResponse); // Key Trump phrases
+      themesFound >= 4 &&
+      hasEmphasis &&
+      hasExclamation &&
+      properLength &&
+      /tremendous|huge|believe me|many people|the best/.test(lowerResponse);
 
     if (isExtraordinary) {
-      return { scoreIncrement: 100 }; // Instant win condition
+      return { scoreIncrement: 100 };
     }
 
-    // Apply resistance factor (7/10 resistance)
-    // Reduce non-winning scores by 30%
     scoreIncrement = Math.floor(scoreIncrement * 0.7);
 
-    // Ensure score increment is within bounds (-5 to +5 for normal responses)
     if (scoreIncrement > 0 && scoreIncrement < 100) {
       scoreIncrement = Math.min(scoreIncrement, 5);
     } else if (scoreIncrement <= 0) {
@@ -185,36 +165,33 @@ export class GameContract {
     try {
       const [
         timeRemaining,
-        currentRequiredAmount,
+        requiredAmount,
         escalationActive,
-        gameWon,
-        currentMultiplier
+        isGameWon,
+        multiplier
       ] = await Promise.all([
         this.contract.getTimeRemaining(),
-        this.contract.currentRequiredAmount(), 
+        this.contract.currentRequiredAmount(),
         this.contract.escalationActive(),
         this.contract.gameWon(),
         this.contract.currentMultiplier()
       ]);
 
-      // Calculate if the game is over
-      const isGameOver = gameWon || Number(timeRemaining) <= 0;
-
       return {
         timeRemaining: Number(timeRemaining),
-        currentAmount: ethers.formatEther(currentRequiredAmount),
-        lastPlayer: "", 
+        currentAmount: ethers.formatEther(requiredAmount),
+        lastPlayer: "",
         escalationActive,
-        gameEndBlock: 0, 
-        isGameWon: gameWon,
-        isGameOver,
-        currentMultiplier: Number(currentMultiplier),
+        gameEndBlock: 0,
+        isGameWon,
+        isGameOver: isGameWon || Number(timeRemaining) <= 0,
+        currentMultiplier: Number(multiplier),
         escalationPeriodTimeRemaining: 0,
         currentPeriodIndex: 0
       };
     } catch (error) {
       console.error("Failed to get game status:", error);
-      throw error;
+      throw new Error("Failed to load game data. Please try again.");
     }
   }
 
@@ -224,73 +201,22 @@ export class GameContract {
 
   async getPlayerHistory(address: string): Promise<PlayerHistoryItem[]> {
     try {
-      const normalizedAddress = address.toLowerCase();
-
-      // Get local storage history
-      const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-      let localHistory: PlayerHistoryItem[] = [];
-      if (stored) {
-        const parsedStorage = JSON.parse(stored);
-        localHistory = parsedStorage[normalizedAddress] || [];
-      }
-
-      // Get chain history
-      const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
-
-      // Convert chain data to our format, filtering out invalid entries
-      const chainHistory = responses
-        .map((response: string, index: number) => ({
-          response,
-          timestamp: Number(timestamps[index]),
-          blockNumber: 0,
-          transactionHash: null,
-          exists: exists[index]
-        }))
-        .filter(item => 
-          // Filter out entries with 1970 timestamps (less than year 2000)
-          item.timestamp > 946684800 && 
-          item.exists
-        );
-
-      // Merge histories, preferring local storage data with valid transactions
-      const validLocalHistory = localHistory.filter(item => 
-        item.blockNumber !== 0 && // Must have a valid block number
-        item.transactionHash !== null && // Must have a transaction hash
-        item.timestamp > 946684800 && // After year 2000
-        item.exists
-      );
-
-      // Combine histories, ensuring no duplicates
-      const allHistory = [...validLocalHistory];
-
-      // Only add chain items that don't exist in local storage
-      chainHistory.forEach(chainItem => {
-        const exists = allHistory.some(localItem => 
-          localItem.response === chainItem.response && 
-          localItem.timestamp === chainItem.timestamp
-        );
-        if (!exists) {
-          allHistory.push(chainItem);
-        }
-      });
-
-      // Sort by timestamp, most recent first
-      return allHistory.sort((a, b) => b.timestamp - a.timestamp);
-    } catch (error) {
-      console.error('Error getting player history:', error);
-      // If contract call fails, return filtered local storage data
       const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
       if (stored) {
         const responses = JSON.parse(stored);
         const normalizedAddress = address.toLowerCase();
-        const localHistory = responses[normalizedAddress] || [];
-        return localHistory.filter(item => 
-          item.blockNumber !== 0 &&
-          item.transactionHash !== null &&
-          item.timestamp > 946684800 &&
-          item.exists
-        ).sort((a, b) => b.timestamp - a.timestamp);
+        return (responses[normalizedAddress] || [])
+          .filter((item: PlayerHistoryItem) => 
+            item.blockNumber !== 0 &&
+            item.transactionHash !== null &&
+            item.timestamp > 946684800 &&
+            item.exists
+          )
+          .sort((a: PlayerHistoryItem, b: PlayerHistoryItem) => b.timestamp - a.timestamp);
       }
+      return [];
+    } catch (error) {
+      console.error('Error getting player history:', error);
       return [];
     }
   }
@@ -299,8 +225,8 @@ export class GameContract {
     if (!this.signer) throw new Error("No signer available");
 
     try {
-      const parsedAmount = ethers.parseEther(amount.toString());
-      console.log('Submitting response with amount:', amount, 'ETH, parsed:', parsedAmount.toString());
+      const parsedAmount = ethers.parseEther(amount);
+      console.log('Submitting response with amount:', amount, 'ETH');
 
       const tx = await this.contract.submitGuess({
         value: parsedAmount,
@@ -311,10 +237,8 @@ export class GameContract {
       const address = await this.signer.getAddress();
       const normalizedAddress = address.toLowerCase();
 
-      // Evaluate response before storing
       const evaluation = await this.evaluateResponse(response);
 
-      // Store response in localStorage
       const stored = localStorage.getItem(PLAYER_RESPONSES_KEY) || '{}';
       const responses = JSON.parse(stored);
 
@@ -322,7 +246,6 @@ export class GameContract {
         responses[normalizedAddress] = [];
       }
 
-      // Create new response entry
       const newResponse: PlayerHistoryItem = {
         response,
         timestamp: Math.floor(Date.now() / 1000),
@@ -332,15 +255,32 @@ export class GameContract {
         scoreChange: evaluation.scoreIncrement
       };
 
-      // Add to beginning of array to show most recent first
       responses[normalizedAddress].unshift(newResponse);
-
-      // Save to localStorage
       localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
 
       return { tx, evaluation };
     } catch (error: any) {
       console.error("Transaction error:", error);
+      throw error;
+    }
+  }
+
+  async getTotalPrizePool(): Promise<string> {
+    try {
+      const balance = await this.provider.getBalance(this.contract.target);
+      return ethers.formatEther(balance);
+    } catch (error) {
+      console.error("Error getting prize pool:", error);
+      return "0";
+    }
+  }
+
+  async buttonPushed(winnerAddress: string) {
+    try {
+      const tx = await this.contract.buttonPushed(winnerAddress);
+      return tx;
+    } catch (error) {
+      console.error("Error pushing button:", error);
       throw error;
     }
   }
@@ -351,35 +291,8 @@ export class GameContract {
     onGameEnded?: (event: any) => void;
     onEscalationStarted?: (event: any) => void;
   }) {
-    if (callbacks.onGuessSubmitted) {
-      this.contract.on('GuessSubmitted', callbacks.onGuessSubmitted);
-    }
-    if (callbacks.onGameWon) {
-      this.contract.on('GameWon', callbacks.onGameWon);
-    }
-    if (callbacks.onGameEnded) {
-      this.contract.on('GameEnded', callbacks.onGameEnded);
-    }
-    if (callbacks.onEscalationStarted) {
-      this.contract.on('EscalationStarted', callbacks.onEscalationStarted);
-    }
-
-    return () => {
-      this.contract.removeAllListeners();
-    };
-  }
-
-  async getTotalPrizePool(): Promise<string> {
-    const balance = await this.contract.getContractBalance();
-    return ethers.formatEther(balance);
-  }
-  async buttonPushed(winnerAddress: string) {
-    try {
-      const tx = await this.contract.buttonPushed(winnerAddress);
-      return tx;
-    } catch (error) {
-      console.error("Error pushing button:", error);
-      throw error;
-    }
+    // Return cleanup function even though we're not setting up listeners
+    // since the contract doesn't have these events in its ABI
+    return () => {};
   }
 }
