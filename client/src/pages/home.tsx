@@ -126,37 +126,41 @@ export default function Home() {
 
       console.log('Submitting response with current amount:', gameStatus.currentAmount);
 
-      // Submit transaction and wait for confirmation
-      const { tx, evaluation } = await gameContract.submitResponse(response, gameStatus.currentAmount);
-      console.log('Transaction submitted:', tx.hash);
+      try {
+        // Submit transaction and wait for confirmation
+        const { tx, evaluation } = await gameContract.submitResponse(response, gameStatus.currentAmount);
+        console.log('Transaction submitted:', tx.hash);
 
-      // Update transaction status to success
-      setTransactionStatus('success');
+        // Update transaction status to success
+        setTransactionStatus('success');
 
-      // Update game state after successful transaction
-      await refreshGameStatus();
+        // Update game state after successful transaction
+        await refreshGameStatus();
 
-      // Add Agent Trump's response
-      let trumpResponse = "Great response! Keep trying to convince me!";
-      addMessage(trumpResponse, false, tx.hash);
+        // Add Agent Trump's response
+        let trumpResponse = "Great response! Keep trying to convince me!";
+        addMessage(trumpResponse, false, tx.hash);
 
-      // Show success toast
-      toast({
-        title: "Response Submitted",
-        description: "Your response has been recorded on the blockchain.",
-      });
+        // Show success toast
+        toast({
+          title: "Response Submitted",
+          description: "Your response has been recorded on the blockchain.",
+        });
+
+      } catch (error: any) {
+        // Handle transaction failure
+        setTransactionStatus('error');
+        addMessage("Failed to submit response. Please try again.", false);
+        throw error; // Re-throw to be caught by outer try-catch
+      }
 
     } catch (error: any) {
-      setTransactionStatus('error');
-      console.error("Submission error details:", {
-        message: error.message,
-        code: error.code,
-        reason: error.reason,
-        data: error.data,
-        method: error.method,
-        transaction: error.transaction
+      console.error("Submission error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit response. Please try again.",
+        variant: "destructive"
       });
-      handleSubmissionError(error);
     } finally {
       setIsLoading(false);
     }

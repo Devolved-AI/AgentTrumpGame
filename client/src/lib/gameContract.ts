@@ -146,18 +146,21 @@ export class GameContract {
       const parsedAmount = ethers.parseEther(amount);
       console.log('Submitting response with amount:', amount, 'ETH');
 
-      // Estimate gas first to ensure transaction will succeed
-      const gasEstimate = await this.contract.submitGuess.estimateGas(response, {
-        value: parsedAmount
-      });
+      // First check if the game is still active
+      const status = await this.getGameStatus();
+      if (status.isGameOver) {
+        throw new Error("Game is already over!");
+      }
 
-      // Add 20% buffer to gas estimate
-      const gasLimit = Math.floor(gasEstimate * 1.2);
+      // Check the current required amount matches
+      const currentRequired = await this.contract.currentRequiredAmount();
+      if (parsedAmount.toString() !== currentRequired.toString()) {
+        throw new Error("Amount mismatch - please refresh and try again");
+      }
 
       // Call submitGuess with the correct parameters and value
       const tx = await this.contract.submitGuess(response, {
-        value: parsedAmount,
-        gasLimit: gasLimit
+        value: parsedAmount
       });
 
       console.log("Transaction sent:", tx.hash);
@@ -169,11 +172,15 @@ export class GameContract {
       return { tx, evaluation, receipt };
     } catch (error: any) {
       console.error("Transaction error:", error);
-      // Rethrow with more specific error message
+      // Handle specific error cases
       if (error.code === 'INSUFFICIENT_FUNDS') {
         throw new Error("Insufficient funds to complete transaction");
       } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
         throw new Error("Could not estimate gas limit. Please try again.");
+      } else if (error.code === 'ACTION_REJECTED') {
+        throw new Error("Transaction was rejected by user");
+      } else if (error.reason) {
+        throw new Error(error.reason);
       }
       throw error;
     }
