@@ -20,7 +20,6 @@ export class GameContract {
     this.provider = provider;
     this.signer = signer;
     this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-    console.log("Available contract functions:", Object.keys(this.contract.interface.functions));
   }
 
   async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
@@ -159,8 +158,7 @@ export class GameContract {
         throw new Error("Amount mismatch - please refresh and try again");
       }
 
-      // We'll use the contract function for submitting a response
-      console.log("Contract functions:", Object.keys(this.contract.interface.functions));
+      // Submit the response using the contract method
       const tx = await this.contract.submitResponse(response, {
         value: parsedAmount
       });
@@ -174,7 +172,6 @@ export class GameContract {
       return { tx, evaluation, receipt };
     } catch (error: any) {
       console.error("Transaction error:", error);
-      // Handle specific error cases
       if (error.code === 'INSUFFICIENT_FUNDS') {
         throw new Error("Insufficient funds to complete transaction");
       } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
