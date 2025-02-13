@@ -221,10 +221,9 @@ export default function Home() {
       });
       setGameWon(status.isGameWon || false);
       setShowGameOver(false);
-      setPlayerHistory([]);
       setPrizePoolEth(totalPool);
-      setPersuasionScore(50);
 
+      // Don't reset persuasion score or player history here
     } catch (error) {
       console.error("Failed to initialize game data:", error);
       toast({
@@ -246,15 +245,31 @@ export default function Home() {
         const contract = new GameContract(state.provider!, state.signer!);
         setGameContract(contract);
 
-        // Load persuasion score
-        const score = getStoredPersuasionScore(state.account);
-        setPersuasionScore(score);
-        console.log('Loaded persuasion score:', score);
+        // Load persuasion score from localStorage
+        const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
+        if (stored) {
+          const scores = JSON.parse(stored);
+          const normalizedAddress = state.account.toLowerCase();
+          const score = scores[normalizedAddress] ?? 50;
+          setPersuasionScore(score);
+          console.log('Restored persuasion score:', score);
+        }
 
-        // Load transaction history
-        const history = await contract.getPlayerHistory(state.account);
-        setPlayerHistory(history);
-        console.log('Loaded transaction history:', history);
+        // Load transaction history from localStorage
+        const storedResponses = localStorage.getItem(PLAYER_RESPONSES_KEY);
+        if (storedResponses) {
+          const responses = JSON.parse(storedResponses);
+          const normalizedAddress = state.account.toLowerCase();
+          const history = responses[normalizedAddress] || [];
+          const validHistory = history.filter((item: PlayerHistoryItem) =>
+            item.blockNumber !== 0 &&
+            item.transactionHash !== null &&
+            item.timestamp > 946684800 &&
+            item.exists
+          ).sort((a: PlayerHistoryItem, b: PlayerHistoryItem) => b.timestamp - a.timestamp);
+          setPlayerHistory(validHistory);
+          console.log('Restored transaction history:', validHistory);
+        }
 
         await initializeGameData(contract, state.account);
       }
