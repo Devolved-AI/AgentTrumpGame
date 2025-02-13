@@ -17,7 +17,6 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 import { ChatContainer } from "@/components/game/ChatContainer";
 import { useChat } from "@/lib/hooks/useChat";
-import { analyzeTrumpResponse, type AIResponse } from '@/lib/ai/trumpAI';
 
 // Only maintain persuasion score in localStorage
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
@@ -151,9 +150,9 @@ export default function Home() {
       console.log('Submitting response with current amount:', gameStatus.currentAmount);
 
       try {
-        // First, analyze the response with OpenAI
-        const aiAnalysis: AIResponse = await analyzeTrumpResponse(response);
-        console.log('AI Analysis:', aiAnalysis);
+        // Evaluate the response locally
+        const evaluation = await gameContract.evaluateResponse(response);
+        console.log('Response evaluation:', evaluation);
 
         // Submit transaction with the evaluated score
         const { tx } = await gameContract.submitResponse(response, gameStatus.currentAmount);
@@ -165,11 +164,14 @@ export default function Home() {
         // Update game state after successful transaction
         await refreshGameStatus();
 
-        // Add Agent Trump's AI response
-        addMessage(aiAnalysis.response, false, tx.hash);
+        // Get Trump's response based on the evaluation
+        const trumpResponse = gameContract.getTrumpResponse(evaluation.scoreIncrement);
 
-        // Update the persuasion score based on AI analysis
-        const newScore = Math.min(100, Math.max(0, persuasionScore + aiAnalysis.persuasionScore));
+        // Add Agent Trump's response
+        addMessage(trumpResponse, false, tx.hash);
+
+        // Update the persuasion score
+        const newScore = Math.min(100, Math.max(0, persuasionScore + evaluation.scoreIncrement));
         setPersuasionScore(newScore);
 
         // Store the updated score
@@ -185,7 +187,7 @@ export default function Home() {
         // Handle transaction failure
         setTransactionStatus('error');
         addMessage("Failed to submit response. Please try again.", false);
-        throw error; // Re-throw to be caught by outer try-catch
+        throw error;
       }
 
     } catch (error: any) {

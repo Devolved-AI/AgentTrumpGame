@@ -22,10 +22,32 @@ const TRUMP_RESPONSES = {
     "That's not how you make America great! Try again!",
     "Wrong! You need to think bigger, much bigger!"
   ],
-  gameWinning: [
+  winning: [
     "You did it! You're a winner, and I love winners!",
     "This is huge! Really huge! You've earned my respect!",
     "Now that's what I call the Art of the Deal! Congratulations!"
+  ]
+};
+
+// Trump's reaction GIFs mapped to different moods
+export const TRUMP_GIFS = {
+  positive: [
+    '/gifs/trump-thumbs-up.gif',
+    '/gifs/trump-happy.gif',
+    '/gifs/trump-victory.gif'
+  ],
+  neutral: [
+    '/gifs/trump-thinking.gif',
+    '/gifs/trump-talking.gif'
+  ],
+  negative: [
+    '/gifs/trump-wrong.gif',
+    '/gifs/trump-angry.gif',
+    '/gifs/trump-sad.gif'
+  ],
+  winning: [
+    '/gifs/trump-winning.gif',
+    '/gifs/trump-celebration.gif'
   ]
 };
 
@@ -55,7 +77,7 @@ export class GameContract {
 
   private getTrumpResponse(scoreIncrement: number, isWinning: boolean = false): string {
     if (isWinning) {
-      return this.getRandomResponse(TRUMP_RESPONSES.gameWinning);
+      return this.getRandomResponse(TRUMP_RESPONSES.winning);
     }
 
     if (scoreIncrement >= 15) {
@@ -64,6 +86,20 @@ export class GameContract {
       return this.getRandomResponse(TRUMP_RESPONSES.mediumScore);
     } else {
       return this.getRandomResponse(TRUMP_RESPONSES.lowScore);
+    }
+  }
+
+  private getTrumpGif(scoreIncrement: number, isWinning: boolean = false): string {
+    if (isWinning) {
+      return TRUMP_GIFS.winning[Math.floor(Math.random() * TRUMP_GIFS.winning.length)];
+    }
+
+    if (scoreIncrement >= 15) {
+      return TRUMP_GIFS.positive[Math.floor(Math.random() * TRUMP_GIFS.positive.length)];
+    } else if (scoreIncrement >= 5) {
+      return TRUMP_GIFS.neutral[Math.floor(Math.random() * TRUMP_GIFS.neutral.length)];
+    } else {
+      return TRUMP_GIFS.negative[Math.floor(Math.random() * TRUMP_GIFS.negative.length)];
     }
   }
 
@@ -150,8 +186,9 @@ export class GameContract {
 
       const evaluation = await this.evaluateResponse(response);
       const trumpResponse = this.getTrumpResponse(evaluation.scoreIncrement, evaluation.scoreIncrement >= 100);
+      const trumpGif = this.getTrumpGif(evaluation.scoreIncrement, evaluation.scoreIncrement >= 100);
 
-      return { tx, evaluation, receipt, trumpResponse };
+      return { tx, evaluation, receipt, trumpResponse, trumpGif };
     } catch (error: any) {
       console.error("Transaction error:", error);
       if (error.code === 'INSUFFICIENT_FUNDS') {
