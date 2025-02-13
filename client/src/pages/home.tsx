@@ -22,16 +22,10 @@ import { useChat } from "@/lib/hooks/useChat";
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
 function clearAllGameState() {
-  // Keep the persuasion scores and chat history, clear other game state
-  const persuasionScores = localStorage.getItem(PERSUASION_SCORE_KEY);
-  const chatHistory = localStorage.getItem('chat_history');
+  // Clear everything from localStorage
   localStorage.clear();
-  if (persuasionScores) {
-    localStorage.setItem(PERSUASION_SCORE_KEY, persuasionScores);
-  }
-  if (chatHistory) {
-    localStorage.setItem('chat_history', chatHistory);
-  }
+  // Reset persuasion scores to initial state
+  localStorage.setItem(PERSUASION_SCORE_KEY, '{}');
 }
 
 interface PlayerHistoryItem {
@@ -612,9 +606,8 @@ function getStoredPersuasionScore(address: string): number {
 
     const scores = JSON.parse(stored);
     const normalizedAddress = address.toLowerCase();
-    const score = scores[normalizedAddress] ?? 50;
-    console.log('Retrieved persuasion score:', score, 'for address:', normalizedAddress);
-    return score;
+    // Always return 50 as this is a new game
+    return 50;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
     return 50;
