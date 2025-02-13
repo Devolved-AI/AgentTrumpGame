@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { toast } from '@/hooks/use-toast';
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from './config';
 
 export interface PlayerHistoryItem {
   response: string;
@@ -18,7 +19,7 @@ export class GameContract {
   constructor(provider: ethers.BrowserProvider, signer: ethers.JsonRpcSigner) {
     this.provider = provider;
     this.signer = signer;
-    this.contract = new ethers.Contract(contractAddress, contractABI, signer);
+    this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
   }
 
   async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
@@ -171,56 +172,3 @@ export class GameContract {
     return () => {};
   }
 }
-
-export const contractAddress = '0xAC4729Ad635dB4A2A601B840a8868DAd07d3ED96';
-export const contractABI = [
-  {
-    "inputs": [{"internalType": "address","name": "winner","type": "address"}],
-    "name": "buttonPushed",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "submitGuess",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getTimeRemaining",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "currentMultiplier",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "currentRequiredAmount",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "escalationActive",
-    "outputs": [{"internalType": "bool","name": "","type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "gameWon",
-    "outputs": [{"internalType": "bool","name": "","type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
