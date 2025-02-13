@@ -498,10 +498,10 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col">
-            <div className="h-[600px]">
+            <div className="h-[700px]">
               <ChatContainer
                 messages={messages}
-                className="h-[500px]"
+                className="h-[600px]"
                 onSubmit={handleSubmitResponse}
                 currentAmount={gameStatus.currentAmount}
                 isLoading={isLoading}

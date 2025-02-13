@@ -40,7 +40,7 @@ export function ChatContainer({
   }, [messages]);
 
   return (
-    <div className="relative w-full h-full rounded-[38px] bg-[#f2f2f7] shadow-xl overflow-hidden">
+    <div className="relative w-full h-full rounded-[38px] bg-[#f2f2f7] shadow-xl overflow-hidden flex flex-col">
       {/* iPhone Notch */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[40%] h-[25px] bg-black rounded-b-[18px] z-10" />
 
@@ -60,7 +60,7 @@ export function ChatContainer({
       </div>
 
       {/* Messages */}
-      <ScrollArea className={className}>
+      <ScrollArea className="flex-1 min-h-0">
         <div ref={scrollRef} className="flex flex-col p-4 space-y-2">
           {messages.map((msg) => (
             <ChatBubble
@@ -74,14 +74,16 @@ export function ChatContainer({
         </div>
       </ScrollArea>
 
-      {/* Message Input */}
-      <ResponseForm
-        onSubmit={onSubmit}
-        currentAmount={currentAmount}
-        isLoading={isLoading}
-        transactionStatus={transactionStatus}
-        disabled={disabled}
-      />
+      {/* Message Input - Fixed at bottom */}
+      <div className="mt-auto">
+        <ResponseForm
+          onSubmit={onSubmit}
+          currentAmount={currentAmount}
+          isLoading={isLoading}
+          transactionStatus={transactionStatus}
+          disabled={disabled}
+        />
+      </div>
     </div>
   );
 }
