@@ -94,8 +94,8 @@ export class GameContract {
         throw new Error("Amount mismatch - please refresh and try again");
       }
 
-      // Simply call the contract method directly without checking if it exists
-      const tx = await this.contract.guess(response, {
+      // Use the correct contract function name - submitGuess
+      const tx = await this.contract.submitGuess(response, {
         value: parsedAmount
       });
 
