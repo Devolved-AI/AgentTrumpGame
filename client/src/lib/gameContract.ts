@@ -182,83 +182,40 @@ export class GameContract {
   }
 
   async getGameStatus() {
-    const [
-      timeRemaining,
-      currentRequiredAmount,
-      lastPlayer,
-      escalationActive,
-      gameEndBlock,
-      isGameWon,
-      currentMultiplier,
-      escalationStartBlock,
-      lastGuessBlock
-    ] = await Promise.all([
-      this.contract.getTimeRemaining(),
-      this.contract.getCurrentRequiredAmount(),
-      this.contract.lastPlayer(),
-      this.contract.escalationActive(),
-      this.contract.gameEndBlock(),
-      this.contract.gameWon(),
-      this.contract.currentMultiplier(),
-      this.contract.escalationStartBlock(),
-      this.contract.lastGuessBlock()
-    ]);
+    try {
+      const [
+        timeRemaining,
+        currentRequiredAmount,
+        escalationActive,
+        gameWon,
+        currentMultiplier
+      ] = await Promise.all([
+        this.contract.getTimeRemaining(),
+        this.contract.currentRequiredAmount(), 
+        this.contract.escalationActive(),
+        this.contract.gameWon(),
+        this.contract.currentMultiplier()
+      ]);
 
-    // Calculate escalation period information
-    let currentAmount = ethers.formatEther(currentRequiredAmount);
-    let escalationPeriodTimeRemaining = 0;
-    let currentPeriodIndex = 0;
+      // Calculate if the game is over
+      const isGameOver = gameWon || Number(timeRemaining) <= 0;
 
-    // Escalation mode calculations
-    if (escalationActive) {
-      // Each escalation period is exactly 5 minutes (300 seconds)
-      const ESCALATION_PERIOD = 300;
-      const currentBlock = await this.getCurrentBlock();
-      const blocksSinceEscalation = currentBlock - Number(escalationStartBlock);
-      const secondsSinceEscalation = blocksSinceEscalation * 12; // Assuming 12 second block time
-      currentPeriodIndex = Math.floor(secondsSinceEscalation / ESCALATION_PERIOD);
-
-      // Calculate remaining time in current period
-      escalationPeriodTimeRemaining = ESCALATION_PERIOD - (secondsSinceEscalation % ESCALATION_PERIOD);
-
-      // Fixed prices for each escalation period (in ETH)
-      const periodPrices = [
-        0.0018, // 1st period: 0.0018 ETH
-        0.0036, // 2nd period: 0.0036 ETH
-        0.0072, // 3rd period: 0.0072 ETH
-        0.0144, // 4th period: 0.0144 ETH
-        0.0288  // 5th period: 0.0288 ETH
-      ];
-
-      // Get the price for current period (cap at last defined price if we go beyond)
-      const periodPrice = currentPeriodIndex < periodPrices.length 
-        ? periodPrices[currentPeriodIndex]
-        : periodPrices[periodPrices.length - 1];
-
-      currentAmount = periodPrice.toFixed(4);
+      return {
+        timeRemaining: Number(timeRemaining),
+        currentAmount: ethers.formatEther(currentRequiredAmount),
+        lastPlayer: "", 
+        escalationActive,
+        gameEndBlock: 0, 
+        isGameWon: gameWon,
+        isGameOver,
+        currentMultiplier: Number(currentMultiplier),
+        escalationPeriodTimeRemaining: 0,
+        currentPeriodIndex: 0
+      };
+    } catch (error) {
+      console.error("Failed to get game status:", error);
+      throw error;
     }
-
-    // Calculate if the game is over
-    // Game is over if:
-    // 1. Time has run out AND we're not in escalation mode
-    // 2. Time has run out in escalation mode AND no guesses in the last period
-    // 3. Someone has won the game
-    const isGameOver = isGameWon || 
-      (Number(timeRemaining) <= 0 && !escalationActive) ||
-      (escalationActive && escalationPeriodTimeRemaining <= 0 && !lastGuessBlock);
-
-    return {
-      timeRemaining: Number(timeRemaining),
-      currentAmount,
-      lastPlayer,
-      escalationActive,
-      gameEndBlock: Number(gameEndBlock),
-      isGameWon,
-      isGameOver,
-      currentMultiplier: Number(currentMultiplier),
-      escalationPeriodTimeRemaining: escalationActive ? escalationPeriodTimeRemaining : 0,
-      currentPeriodIndex
-    };
   }
 
   async getCurrentBlock() {
@@ -345,7 +302,7 @@ export class GameContract {
       const parsedAmount = ethers.parseEther(amount.toString());
       console.log('Submitting response with amount:', amount, 'ETH, parsed:', parsedAmount.toString());
 
-      const tx = await this.contract.submitGuess(response, {
+      const tx = await this.contract.submitGuess({
         value: parsedAmount,
         gasLimit: 500000
       });
