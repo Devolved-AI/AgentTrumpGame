@@ -75,6 +75,52 @@ export class GameContract {
     return { scoreIncrement };
   }
 
+  async submitResponse(response: string, amount: string) {
+    if (!this.signer) throw new Error("No signer available");
+
+    try {
+      const parsedAmount = ethers.parseEther(amount);
+      console.log('Submitting response with amount:', amount, 'ETH');
+
+      // First check if the game is still active
+      const status = await this.getGameStatus();
+      if (status.isGameOver) {
+        throw new Error("Game is already over!");
+      }
+
+      // Check the current required amount matches
+      const currentRequired = await this.contract.currentRequiredAmount();
+      if (parsedAmount.toString() !== currentRequired.toString()) {
+        throw new Error("Amount mismatch - please refresh and try again");
+      }
+
+      // Use the correct contract function name - submitGuess
+      const tx = await this.contract.submitGuess(response, {
+        value: parsedAmount
+      });
+
+      console.log("Transaction sent:", tx.hash);
+      const receipt = await tx.wait();
+      console.log("Transaction confirmed:", receipt);
+
+      const evaluation = await this.evaluateResponse(response);
+
+      return { tx, evaluation, receipt };
+    } catch (error: any) {
+      console.error("Transaction error:", error);
+      if (error.code === 'INSUFFICIENT_FUNDS') {
+        throw new Error("Insufficient funds to complete transaction");
+      } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
+        throw new Error("Could not estimate gas limit. Please try again.");
+      } else if (error.code === 'ACTION_REJECTED') {
+        throw new Error("Transaction was rejected by user");
+      } else if (error.reason) {
+        throw new Error(error.reason);
+      }
+      throw error;
+    }
+  }
+
   async getGameStatus() {
     try {
       const [
@@ -139,51 +185,6 @@ export class GameContract {
     }
   }
 
-  async submitResponse(response: string, amount: string) {
-    if (!this.signer) throw new Error("No signer available");
-
-    try {
-      const parsedAmount = ethers.parseEther(amount);
-      console.log('Submitting response with amount:', amount, 'ETH');
-
-      // First check if the game is still active
-      const status = await this.getGameStatus();
-      if (status.isGameOver) {
-        throw new Error("Game is already over!");
-      }
-
-      // Check the current required amount matches
-      const currentRequired = await this.contract.currentRequiredAmount();
-      if (parsedAmount.toString() !== currentRequired.toString()) {
-        throw new Error("Amount mismatch - please refresh and try again");
-      }
-
-      // Submit the response using the contract method
-      const tx = await this.contract.submitResponse(response, {
-        value: parsedAmount
-      });
-
-      console.log("Transaction sent:", tx.hash);
-      const receipt = await tx.wait();
-      console.log("Transaction confirmed:", receipt);
-
-      const evaluation = await this.evaluateResponse(response);
-
-      return { tx, evaluation, receipt };
-    } catch (error: any) {
-      console.error("Transaction error:", error);
-      if (error.code === 'INSUFFICIENT_FUNDS') {
-        throw new Error("Insufficient funds to complete transaction");
-      } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
-        throw new Error("Could not estimate gas limit. Please try again.");
-      } else if (error.code === 'ACTION_REJECTED') {
-        throw new Error("Transaction was rejected by user");
-      } else if (error.reason) {
-        throw new Error(error.reason);
-      }
-      throw error;
-    }
-  }
 
   async getTotalPrizePool(): Promise<string> {
     try {
