@@ -18,21 +18,15 @@ import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
-// Update the clearAllGameState function to preserve game progress
+// Keep only PERSUASION_SCORE_KEY, remove PLAYER_RESPONSES_KEY
+const PERSUASION_SCORE_KEY = 'persuasion_scores';
+
 function clearAllGameState() {
-  // Get the values we want to preserve before clearing
+  // Only preserve persuasion scores
   const persuasionScores = localStorage.getItem(PERSUASION_SCORE_KEY);
-  const playerResponses = localStorage.getItem(PLAYER_RESPONSES_KEY);
-
-  // Clear everything except our preserved values
   localStorage.clear();
-
-  // Restore the preserved values
   if (persuasionScores) {
     localStorage.setItem(PERSUASION_SCORE_KEY, persuasionScores);
-  }
-  if (playerResponses) {
-    localStorage.setItem(PLAYER_RESPONSES_KEY, playerResponses);
   }
 }
 
@@ -250,7 +244,7 @@ export default function Home() {
         console.log('Restored persuasion score:', score);
         setPersuasionScore(score);
 
-        const history = getPlayerResponses(state.account);
+        const history = await contract.getPlayerHistory(state.account); //Removed getPlayerResponses
         console.log('Restored transaction history:', history);
         setPlayerHistory(history);
 
@@ -329,12 +323,13 @@ export default function Home() {
     }
   }
 
+  // Update handleSubmitResponse to handle contract responses
   async function handleSubmitResponse(response: string) {
     if (!gameContract || !web3State.account) return;
 
     try {
       const status = await gameContract.getGameStatus();
-      if (playerHistory.length > 0 && status.isGameOver) {
+      if (status.isGameOver) {
         setGameWon(status.isGameWon);
         setShowGameOver(true);
         toast({
@@ -349,7 +344,7 @@ export default function Home() {
 
       const { tx, evaluation } = await gameContract.submitResponse(response, gameStatus.currentAmount);
 
-      // Update persuasion score
+      // Update persuasion score in localStorage
       const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
       setPersuasionScore(newScore);
       storePersuasionScore(web3State.account, newScore);
@@ -357,11 +352,10 @@ export default function Home() {
 
       setTransactionStatus('success');
 
-      // Refresh transaction history
-      const updatedHistory = await gameContract.getPlayerHistory(web3State.account);
-      setPlayerHistory(updatedHistory);
-      console.log('Updated transaction history:', updatedHistory);
+      // Get updated game state after submission
+      await refreshGameStatus();
 
+      // Handle winning condition
       if (newScore >= 100) {
         try {
           await gameContract.buttonPushed(web3State.account);
@@ -391,11 +385,6 @@ export default function Home() {
       setTimeout(() => {
         setShowTrumpDialog(true);
       }, 1000);
-
-      await Promise.all([
-        refreshGameStatus(),
-        refreshPlayerHistory()
-      ]);
 
     } catch (error: any) {
       setTransactionStatus('error');
@@ -602,9 +591,6 @@ export default function Home() {
   );
 }
 
-const PERSUASION_SCORE_KEY = 'persuasion_scores';
-const PLAYER_RESPONSES_KEY = 'player_responses';
-
 function formatPacificTime(timestamp: number): string {
   return formatInTimeZone(
     new Date(timestamp),
@@ -642,61 +628,5 @@ function storePersuasionScore(address: string, score: number) {
     console.log('Stored persuasion score:', scores[normalizedAddress], 'for address:', normalizedAddress);
   } catch (error) {
     console.error('Error storing persuasion score:', error);
-  }
-}
-
-function storePlayerResponse(
-  address: string,
-  response: string,
-  timestamp: number,
-  blockNumber: number,
-  hash: string | null
-) {
-  try {
-    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-    const responses = stored ? JSON.parse(stored) : {};
-    const normalizedAddress = address.toLowerCase();
-
-    if (!responses[normalizedAddress]) {
-      responses[normalizedAddress] = [];
-    }
-
-    responses[normalizedAddress].push({
-      response,
-      timestamp,
-      blockNumber,
-      transactionHash: hash,
-      exists: true
-    });
-
-    localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
-  } catch (error) {
-    console.error('Error storing player response:', error);
-  }
-}
-
-function getPlayerResponses(address: string): PlayerHistoryItem[] {
-  try {
-    const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-    if (!stored) {
-      console.log('No stored player responses found');
-      return [];
-    }
-
-    const responses = JSON.parse(stored);
-    const normalizedAddress = address.toLowerCase();
-    const history = responses[normalizedAddress] || [];
-    const validHistory = history.filter((item: PlayerHistoryItem) =>
-      item.blockNumber !== 0 &&
-      item.transactionHash !== null &&
-      item.timestamp > 946684800 &&
-      item.exists
-    ).sort((a: PlayerHistoryItem, b: PlayerHistoryItem) => b.timestamp - a.timestamp);
-
-    console.log('Retrieved player history:', validHistory.length, 'items for address:', normalizedAddress);
-    return validHistory;
-  } catch (error) {
-    console.error('Error getting player responses:', error);
-    return [];
   }
 }

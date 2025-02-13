@@ -86,7 +86,6 @@ const contractABI = [
   }
 ];
 
-const PLAYER_RESPONSES_KEY = 'playerResponses';
 
 export interface PlayerHistoryItem {
   response: string;
@@ -199,28 +198,6 @@ export class GameContract {
     return await this.provider.getBlockNumber();
   }
 
-  async getPlayerHistory(address: string): Promise<PlayerHistoryItem[]> {
-    try {
-      const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-      if (stored) {
-        const responses = JSON.parse(stored);
-        const normalizedAddress = address.toLowerCase();
-        return (responses[normalizedAddress] || [])
-          .filter((item: PlayerHistoryItem) => 
-            item.blockNumber !== 0 &&
-            item.transactionHash !== null &&
-            item.timestamp > 946684800 &&
-            item.exists
-          )
-          .sort((a: PlayerHistoryItem, b: PlayerHistoryItem) => b.timestamp - a.timestamp);
-      }
-      return [];
-    } catch (error) {
-      console.error('Error getting player history:', error);
-      return [];
-    }
-  }
-
   async submitResponse(response: string, amount: string) {
     if (!this.signer) throw new Error("No signer available");
 
@@ -234,29 +211,8 @@ export class GameContract {
       });
 
       const receipt = await tx.wait();
-      const address = await this.signer.getAddress();
-      const normalizedAddress = address.toLowerCase();
 
       const evaluation = await this.evaluateResponse(response);
-
-      const stored = localStorage.getItem(PLAYER_RESPONSES_KEY) || '{}';
-      const responses = JSON.parse(stored);
-
-      if (!responses[normalizedAddress]) {
-        responses[normalizedAddress] = [];
-      }
-
-      const newResponse: PlayerHistoryItem = {
-        response,
-        timestamp: Math.floor(Date.now() / 1000),
-        blockNumber: receipt.blockNumber,
-        transactionHash: receipt.hash,
-        exists: true,
-        scoreChange: evaluation.scoreIncrement
-      };
-
-      responses[normalizedAddress].unshift(newResponse);
-      localStorage.setItem(PLAYER_RESPONSES_KEY, JSON.stringify(responses));
 
       return { tx, evaluation };
     } catch (error: any) {
@@ -291,8 +247,6 @@ export class GameContract {
     onGameEnded?: (event: any) => void;
     onEscalationStarted?: (event: any) => void;
   }) {
-    // Return cleanup function even though we're not setting up listeners
-    // since the contract doesn't have these events in its ABI
     return () => {};
   }
 }
