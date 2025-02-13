@@ -276,10 +276,19 @@ export default function Home() {
 
   async function initializeGameData(contract: GameContract, account: string) {
     try {
+      // Clear all game state when starting a new game
+      clearAllGameState();
+      console.log('Game state cleared for new game initialization');
+
       const [status, totalPool] = await Promise.all([
         contract.getGameStatus(),
         contract.getTotalPrizePool()
       ]);
+
+      // Add more detailed error checking for contract calls
+      if (!status || !totalPool) {
+        throw new Error("Failed to fetch game data from contract");
+      }
 
       setGameStatus({
         timeRemaining: status.timeRemaining || 0,
@@ -297,14 +306,29 @@ export default function Home() {
       setShowGameOver(false);
       setPrizePoolEth(totalPool);
 
-      // Don't reset persuasion score or player history here
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to initialize game data:", error);
+
+      // More specific error messages based on error type
+      let errorMessage = "Failed to load game data. ";
+      if (error.code === 'NETWORK_ERROR') {
+        errorMessage += "Please check your internet connection.";
+      } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
+        errorMessage += "Unable to estimate gas. The contract may be paused or not responding.";
+      } else if (error.code === 'CALL_EXCEPTION') {
+        errorMessage += "Contract call failed. Please ensure you're connected to Base Sepolia network.";
+      } else {
+        errorMessage += "Please try refreshing the page.";
+      }
+
       toast({
         title: "Error",
-        description: "Failed to load game data. Please try refreshing the page.",
+        description: errorMessage,
         variant: "destructive"
       });
+
+      // Re-throw to be handled by caller
+      throw error;
     }
   }
 
