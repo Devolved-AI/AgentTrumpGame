@@ -84,13 +84,15 @@ export class GameContract {
         isGameWon,
         multiplier,
         currentBlock,
+        lastPlayerAddress 
       ] = await Promise.all([
         this.contract.getTimeRemaining(),
         this.contract.currentRequiredAmount(),
         this.contract.escalationActive(),
         this.contract.gameWon(),
         this.contract.currentMultiplier(),
-        this.provider.getBlockNumber()
+        this.provider.getBlockNumber(),
+        this.contract.lastPlayer() 
       ]);
 
       // Calculate escalation period details
@@ -104,7 +106,7 @@ export class GameContract {
       return {
         timeRemaining: baseTimeRemaining,
         currentAmount: ethers.formatEther(requiredAmount),
-        lastPlayer: "",  // This should come from contract events
+        lastPlayer: lastPlayerAddress, 
         escalationActive,
         gameEndBlock: currentBlock,
         isGameWon,
@@ -126,10 +128,10 @@ export class GameContract {
       return responses.map((response: string, index: number) => ({
         response,
         timestamp: Number(timestamps[index]),
-        blockNumber: 0, // We don't get this from the contract
-        transactionHash: null, // We don't get this from the contract
+        blockNumber: 0, 
+        transactionHash: null, 
         exists: exists[index],
-        scoreChange: 0 // We don't store this on-chain
+        scoreChange: 0 
       }));
     } catch (error) {
       console.error('Error getting player history:', error);
