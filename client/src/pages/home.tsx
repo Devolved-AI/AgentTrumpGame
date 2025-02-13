@@ -18,7 +18,7 @@ import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
-// Keep only PERSUASION_SCORE_KEY, remove PLAYER_RESPONSES_KEY
+// Only maintain persuasion score in localStorage
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
 function clearAllGameState() {
@@ -46,7 +46,7 @@ export default function Home() {
   const [gameContract, setGameContract] = useState<GameContract | null>(null);
   const [gameStatus, setGameStatus] = useState({
     timeRemaining: 0,
-    currentAmount: "0.0009", // Reset to initial amount
+    currentAmount: "0.0009",
     lastPlayer: "",
     escalationActive: false,
     gameEndBlock: 0,
@@ -60,7 +60,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [persuasionScore, setPersuasionScore] = useState<number>(50); // Reset to default 50
+  const [persuasionScore, setPersuasionScore] = useState<number>(50);
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false);
@@ -68,6 +68,133 @@ export default function Home() {
   const [showTrumpDialog, setShowTrumpDialog] = useState(false);
   const [trumpMessage, setTrumpMessage] = useState("");
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
+
+  // Restore connection and state
+  useEffect(() => {
+    async function restoreConnection() {
+      try {
+        const restored = await restoreWalletConnection();
+        if (restored) {
+          setWeb3State(restored);
+          const contract = new GameContract(restored.provider!, restored.signer!);
+          setGameContract(contract);
+
+          if (restored.account) {
+            // Load persuasion score from localStorage
+            const score = getStoredPersuasionScore(restored.account);
+            setPersuasionScore(score);
+            console.log('Restored persuasion score:', score);
+
+            // Initialize game data
+            await initializeGameData(contract, restored.account);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to restore connection:', error);
+      }
+    }
+
+    restoreConnection();
+  }, []);
+
+  async function handleSubmitResponse(response: string) {
+    if (!gameContract || !web3State.account) return;
+
+    try {
+      const status = await gameContract.getGameStatus();
+      if (status.isGameOver) {
+        setGameWon(status.isGameWon);
+        setShowGameOver(true);
+        toast({
+          title: status.isGameWon ? "Game Won!" : "Game Over",
+          description: "Thanks for playing!",
+        });
+        return;
+      }
+
+      setIsLoading(true);
+      setTransactionStatus('pending');
+
+      const { tx, evaluation, receipt } = await gameContract.submitResponse(response, gameStatus.currentAmount);
+
+      // Update persuasion score in localStorage
+      const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
+      setPersuasionScore(newScore);
+      storePersuasionScore(web3State.account, newScore);
+      console.log('Updated persuasion score:', newScore);
+
+      setTransactionStatus('success');
+
+      // Update game state after successful transaction
+      await refreshGameStatus();
+
+      // Handle winning condition
+      if (newScore >= 100) {
+        try {
+          await gameContract.buttonPushed(web3State.account);
+          setGameWon(true);
+          setShowGameOver(true);
+          setShowConfetti(true);
+          setTrumpMessage("🎉 Congratulations! You've successfully convinced me!");
+          setTrumpMessageVariant('success');
+        } catch (error) {
+          console.error("Error pushing the button:", error);
+        }
+      } else {
+        let message;
+        if (evaluation.scoreIncrement >= 10) {
+          message = "TREMENDOUS response! That's how you do it, believe me! +10 persuasion points!";
+        } else if (evaluation.scoreIncrement === 5) {
+          message = "Not bad, not bad at all! You gained 5 persuasion points!";
+        } else if (evaluation.scoreIncrement === 0) {
+          message = "Eh, I've heard better. No points this time. Try using more of my favorite phrases!";
+        } else {
+          message = "Sad! That's not how I talk at all. Lost 5 persuasion points. You need to be more tremendous!";
+        }
+        setTrumpMessage(message);
+        setTrumpMessageVariant(evaluation.scoreIncrement > 0 ? 'success' : 'error');
+      }
+
+      setTimeout(() => {
+        setShowTrumpDialog(true);
+      }, 1000);
+
+    } catch (error: any) {
+      setTransactionStatus('error');
+      console.error("Submission error:", error);
+      handleSubmissionError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleSubmissionError(error: any) {
+    if (error.code === 4001) {
+      toast({
+        title: "Transaction Cancelled",
+        description: "You cancelled the transaction.",
+        variant: "destructive"
+      });
+    } else if (error.code === 'NETWORK_ERROR') {
+      toast({
+        title: "Network Error",
+        description: "Please check your internet connection and try again.",
+        variant: "destructive"
+      });
+    } else if (error.reason) {
+      toast({
+        title: "Transaction Failed",
+        description: error.reason,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }
 
   // Initial check for game status
   useEffect(() => {
@@ -105,74 +232,6 @@ export default function Home() {
     setPrizePoolEth("0");
     setPersuasionScore(50);
   };
-
-  // Restore connection and state
-  useEffect(() => {
-    async function restoreConnection() {
-      try {
-        const restored = await restoreWalletConnection();
-        if (restored) {
-          setWeb3State(restored);
-          const contract = new GameContract(restored.provider!, restored.signer!);
-          setGameContract(contract);
-
-          if (restored.account) {
-            // Load persuasion score
-            const score = getStoredPersuasionScore(restored.account);
-            setPersuasionScore(score);
-            console.log('Restored persuasion score:', score);
-
-            // Load transaction history
-            const history = await contract.getPlayerHistory(restored.account);
-            setPlayerHistory(history);
-            console.log('Restored transaction history:', history);
-
-            // Initialize game data without resetting state
-            await initializeGameData(contract, restored.account);
-          }
-
-          contract.subscribeToEvents({
-            onGuessSubmitted: async () => {
-              await Promise.all([
-                refreshGameStatus(),
-                updatePrizePool(),
-                refreshPlayerHistory()
-              ]);
-            },
-            onGameWon: async () => {
-              setShowConfetti(true);
-              setGameWon(true);
-              setShowGameOver(true);
-              toast({
-                title: "Game Won!",
-                description: "Someone has won the game!",
-              });
-              await Promise.all([
-                refreshGameStatus(),
-                updatePrizePool(),
-                refreshPlayerHistory()
-              ]);
-            },
-            onEscalationStarted: async () => {
-              toast({
-                title: "Escalation Started",
-                description: "The game has entered escalation mode!",
-              });
-              await Promise.all([
-                refreshGameStatus(),
-                updatePrizePool(),
-                refreshPlayerHistory()
-              ]);
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Failed to restore connection:', error);
-      }
-    }
-
-    restoreConnection();
-  }, []);
 
   useEffect(() => {
     async function fetchEthPrice() {
@@ -243,10 +302,6 @@ export default function Home() {
         const score = getStoredPersuasionScore(state.account);
         console.log('Restored persuasion score:', score);
         setPersuasionScore(score);
-
-        const history = await contract.getPlayerHistory(state.account); //Removed getPlayerResponses
-        console.log('Restored transaction history:', history);
-        setPlayerHistory(history);
 
         await initializeGameData(contract, state.account);
       }
@@ -323,102 +378,6 @@ export default function Home() {
     }
   }
 
-  // Update handleSubmitResponse to handle contract responses
-  async function handleSubmitResponse(response: string) {
-    if (!gameContract || !web3State.account) return;
-
-    try {
-      const status = await gameContract.getGameStatus();
-      if (status.isGameOver) {
-        setGameWon(status.isGameWon);
-        setShowGameOver(true);
-        toast({
-          title: status.isGameWon ? "Game Won!" : "Game Over",
-          description: "Thanks for playing!",
-        });
-        return;
-      }
-
-      setIsLoading(true);
-      setTransactionStatus('pending');
-
-      const { tx, evaluation } = await gameContract.submitResponse(response, gameStatus.currentAmount);
-
-      // Update persuasion score in localStorage
-      const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
-      setPersuasionScore(newScore);
-      storePersuasionScore(web3State.account, newScore);
-      console.log('Updated persuasion score:', newScore);
-
-      setTransactionStatus('success');
-
-      // Get updated game state after submission
-      await refreshGameStatus();
-
-      // Handle winning condition
-      if (newScore >= 100) {
-        try {
-          await gameContract.buttonPushed(web3State.account);
-          setGameWon(true);
-          setShowGameOver(true);
-          setShowConfetti(true);
-          setTrumpMessage("🎉 Congratulations! You've successfully convinced me! The entire prize pool will be transferred to your wallet!");
-          setTrumpMessageVariant('success');
-        } catch (error) {
-          console.error("Error pushing the button:", error);
-        }
-      } else {
-        let message;
-        if (evaluation.scoreIncrement >= 10) {
-          message = "TREMENDOUS response! That's how you do it, believe me! +10 persuasion points!";
-        } else if (evaluation.scoreIncrement === 5) {
-          message = "Not bad, not bad at all! You gained 5 persuasion points!";
-        } else if (evaluation.scoreIncrement === 0) {
-          message = "Eh, I've heard better. No points this time. Try using more of my favorite phrases!";
-        } else {
-          message = "Sad! That's not how I talk at all. Lost 5 persuasion points. You need to be more tremendous!";
-        }
-        setTrumpMessage(message);
-        setTrumpMessageVariant(evaluation.scoreIncrement > 0 ? 'success' : 'error');
-      }
-
-      setTimeout(() => {
-        setShowTrumpDialog(true);
-      }, 1000);
-
-    } catch (error: any) {
-      setTransactionStatus('error');
-      console.error("Submission error:", error);
-
-      if (error.code === 4001) {
-        toast({
-          title: "Transaction Cancelled",
-          description: "You cancelled the transaction.",
-          variant: "destructive"
-        });
-      } else if (error.code === 'NETWORK_ERROR') {
-        toast({
-          title: "Network Error",
-          description: "Please check your internet connection and try again.",
-          variant: "destructive"
-        });
-      } else if (error.reason) {
-        toast({
-          title: "Transaction Failed",
-          description: error.reason,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive"
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   useEffect(() => {
     const interval = setInterval(async () => {

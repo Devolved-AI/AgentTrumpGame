@@ -13,6 +13,8 @@ interface GameStatusProps {
 }
 
 function formatTimeRemaining(seconds: number, escalationActive: boolean): string {
+  if (seconds <= 0) return "Game Over";
+
   if (escalationActive) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -24,25 +26,23 @@ function formatTimeRemaining(seconds: number, escalationActive: boolean): string
   const remainingSeconds = seconds % 60;
 
   const parts = [];
-  if (hours > 0) parts.push(`${hours} ${hours === 1 ? 'hour' : 'hours'}`);
-  if (minutes > 0) parts.push(`${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`);
-  if (remainingSeconds > 0 || parts.length === 0) {
-    parts.push(`${remainingSeconds} ${remainingSeconds === 1 ? 'second' : 'seconds'}`);
-  }
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0 || hours > 0) parts.push(`${minutes}m`);
+  if (remainingSeconds > 0 || parts.length === 0) parts.push(`${remainingSeconds}s`);
 
-  return parts.join(', ');
+  return parts.join(' ');
 }
 
 function getScoreColor(score: number): string {
   if (score <= 25) return "text-red-500";
   if (score >= 76) return "text-green-500";
-  return "text-yellow-500"; // Gold for 26-75
+  return "text-yellow-500";
 }
 
 function getProgressColor(score: number): string {
   if (score <= 25) return "bg-red-100";
   if (score >= 76) return "bg-green-100";
-  return "bg-yellow-100"; // Gold for 26-75
+  return "bg-yellow-100";
 }
 
 export function GameStatus({ 
@@ -54,9 +54,8 @@ export function GameStatus({
   isGameWon
 }: GameStatusProps) {
   const normalizedScore = Math.max(0, Math.min(100, persuasionScore));
-  const isGameOver = isGameWon;  // Only consider game over when someone has won
+  const isGameOver = isGameWon || timeRemaining <= 0;
 
-  // Calculate progress percentage
   const progressPercentage = escalationActive 
     ? (timeRemaining / 300) * 100  // 5 minutes (300 seconds) per escalation period
     : (timeRemaining / (72 * 3600)) * 100; // 72 hours in seconds
@@ -75,7 +74,7 @@ export function GameStatus({
         </CardHeader>
         <CardContent>
           <div className="text-xl font-bold">
-            {isGameWon ? "Game Over!" : formatTimeRemaining(timeRemaining, escalationActive)}
+            {isGameWon ? "Game Won!" : formatTimeRemaining(timeRemaining, escalationActive)}
           </div>
           <Progress 
             value={progressPercentage} 
@@ -84,9 +83,9 @@ export function GameStatus({
               escalationActive && "bg-orange-100"
             )} 
           />
-          {escalationActive && (
+          {escalationActive && !isGameOver && (
             <p className="text-xs text-orange-500 mt-1 font-semibold">
-              ⚠️ Escalation Active - Fixed Price Until Timer Ends
+              ⚠️ Escalation Active
             </p>
           )}
         </CardContent>
@@ -112,7 +111,7 @@ export function GameStatus({
               ? "Game Over" 
               : escalationActive 
                 ? "Current Period's Fixed Price" 
-                : "Base Amount (0.0009 ETH)"}
+                : "Base Amount"}
           </p>
         </CardContent>
       </Card>
@@ -145,7 +144,7 @@ export function GameStatus({
           <div className="font-mono text-sm">
             {lastPlayer ? `${lastPlayer.slice(0, 6)}...${lastPlayer.slice(-4)}` : 'No players yet'}
           </div>
-          {escalationActive && lastPlayer && (
+          {escalationActive && lastPlayer && !isGameOver && (
             <p className="text-xs text-orange-500 mt-1">
               Last guess started escalation period
             </p>

@@ -1,92 +1,6 @@
 import { ethers } from 'ethers';
 import { toast } from '@/hooks/use-toast';
 
-const contractAddress = '0xAC4729Ad635dB4A2A601B840a8868DAd07d3ED96';
-const contractABI = [
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "winner",
-        "type": "address"
-      }
-    ],
-    "name": "buttonPushed",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "deposit",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "emergencyWithdraw",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "endGame",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [],
-    "name": "submitGuess",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getTimeRemaining",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "currentMultiplier",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "currentRequiredAmount",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "escalationActive",
-    "outputs": [{"internalType": "bool","name": "","type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "gameWon",
-    "outputs": [{"internalType": "bool","name": "","type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
-
-
 export interface PlayerHistoryItem {
   response: string;
   timestamp: number;
@@ -167,35 +81,41 @@ export class GameContract {
         requiredAmount,
         escalationActive,
         isGameWon,
-        multiplier
+        multiplier,
+        currentBlock,
       ] = await Promise.all([
         this.contract.getTimeRemaining(),
         this.contract.currentRequiredAmount(),
         this.contract.escalationActive(),
         this.contract.gameWon(),
-        this.contract.currentMultiplier()
+        this.contract.currentMultiplier(),
+        this.provider.getBlockNumber()
       ]);
 
+      // Calculate escalation period details
+      const baseTimeRemaining = Number(timeRemaining);
+      const escalationPeriodLength = 300; // 5 minutes in seconds
+      const escalationPeriodTimeRemaining = escalationActive ? 
+        baseTimeRemaining % escalationPeriodLength : 0;
+      const currentPeriodIndex = escalationActive ? 
+        Math.floor(baseTimeRemaining / escalationPeriodLength) : 0;
+
       return {
-        timeRemaining: Number(timeRemaining),
+        timeRemaining: baseTimeRemaining,
         currentAmount: ethers.formatEther(requiredAmount),
-        lastPlayer: "",
+        lastPlayer: "",  // This should come from contract events
         escalationActive,
-        gameEndBlock: 0,
+        gameEndBlock: currentBlock,
         isGameWon,
-        isGameOver: isGameWon || Number(timeRemaining) <= 0,
+        isGameOver: isGameWon || baseTimeRemaining <= 0,
         currentMultiplier: Number(multiplier),
-        escalationPeriodTimeRemaining: 0,
-        currentPeriodIndex: 0
+        escalationPeriodTimeRemaining,
+        currentPeriodIndex
       };
     } catch (error) {
       console.error("Failed to get game status:", error);
       throw new Error("Failed to load game data. Please try again.");
     }
-  }
-
-  async getCurrentBlock() {
-    return await this.provider.getBlockNumber();
   }
 
   async submitResponse(response: string, amount: string) {
@@ -211,10 +131,9 @@ export class GameContract {
       });
 
       const receipt = await tx.wait();
-
       const evaluation = await this.evaluateResponse(response);
 
-      return { tx, evaluation };
+      return { tx, evaluation, receipt };
     } catch (error: any) {
       console.error("Transaction error:", error);
       throw error;
@@ -234,6 +153,7 @@ export class GameContract {
   async buttonPushed(winnerAddress: string) {
     try {
       const tx = await this.contract.buttonPushed(winnerAddress);
+      await tx.wait();
       return tx;
     } catch (error) {
       console.error("Error pushing button:", error);
@@ -247,6 +167,60 @@ export class GameContract {
     onGameEnded?: (event: any) => void;
     onEscalationStarted?: (event: any) => void;
   }) {
+    // Subscribe to contract events when they're available in the ABI
     return () => {};
   }
 }
+
+export const contractAddress = '0xAC4729Ad635dB4A2A601B840a8868DAd07d3ED96';
+export const contractABI = [
+  {
+    "inputs": [{"internalType": "address","name": "winner","type": "address"}],
+    "name": "buttonPushed",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "submitGuess",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getTimeRemaining",
+    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "currentMultiplier",
+    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "currentRequiredAmount",
+    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "escalationActive",
+    "outputs": [{"internalType": "bool","name": "","type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "gameWon",
+    "outputs": [{"internalType": "bool","name": "","type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+] as const;
