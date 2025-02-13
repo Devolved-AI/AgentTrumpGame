@@ -18,11 +18,22 @@ import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 
-// Update the clearAllGameState function to be more thorough
+// Update the clearAllGameState function to preserve game progress
 function clearAllGameState() {
+  // Get the values we want to preserve before clearing
+  const persuasionScores = localStorage.getItem(PERSUASION_SCORE_KEY);
+  const playerResponses = localStorage.getItem(PLAYER_RESPONSES_KEY);
+
+  // Clear everything except our preserved values
   localStorage.clear();
-  localStorage.removeItem(PERSUASION_SCORE_KEY);
-  localStorage.removeItem(PLAYER_RESPONSES_KEY);
+
+  // Restore the preserved values
+  if (persuasionScores) {
+    localStorage.setItem(PERSUASION_SCORE_KEY, persuasionScores);
+  }
+  if (playerResponses) {
+    localStorage.setItem(PLAYER_RESPONSES_KEY, playerResponses);
+  }
 }
 
 interface PlayerHistoryItem {
