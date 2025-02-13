@@ -146,12 +146,16 @@ export class GameContract {
       const parsedAmount = ethers.parseEther(amount);
       console.log('Submitting response with amount:', amount, 'ETH');
 
+      // Call submitGuess with the correct parameters and value
       const tx = await this.contract.submitGuess(response, {
         value: parsedAmount,
         gasLimit: 500000
       });
 
+      console.log("Transaction sent:", tx.hash);
       const receipt = await tx.wait();
+      console.log("Transaction confirmed:", receipt);
+
       const evaluation = await this.evaluateResponse(response);
 
       return { tx, evaluation, receipt };
