@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { TransactionLoader } from "./TransactionLoader";
+import { Send } from "lucide-react";
 
 const formSchema = z.object({
   response: z.string()
@@ -64,59 +64,31 @@ export function ResponseForm({
   return (
     <>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="flex items-center gap-2 px-4 py-2 bg-[#ffffff] border-t border-gray-200">
           <FormField
             control={form.control}
             name="response"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Stump Agent Trump</FormLabel>
+              <FormItem className="flex-1">
                 <FormControl>
-                  <div className="relative message-bubble">
-                    <Textarea
-                      placeholder={disabled ? "Game is over!" : "Enter your response..."}
-                      className="min-h-[120px] bg-blue-50 rounded-lg p-4 relative"
-                      disabled={disabled || isLoading}
-                      {...field}
-                    />
-                    <div 
-                      className="absolute left-[-8px] bottom-[15px] w-4 h-4 bg-blue-50 transform rotate-45"
-                      style={{
-                        clipPath: 'polygon(0 0, 100% 100%, 0 100%)'
-                      }}
-                    />
-                  </div>
+                  <Input
+                    placeholder={disabled ? "Game is over!" : "iMessage"}
+                    className="rounded-full border-gray-300 bg-gray-100 focus:ring-2 focus:ring-blue-500 text-[15px] font-[-apple-system] h-9"
+                    disabled={disabled || isLoading}
+                    {...field}
+                  />
                 </FormControl>
-                <FormMessage />
               </FormItem>
             )}
           />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Required Amount: <span className="font-bold">{currentAmount} ETH</span>
-              </p>
-              {escalationActive && (
-                <p className="text-sm text-orange-500 mt-1">
-                  ⚠️ Escalation Active: Cost doubles every 5 minutes!
-                </p>
-              )}
-            </div>
-            <Button 
-              type="submit" 
-              disabled={disabled || isLoading}
-              className={`bg-gradient-to-r ${
-                disabled 
-                  ? "from-gray-400 to-gray-500 cursor-not-allowed" 
-                  : escalationActive
-                  ? "from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
-                  : "from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-              }`}
-            >
-              {disabled ? "Game Over" : escalationActive ? "Submit (Double Cost!)" : "Submit Response"}
-            </Button>
-          </div>
+          <Button 
+            type="submit" 
+            size="icon"
+            disabled={disabled || isLoading || !form.getValues().response}
+            className="rounded-full w-9 h-9 bg-[#007AFF] hover:bg-[#0056b3] disabled:bg-gray-300 transition-colors"
+          >
+            <Send className="h-4 w-4 text-white" />
+          </Button>
         </form>
       </Form>
 

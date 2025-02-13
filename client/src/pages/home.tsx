@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { ConnectWallet } from "@/components/game/ConnectWallet";
 import { GameStatus } from "@/components/game/GameStatus";
-import { ResponseForm } from "@/components/game/ResponseForm";
-import { TransactionTimeline } from "@/components/game/TransactionTimeline";
 import { TransactionLoader } from "@/components/game/TransactionLoader";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Confetti } from "@/components/game/Confetti";
@@ -398,7 +396,6 @@ export default function Home() {
     }
   }
 
-
   useEffect(() => {
     const interval = setInterval(async () => {
       if (!gameContract || !web3State.account) return;
@@ -501,20 +498,16 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col">
-            <div className="h-[600px] bg-gray-50 rounded-lg p-4">
+            <div className="h-[600px]">
               <ChatContainer
                 messages={messages}
                 className="h-[500px]"
+                onSubmit={handleSubmitResponse}
+                currentAmount={gameStatus.currentAmount}
+                isLoading={isLoading}
+                transactionStatus={transactionStatus}
+                disabled={gameStatus.isGameOver}
               />
-              <div className="mt-4">
-                <ResponseForm
-                  onSubmit={handleSubmitResponse}
-                  currentAmount={gameStatus.currentAmount}
-                  isLoading={isLoading}
-                  transactionStatus={transactionStatus}
-                  disabled={gameStatus.isGameOver}
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -530,31 +523,27 @@ export default function Home() {
           />
         </div>
 
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
-          <TransactionTimeline responses={playerHistory} />
-        </div>
         <div className="mt-8 bg-gray-50 rounded-lg p-6">
-            <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
-            <div className="prose max-w-none">
-              <ol className="list-decimal pl-4 space-y-3">
-                <li>You have 72 hours to convince Agent Trump (AGT) to press the big red button which rewards you his prize pot.</li>
-                <li>If your persuasion score reaches 100, you win.</li>
-                <li>If no winner after 72 hours, the clock counts down in 5-minute escalation periods at 2x the previous cost to guess until a period goes without a guess.</li>
-                <li>Escalation Period Costs:
-                  <ul className="list-disc pl-6 mt-2">
-                    <li>Base Period: .0009 ETH</li>
-                    <li>Period 1: .0018 ETH</li>
-                    <li>Period 2: .0036 ETH</li>
-                    <li>Period 3: .0072 ETH</li>
-                    <li>Period 4: .0144 ETH</li>
-                    <li>Period 5: .0288 ETH</li>
-                  </ul>
-                </li>
-                <li>The last guess gets 10% of the pool. The rest is distributed to AGT holders by % of holding.</li>
-              </ol>
-            </div>
+          <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
+          <div className="prose max-w-none">
+            <ol className="list-decimal pl-4 space-y-3">
+              <li>You have 72 hours to convince Agent Trump (AGT) to press the big red button which rewards you his prize pot.</li>
+              <li>If your persuasion score reaches 100, you win.</li>
+              <li>If no winner after 72 hours, the clock counts down in 5-minute escalation periods at 2x the previous cost to guess until a period goes without a guess.</li>
+              <li>Escalation Period Costs:
+                <ul className="list-disc pl-6 mt-2">
+                  <li>Base Period: .0009 ETH</li>
+                  <li>Period 1: .0018 ETH</li>
+                  <li>Period 2: .0036 ETH</li>
+                  <li>Period 3: .0072 ETH</li>
+                  <li>Period 4: .0144 ETH</li>
+                  <li>Period 5: .0288 ETH</li>
+                </ul>
+              </li>
+              <li>The last guess gets 10% of the pool. The rest is distributed to AGT holders by % of holding.</li>
+            </ol>
           </div>
+        </div>
       </div>
       <Footer />
       <GameOverDialog
@@ -563,7 +552,6 @@ export default function Home() {
         lastBlock={gameStatus.gameEndBlock}
         winnerAddress={gameStatus.isGameWon ? gameStatus.lastPlayer : undefined}
         lastGuessAddress={gameStatus.lastPlayer}
-        hideCloseButton={true}
       />
       <AgentTrumpDialog
         isOpen={showTrumpDialog}

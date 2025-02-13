@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { ChatBubble } from "./ChatBubble";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Battery, Signal, Wifi } from "lucide-react";
+import { ResponseForm } from "./ResponseForm";
 
 export interface ChatMessage {
   id: string;
@@ -14,9 +15,22 @@ export interface ChatMessage {
 interface ChatContainerProps {
   messages: ChatMessage[];
   className?: string;
+  onSubmit: (response: string) => Promise<void>;
+  currentAmount: string;
+  isLoading: boolean;
+  transactionStatus?: 'pending' | 'success' | 'error';
+  disabled?: boolean;
 }
 
-export function ChatContainer({ messages, className }: ChatContainerProps) {
+export function ChatContainer({ 
+  messages, 
+  className,
+  onSubmit,
+  currentAmount,
+  isLoading,
+  transactionStatus,
+  disabled
+}: ChatContainerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,6 +73,15 @@ export function ChatContainer({ messages, className }: ChatContainerProps) {
           ))}
         </div>
       </ScrollArea>
+
+      {/* Message Input */}
+      <ResponseForm
+        onSubmit={onSubmit}
+        currentAmount={currentAmount}
+        isLoading={isLoading}
+        transactionStatus={transactionStatus}
+        disabled={disabled}
+      />
     </div>
   );
 }
