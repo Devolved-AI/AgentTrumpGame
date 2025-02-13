@@ -94,13 +94,8 @@ export class GameContract {
         throw new Error("Amount mismatch - please refresh and try again");
       }
 
-      // Get the function from the contract instance
-      const submitGuessFunction = this.contract["submitGuess"];
-      if (!submitGuessFunction) {
-        throw new Error("Contract function 'submitGuess' not found!");
-      }
-
-      const tx = await submitGuessFunction(response, {
+      // Simply call the contract method directly without checking if it exists
+      const tx = await this.contract.guess(response, {
         value: parsedAmount
       });
 
@@ -116,7 +111,7 @@ export class GameContract {
       if (error.code === 'INSUFFICIENT_FUNDS') {
         throw new Error("Insufficient funds to complete transaction");
       } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
-        throw new Error("Could not estimate gas limit. Please try again.");
+        throw new Error("Could not estimate gas. Please try again.");
       } else if (error.code === 'ACTION_REJECTED') {
         throw new Error("Transaction was rejected by user");
       } else if (error.reason) {
