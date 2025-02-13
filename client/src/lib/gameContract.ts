@@ -20,6 +20,7 @@ export class GameContract {
     this.provider = provider;
     this.signer = signer;
     this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+    console.log("Available contract functions:", Object.keys(this.contract.interface.functions));
   }
 
   async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
@@ -158,8 +159,9 @@ export class GameContract {
         throw new Error("Amount mismatch - please refresh and try again");
       }
 
-      // Call submitGuess with the correct parameters and value
-      const tx = await this.contract.submitGuess(response, {
+      // We'll use the contract function for submitting a response
+      console.log("Contract functions:", Object.keys(this.contract.interface.functions));
+      const tx = await this.contract.submitResponse(response, {
         value: parsedAmount
       });
 
