@@ -2,6 +2,33 @@ import { ethers } from 'ethers';
 import { toast } from '@/hooks/use-toast';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from './config';
 
+// Trump's possible responses based on different scenarios
+const TRUMP_RESPONSES = {
+  highScore: [
+    "That was a tremendous response, really tremendous! You're getting warmer!",
+    "Now that's what I call high energy! Keep it up, and we'll make a deal!",
+    "You're starting to speak my language. Very smart person, very smart!",
+    "I like your style, reminds me of myself. Nobody does it better than me though!"
+  ],
+  mediumScore: [
+    "Not bad, not bad. But I know you can do better, believe me!",
+    "You're getting there, but I've heard better deals. Much better!",
+    "That's interesting, but I need more. Nobody knows more about deals than me!",
+    "Keep trying, but remember - I wrote The Art of the Deal!"
+  ],
+  lowScore: [
+    "Low energy response! Sad!",
+    "I've heard better from CNN, and that's saying something!",
+    "That's not how you make America great! Try again!",
+    "Wrong! You need to think bigger, much bigger!"
+  ],
+  gameWinning: [
+    "You did it! You're a winner, and I love winners!",
+    "This is huge! Really huge! You've earned my respect!",
+    "Now that's what I call the Art of the Deal! Congratulations!"
+  ]
+};
+
 export interface PlayerHistoryItem {
   response: string;
   timestamp: number;
@@ -20,6 +47,24 @@ export class GameContract {
     this.provider = provider;
     this.signer = signer;
     this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+  }
+
+  private getRandomResponse(responses: string[]): string {
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+
+  private getTrumpResponse(scoreIncrement: number, isWinning: boolean = false): string {
+    if (isWinning) {
+      return this.getRandomResponse(TRUMP_RESPONSES.gameWinning);
+    }
+
+    if (scoreIncrement >= 15) {
+      return this.getRandomResponse(TRUMP_RESPONSES.highScore);
+    } else if (scoreIncrement >= 5) {
+      return this.getRandomResponse(TRUMP_RESPONSES.mediumScore);
+    } else {
+      return this.getRandomResponse(TRUMP_RESPONSES.lowScore);
+    }
   }
 
   async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
@@ -104,8 +149,9 @@ export class GameContract {
       console.log("Transaction confirmed:", receipt);
 
       const evaluation = await this.evaluateResponse(response);
+      const trumpResponse = this.getTrumpResponse(evaluation.scoreIncrement, evaluation.scoreIncrement >= 100);
 
-      return { tx, evaluation, receipt };
+      return { tx, evaluation, receipt, trumpResponse };
     } catch (error: any) {
       console.error("Transaction error:", error);
       if (error.code === 'INSUFFICIENT_FUNDS') {

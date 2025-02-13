@@ -151,7 +151,7 @@ export default function Home() {
 
       try {
         // Submit transaction and wait for confirmation
-        const { tx, evaluation } = await gameContract.submitResponse(response, gameStatus.currentAmount);
+        const { tx, evaluation, trumpResponse } = await gameContract.submitResponse(response, gameStatus.currentAmount);
         console.log('Transaction submitted:', tx.hash);
 
         // Update transaction status to success
@@ -160,8 +160,7 @@ export default function Home() {
         // Update game state after successful transaction
         await refreshGameStatus();
 
-        // Add Agent Trump's response
-        let trumpResponse = "Great response! Keep trying to convince me!";
+        // Add Agent Trump's response using the new dynamic response system
         addMessage(trumpResponse, false, tx.hash);
 
         // Show success toast
