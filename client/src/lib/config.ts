@@ -1,5 +1,5 @@
 // Smart contract configuration
-export const CONTRACT_ADDRESS = import.meta.env.VITE_BASE_CONTRACT_ADDRESS || "0x6FeB0D4a0B841d28573996907C864f93278a487c";
+export const CONTRACT_ADDRESS = import.meta.env.VITE_BASE_CONTRACT_ADDRESS || "0xC297e540FB5C879E9B8b646EB8791449638059B0";
 export const CONTRACT_ABI = [
 	{
 		"inputs": [
