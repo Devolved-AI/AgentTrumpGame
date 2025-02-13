@@ -21,7 +21,6 @@ import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
 // Update the clearAllGameState function to be more thorough
 function clearAllGameState() {
   localStorage.clear();
-  // Clear all game-specific keys
   localStorage.removeItem(PERSUASION_SCORE_KEY);
   localStorage.removeItem(PLAYER_RESPONSES_KEY);
 }
@@ -42,7 +41,7 @@ export default function Home() {
   const [gameContract, setGameContract] = useState<GameContract | null>(null);
   const [gameStatus, setGameStatus] = useState({
     timeRemaining: 0,
-    currentAmount: "0.0009", 
+    currentAmount: "0.0009", // Reset to initial amount
     lastPlayer: "",
     escalationActive: false,
     gameEndBlock: 0,
@@ -56,7 +55,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [prizePoolEth, setPrizePoolEth] = useState<string>("0");
-  const [persuasionScore, setPersuasionScore] = useState<number>(50);
+  const [persuasionScore, setPersuasionScore] = useState<number>(50); // Reset to default 50
   const [transactionStatus, setTransactionStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [showGameOver, setShowGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false);
@@ -198,7 +197,7 @@ export default function Home() {
       ]);
 
       setGameStatus({
-        timeRemaining: status.timeRemaining || 0, 
+        timeRemaining: status.timeRemaining || 0,
         currentAmount: status.currentAmount || "0.0009",
         lastPlayer: status.lastPlayer || "",
         escalationActive: status.escalationActive || false,
@@ -446,7 +445,7 @@ export default function Home() {
   useEffect(() => {
     if (!gameContract || !web3State.account) return;
 
-    const interval = setInterval(updatePrizePool, 
+    const interval = setInterval(updatePrizePool,
       gameStatus.escalationActive ? 5000 : 30000
     );
     return () => clearInterval(interval);
@@ -530,7 +529,7 @@ export default function Home() {
               lastPlayer={gameStatus.lastPlayer}
               escalationActive={gameStatus.escalationActive}
               persuasionScore={persuasionScore}
-              isGameWon={gameStatus.isGameWon} 
+              isGameWon={gameStatus.isGameWon}
             />
           </div>
 
@@ -565,11 +564,11 @@ export default function Home() {
       <Footer />
       <GameOverDialog
         isOpen={showGameOver}
-        onClose={() => {}} 
+        onClose={() => {}}
         lastBlock={gameStatus.gameEndBlock}
         winnerAddress={gameStatus.isGameWon ? gameStatus.lastPlayer : undefined}
         lastGuessAddress={gameStatus.lastPlayer}
-        hideCloseButton={true} 
+        hideCloseButton={true}
       />
       <AgentTrumpDialog
         isOpen={showTrumpDialog}
@@ -620,10 +619,10 @@ function storePersuasionScore(address: string, score: number) {
 }
 
 function storePlayerResponse(
-  address: string, 
-  response: string, 
-  timestamp: number, 
-  blockNumber: number, 
+  address: string,
+  response: string,
+  timestamp: number,
+  blockNumber: number,
   hash: string | null
 ) {
   try {
