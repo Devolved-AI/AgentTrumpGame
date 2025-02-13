@@ -17,6 +17,8 @@ import { GameOverDialog } from "@/components/game/GameOverDialog";
 import {TrumpAnimation} from "@/components/game/TrumpAnimation";
 import { formatInTimeZone } from 'date-fns-tz';
 import { AgentTrumpDialog } from "@/components/game/AgentTrumpDialog";
+import { ChatContainer } from "@/components/game/ChatContainer";
+import { useChat } from "@/lib/hooks/useChat";
 
 // Only maintain persuasion score in localStorage
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
@@ -68,6 +70,7 @@ export default function Home() {
   const [showTrumpDialog, setShowTrumpDialog] = useState(false);
   const [trumpMessage, setTrumpMessage] = useState("");
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
+  const { messages, addMessage } = useChat(web3State.account);
 
   // Restore connection and state
   useEffect(() => {
@@ -115,6 +118,9 @@ export default function Home() {
       setIsLoading(true);
       setTransactionStatus('pending');
 
+      // Add user's message to chat
+      addMessage(response, true);
+
       console.log('Submitting response with current amount:', gameStatus.currentAmount);
 
       const { tx, evaluation, receipt } = await gameContract.submitResponse(response, gameStatus.currentAmount);
@@ -133,32 +139,34 @@ export default function Home() {
       // Update game state after successful transaction
       await refreshGameStatus();
 
-      // Handle winning condition
+      // Add Agent Trump's response based on evaluation
+      let trumpResponse = "";
       if (newScore >= 100) {
+        trumpResponse = "🎉 Congratulations! You've successfully convinced me!";
         try {
           await gameContract.buttonPushed(web3State.account);
           setGameWon(true);
           setShowGameOver(true);
           setShowConfetti(true);
-          setTrumpMessage("🎉 Congratulations! You've successfully convinced me!");
-          setTrumpMessageVariant('success');
         } catch (error) {
           console.error("Error pushing the button:", error);
         }
       } else {
-        let message;
         if (evaluation.scoreIncrement >= 10) {
-          message = "TREMENDOUS response! That's how you do it, believe me! +10 persuasion points!";
+          trumpResponse = "TREMENDOUS response! That's how you do it, believe me! +10 persuasion points!";
         } else if (evaluation.scoreIncrement === 5) {
-          message = "Not bad, not bad at all! You gained 5 persuasion points!";
+          trumpResponse = "Not bad, not bad at all! You gained 5 persuasion points!";
         } else if (evaluation.scoreIncrement === 0) {
-          message = "Eh, I've heard better. No points this time. Try using more of my favorite phrases!";
+          trumpResponse = "Eh, I've heard better. No points this time. Try using more of my favorite phrases!";
         } else {
-          message = "Sad! That's not how I talk at all. Lost 5 persuasion points. You need to be more tremendous!";
+          trumpResponse = "Sad! That's not how I talk at all. Lost 5 persuasion points. You need to be more tremendous!";
         }
-        setTrumpMessage(message);
-        setTrumpMessageVariant(evaluation.scoreIncrement > 0 ? 'success' : 'error');
       }
+
+      // Add Trump's response to chat
+      addMessage(trumpResponse, false);
+      setTrumpMessage(trumpResponse);
+      setTrumpMessageVariant(evaluation.scoreIncrement > 0 ? 'success' : 'error');
 
       setTimeout(() => {
         setShowTrumpDialog(true);
@@ -492,7 +500,13 @@ export default function Home() {
             </div>
           </div>
 
-          <div>
+          <div className="flex flex-col gap-4">
+            <div className="flex-grow h-[400px] bg-white rounded-lg shadow-lg">
+              <ChatContainer
+                messages={messages}
+                className="h-full"
+              />
+            </div>
             <ResponseForm
               onSubmit={handleSubmitResponse}
               currentAmount={gameStatus.currentAmount}
