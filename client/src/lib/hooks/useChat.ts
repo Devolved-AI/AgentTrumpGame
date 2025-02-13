@@ -8,15 +8,26 @@ export interface ChatMessage {
   transactionHash?: string;
 }
 
+// Key format includes both contract and wallet address to separate different game instances
 const CHAT_HISTORY_KEY = 'agent_trump_chat_history';
 
 export function useChat(address: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  // Load chat history when component mounts
+  // Load chat history when component mounts or address changes
   useEffect(() => {
-    // Start with empty messages for new game
-    setMessages([]);
+    if (address) {
+      // Load existing chat history for this wallet address
+      const storedMessages = localStorage.getItem(
+        `${CHAT_HISTORY_KEY}_${address.toLowerCase()}`
+      );
+      if (storedMessages) {
+        setMessages(JSON.parse(storedMessages));
+      } else {
+        // Start with empty messages for new game
+        setMessages([]);
+      }
+    }
   }, [address]);
 
   // Save messages to localStorage whenever they change

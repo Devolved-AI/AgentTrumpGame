@@ -22,17 +22,40 @@ import { useChat } from "@/lib/hooks/useChat";
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 const CHAT_HISTORY_KEY = 'agent_trump_chat_history';
 
-function clearAllGameState() {
-  // Clear everything from localStorage
-  const keys = Object.keys(localStorage);
-  keys.forEach(key => {
-    if (key.startsWith(CHAT_HISTORY_KEY)) {
-      localStorage.removeItem(key);
-    }
-  });
+// Expose clearAllGameState to window for debugging
+declare global {
+  interface Window {
+    clearAllGameState: () => void;
+  }
+}
 
-  // Reset persuasion scores to initial state
-  localStorage.setItem(PERSUASION_SCORE_KEY, '{}');
+// Modified clearAllGameState function with better console output
+function clearAllGameState() {
+  console.log('Clearing all game state...');
+  try {
+    // Clear everything from localStorage
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith(CHAT_HISTORY_KEY)) {
+        localStorage.removeItem(key);
+        console.log('Cleared chat history:', key);
+      }
+    });
+
+    // Reset persuasion scores to initial state
+    localStorage.setItem(PERSUASION_SCORE_KEY, '{}');
+    console.log('Reset persuasion scores');
+
+    console.log('All game state cleared successfully');
+  } catch (error) {
+    console.error('Error clearing game state:', error);
+  }
+}
+
+// Make it available on window object
+if (typeof window !== 'undefined') {
+  window.clearAllGameState = clearAllGameState;
+  console.log('clearAllGameState function is now available. Type window.clearAllGameState() to use it.');
 }
 
 interface PlayerHistoryItem {
@@ -576,8 +599,7 @@ function getStoredPersuasionScore(address: string): number {
 
     const scores = JSON.parse(stored);
     const normalizedAddress = address.toLowerCase();
-    // Always return 50 as this is a new game
-    return 50;
+    return scores[normalizedAddress] || 50;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
     return 50;
