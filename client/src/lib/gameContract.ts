@@ -146,10 +146,18 @@ export class GameContract {
       const parsedAmount = ethers.parseEther(amount);
       console.log('Submitting response with amount:', amount, 'ETH');
 
+      // Estimate gas first to ensure transaction will succeed
+      const gasEstimate = await this.contract.submitGuess.estimateGas(response, {
+        value: parsedAmount
+      });
+
+      // Add 20% buffer to gas estimate
+      const gasLimit = Math.floor(gasEstimate * 1.2);
+
       // Call submitGuess with the correct parameters and value
       const tx = await this.contract.submitGuess(response, {
         value: parsedAmount,
-        gasLimit: 500000
+        gasLimit: gasLimit
       });
 
       console.log("Transaction sent:", tx.hash);
@@ -161,6 +169,12 @@ export class GameContract {
       return { tx, evaluation, receipt };
     } catch (error: any) {
       console.error("Transaction error:", error);
+      // Rethrow with more specific error message
+      if (error.code === 'INSUFFICIENT_FUNDS') {
+        throw new Error("Insufficient funds to complete transaction");
+      } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
+        throw new Error("Could not estimate gas limit. Please try again.");
+      }
       throw error;
     }
   }

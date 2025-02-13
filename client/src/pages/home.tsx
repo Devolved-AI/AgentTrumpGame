@@ -121,15 +121,14 @@ export default function Home() {
       setIsLoading(true);
       setTransactionStatus('pending');
 
-      // Add user's message to chat
+      // Add user's message to chat immediately
       addMessage(response, true);
 
       console.log('Submitting response with current amount:', gameStatus.currentAmount);
 
-      const { tx, evaluation, receipt } = await gameContract.submitResponse(response, gameStatus.currentAmount);
+      // Submit transaction and wait for confirmation
+      const { tx, evaluation } = await gameContract.submitResponse(response, gameStatus.currentAmount);
       console.log('Transaction submitted:', tx.hash);
-      console.log('Transaction receipt:', receipt);
-      console.log('Response evaluation:', evaluation);
 
       // Update transaction status to success
       setTransactionStatus('success');
@@ -137,9 +136,15 @@ export default function Home() {
       // Update game state after successful transaction
       await refreshGameStatus();
 
-      // Add Agent Trump's response based on normalized evaluation
+      // Add Agent Trump's response
       let trumpResponse = "Great response! Keep trying to convince me!";
       addMessage(trumpResponse, false, tx.hash);
+
+      // Show success toast
+      toast({
+        title: "Response Submitted",
+        description: "Your response has been recorded on the blockchain.",
+      });
 
     } catch (error: any) {
       setTransactionStatus('error');
