@@ -1,13 +1,15 @@
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { ExternalLink } from "lucide-react";
 
 interface ChatBubbleProps {
   message: string;
   isUser: boolean;
   timestamp: Date;
+  transactionHash?: string;
 }
 
-export function ChatBubble({ message, isUser, timestamp }: ChatBubbleProps) {
+export function ChatBubble({ message, isUser, timestamp, transactionHash }: ChatBubbleProps) {
   return (
     <motion.div 
       className={cn(
@@ -25,6 +27,20 @@ export function ChatBubble({ message, isUser, timestamp }: ChatBubbleProps) {
           : "bg-[#E9E9EB] text-[#000000] rounded-bl-[4px]"
       )}>
         <p className="text-[15px] leading-5 break-words font-[-apple-system]">{message}</p>
+        {transactionHash && (
+          <a 
+            href={`https://sepolia.basescan.org/tx/${transactionHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "flex items-center gap-1 text-[10px] mt-1 hover:underline",
+              isUser ? "text-white/70" : "text-black/50"
+            )}
+          >
+            <ExternalLink className="w-3 h-3" />
+            View transaction
+          </a>
+        )}
         <p className={cn(
           "text-[10px] mt-1",
           isUser ? "text-white/70" : "text-black/50"

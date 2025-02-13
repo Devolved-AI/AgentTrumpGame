@@ -5,6 +5,7 @@ export interface ChatMessage {
   message: string;
   isUser: boolean;
   timestamp: string;
+  transactionHash?: string;
 }
 
 const CHAT_HISTORY_KEY = 'agent_trump_chat_history';
@@ -36,12 +37,13 @@ export function useChat(address: string | null) {
     }
   }, [messages, address]);
 
-  const addMessage = (message: string, isUser: boolean) => {
+  const addMessage = (message: string, isUser: boolean, transactionHash?: string) => {
     const newMessage: ChatMessage = {
       id: `${Date.now()}-${Math.random()}`,
       message,
       isUser,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      transactionHash
     };
     setMessages(prev => [...prev, newMessage]);
   };

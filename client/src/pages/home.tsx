@@ -163,8 +163,8 @@ export default function Home() {
         }
       }
 
-      // Add Trump's response to chat
-      addMessage(trumpResponse, false);
+      // Add Trump's response to chat with transaction hash
+      addMessage(trumpResponse, false, tx.hash);
       setTrumpMessage(trumpResponse);
       setTrumpMessageVariant(evaluation.scoreIncrement > 0 ? 'success' : 'error');
 
@@ -500,41 +500,40 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <div className="flex-grow h-[400px] bg-white rounded-lg shadow-lg">
+          <div className="flex flex-col">
+            <div className="h-[600px] bg-gray-50 rounded-lg p-4">
               <ChatContainer
                 messages={messages}
-                className="h-full"
+                className="h-[500px]"
               />
+              <div className="mt-4">
+                <ResponseForm
+                  onSubmit={handleSubmitResponse}
+                  currentAmount={gameStatus.currentAmount}
+                  isLoading={isLoading}
+                  transactionStatus={transactionStatus}
+                  disabled={gameStatus.isGameOver}
+                />
+              </div>
             </div>
-            <ResponseForm
-              onSubmit={handleSubmitResponse}
-              currentAmount={gameStatus.currentAmount}
-              isLoading={isLoading}
-              transactionStatus={transactionStatus}
-              disabled={gameStatus.isGameOver}
-            />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div>
-            <GameStatus
-              timeRemaining={gameStatus.timeRemaining}
-              currentAmount={gameStatus.currentAmount}
-              lastPlayer={gameStatus.lastPlayer}
-              escalationActive={gameStatus.escalationActive}
-              persuasionScore={persuasionScore}
-              isGameWon={gameStatus.isGameWon}
-            />
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
-            <TransactionTimeline responses={playerHistory} />
-          </div>
+        <div className="mb-8">
+          <GameStatus
+            timeRemaining={gameStatus.timeRemaining}
+            currentAmount={gameStatus.currentAmount}
+            lastPlayer={gameStatus.lastPlayer}
+            escalationActive={gameStatus.escalationActive}
+            persuasionScore={persuasionScore}
+            isGameWon={gameStatus.isGameWon}
+          />
         </div>
 
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
+          <TransactionTimeline responses={playerHistory} />
+        </div>
         <div className="mt-8 bg-gray-50 rounded-lg p-6">
             <h2 className="text-2xl font-bold mb-4">Game Rules</h2>
             <div className="prose max-w-none">
