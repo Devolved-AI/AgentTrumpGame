@@ -94,8 +94,13 @@ export class GameContract {
         throw new Error("Amount mismatch - please refresh and try again");
       }
 
-      // Use the correct contract function name - submitGuess
-      const tx = await this.contract.submitGuess(response, {
+      // Get the function from the contract instance
+      const submitGuessFunction = this.contract["submitGuess"];
+      if (!submitGuessFunction) {
+        throw new Error("Contract function 'submitGuess' not found!");
+      }
+
+      const tx = await submitGuessFunction(response, {
         value: parsedAmount
       });
 
@@ -184,7 +189,6 @@ export class GameContract {
       return [];
     }
   }
-
 
   async getTotalPrizePool(): Promise<string> {
     try {
