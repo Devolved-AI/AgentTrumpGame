@@ -20,10 +20,17 @@ import { useChat } from "@/lib/hooks/useChat";
 
 // Only maintain persuasion score in localStorage
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
+const CHAT_HISTORY_KEY = 'agent_trump_chat_history';
 
 function clearAllGameState() {
   // Clear everything from localStorage
-  localStorage.clear();
+  const keys = Object.keys(localStorage);
+  keys.forEach(key => {
+    if (key.startsWith(CHAT_HISTORY_KEY)) {
+      localStorage.removeItem(key);
+    }
+  });
+
   // Reset persuasion scores to initial state
   localStorage.setItem(PERSUASION_SCORE_KEY, '{}');
 }

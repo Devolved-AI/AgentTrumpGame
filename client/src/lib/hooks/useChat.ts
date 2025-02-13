@@ -15,16 +15,8 @@ export function useChat(address: string | null) {
 
   // Load chat history when component mounts
   useEffect(() => {
-    if (address) {
-      const stored = localStorage.getItem(`${CHAT_HISTORY_KEY}_${address.toLowerCase()}`);
-      if (stored) {
-        try {
-          setMessages(JSON.parse(stored));
-        } catch (error) {
-          console.error('Error loading chat history:', error);
-        }
-      }
-    }
+    // Start with empty messages for new game
+    setMessages([]);
   }, [address]);
 
   // Save messages to localStorage whenever they change
