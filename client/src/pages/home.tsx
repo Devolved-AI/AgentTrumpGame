@@ -130,8 +130,20 @@ export default function Home() {
       console.log('Transaction receipt:', receipt);
       console.log('Response evaluation:', evaluation);
 
-      // Update persuasion score in localStorage
-      const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
+      // Normalize score increment to fixed values
+      let normalizedIncrement = 0;
+      if (evaluation.scoreIncrement > 7) {
+        normalizedIncrement = 10;
+      } else if (evaluation.scoreIncrement > 2) {
+        normalizedIncrement = 5;
+      } else if (evaluation.scoreIncrement > -2) {
+        normalizedIncrement = 0;
+      } else {
+        normalizedIncrement = -5;
+      }
+
+      // Update persuasion score in localStorage with normalized increment
+      const newScore = Math.max(0, Math.min(100, persuasionScore + normalizedIncrement));
       setPersuasionScore(newScore);
       storePersuasionScore(web3State.account, newScore);
       console.log('Updated persuasion score:', newScore);
@@ -141,7 +153,7 @@ export default function Home() {
       // Update game state after successful transaction
       await refreshGameStatus();
 
-      // Add Agent Trump's response based on evaluation
+      // Add Agent Trump's response based on normalized evaluation
       let trumpResponse = "";
       if (newScore >= 100) {
         trumpResponse = "🎉 Congratulations! You've successfully convinced me!";
@@ -154,11 +166,11 @@ export default function Home() {
           console.error("Error pushing the button:", error);
         }
       } else {
-        if (evaluation.scoreIncrement >= 10) {
+        if (normalizedIncrement === 10) {
           trumpResponse = "TREMENDOUS response! That's how you do it, believe me! +10 persuasion points!";
-        } else if (evaluation.scoreIncrement === 5) {
+        } else if (normalizedIncrement === 5) {
           trumpResponse = "Not bad, not bad at all! You gained 5 persuasion points!";
-        } else if (evaluation.scoreIncrement === 0) {
+        } else if (normalizedIncrement === 0) {
           trumpResponse = "Eh, I've heard better. No points this time. Try using more of my favorite phrases!";
         } else {
           trumpResponse = "Sad! That's not how I talk at all. Lost 5 persuasion points. You need to be more tremendous!";
@@ -168,7 +180,7 @@ export default function Home() {
       // Add Trump's response to chat with transaction hash
       addMessage(trumpResponse, false, tx.hash);
       setTrumpMessage(trumpResponse);
-      setTrumpMessageVariant(evaluation.scoreIncrement > 0 ? 'success' : 'error');
+      setTrumpMessageVariant(normalizedIncrement > 0 ? 'success' : 'error');
 
       setTimeout(() => {
         setShowTrumpDialog(true);
