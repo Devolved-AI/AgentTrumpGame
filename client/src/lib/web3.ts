@@ -136,7 +136,7 @@ export async function restoreWalletConnection(): Promise<Web3State | null> {
     const accounts = await provider.listAccounts();
 
     // Verify the stored account is still connected
-    if (accounts.length > 0 && accounts[0].toLowerCase() === account.toLowerCase()) {
+    if (accounts.length > 0 && accounts[0].address.toLowerCase() === account.toLowerCase()) {
       const signer = await provider.getSigner();
       return {
         provider,

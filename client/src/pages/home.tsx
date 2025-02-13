@@ -115,7 +115,12 @@ export default function Home() {
       setIsLoading(true);
       setTransactionStatus('pending');
 
+      console.log('Submitting response with current amount:', gameStatus.currentAmount);
+
       const { tx, evaluation, receipt } = await gameContract.submitResponse(response, gameStatus.currentAmount);
+      console.log('Transaction submitted:', tx.hash);
+      console.log('Transaction receipt:', receipt);
+      console.log('Response evaluation:', evaluation);
 
       // Update persuasion score in localStorage
       const newScore = Math.max(0, Math.min(100, persuasionScore + evaluation.scoreIncrement));
@@ -161,7 +166,14 @@ export default function Home() {
 
     } catch (error: any) {
       setTransactionStatus('error');
-      console.error("Submission error:", error);
+      console.error("Submission error details:", {
+        message: error.message,
+        code: error.code,
+        reason: error.reason,
+        data: error.data,
+        method: error.method,
+        transaction: error.transaction
+      });
       handleSubmissionError(error);
     } finally {
       setIsLoading(false);
