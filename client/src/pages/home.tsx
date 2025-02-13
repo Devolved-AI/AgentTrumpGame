@@ -22,8 +22,16 @@ import { useChat } from "@/lib/hooks/useChat";
 const PERSUASION_SCORE_KEY = 'persuasion_scores';
 
 function clearAllGameState() {
-  // Clear all game state including persuasion scores
+  // Keep the persuasion scores and chat history, clear other game state
+  const persuasionScores = localStorage.getItem(PERSUASION_SCORE_KEY);
+  const chatHistory = localStorage.getItem('chat_history');
   localStorage.clear();
+  if (persuasionScores) {
+    localStorage.setItem(PERSUASION_SCORE_KEY, persuasionScores);
+  }
+  if (chatHistory) {
+    localStorage.setItem('chat_history', chatHistory);
+  }
 }
 
 interface PlayerHistoryItem {
@@ -305,9 +313,6 @@ export default function Home() {
     setIsConnecting(true);
     setIsUpdatingGameData(true);
     try {
-      // Clear all previous game state when connecting
-      clearAllGameState();
-
       const state = await connectWallet();
       setWeb3State(state);
 
@@ -315,8 +320,9 @@ export default function Home() {
         const contract = new GameContract(state.provider!, state.signer!);
         setGameContract(contract);
 
-        // Reset persuasion score to initial value
-        setPersuasionScore(50);
+        // Maintain existing persuasion score instead of resetting
+        const score = getStoredPersuasionScore(state.account);
+        setPersuasionScore(score);
 
         await initializeGameData(contract, state.account);
       }
