@@ -1,20 +1,31 @@
 // Smart contract configuration
 export const CONTRACT_ADDRESS = import.meta.env.VITE_BASE_CONTRACT_ADDRESS || "0xE8538aa5B5e3627C7F6C4d9Bf343c2935046c740";
+
+// When updating the ABI, make sure to include only the functions you need
+// Current minimum required functions:
+// - submitGuess
+// - currentMultiplier
+// - currentRequiredAmount
+// - escalationActive
+// - getAllPlayerResponses
+// - getTimeRemaining
+// - gameWon
+// - lastPlayer
 export const CONTRACT_ABI = [
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "response",
-				"type": "string"
-			}
-		],
-		"name": "submitGuess",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "response",
+        "type": "string"
+      }
+    ],
+    "name": "submitGuess",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
 		"inputs": [],
 		"name": "currentMultiplier",
 		"outputs": [
