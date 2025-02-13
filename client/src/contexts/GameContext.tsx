@@ -7,6 +7,7 @@ interface GameState {
   requiredAmount: string;
   isEscalationActive: boolean;
   timeRemaining: number;
+  lastPlayer: string | null;
 }
 
 interface GameContextType {
@@ -22,7 +23,8 @@ const DEFAULT_GAME_STATE: GameState = {
   multiplier: 1,
   requiredAmount: "0.01",
   isEscalationActive: false,
-  timeRemaining: 300
+  timeRemaining: 300,
+  lastPlayer: null
 };
 
 export function GameProvider({ children }: { children: ReactNode }) {
@@ -39,7 +41,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           multiplier: state.multiplier,
           requiredAmount: state.requiredAmount,
           isEscalationActive: state.isEscalationActive,
-          timeRemaining: state.timeRemaining
+          timeRemaining: state.timeRemaining,
+          lastPlayer: state.lastPlayer
         });
       }
     } catch (error) {

@@ -63,18 +63,20 @@ export function useGameContract() {
     if (!contract) return null;
 
     try {
-      const [multiplier, requiredAmount, isEscalationActive, timeRemaining] = await Promise.all([
+      const [multiplier, requiredAmount, isEscalationActive, timeRemaining, lastPlayerAddress] = await Promise.all([
         contract.currentMultiplier(),
         contract.currentRequiredAmount(),
         contract.escalationActive(),
         contract.getTimeRemaining(),
+        contract.lastPlayer()
       ]);
 
       return {
         multiplier: Number(multiplier),
         requiredAmount: ethers.formatEther(requiredAmount),
         isEscalationActive,
-        timeRemaining: Number(timeRemaining)
+        timeRemaining: Number(timeRemaining),
+        lastPlayer: lastPlayerAddress
       };
     } catch (error) {
       console.error('Error fetching game state:', error);
@@ -82,7 +84,8 @@ export function useGameContract() {
         multiplier: 1,
         requiredAmount: "0.01",
         isEscalationActive: false,
-        timeRemaining: 300
+        timeRemaining: 300,
+        lastPlayer: null
       };
     }
   }, [contract]);

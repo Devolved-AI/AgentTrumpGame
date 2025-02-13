@@ -371,13 +371,27 @@ export default function Home() {
     });
   }
 
+  // Update the refreshGameStatus function to properly handle lastPlayer
   async function refreshGameStatus() {
     if (!gameContract || !web3State.account) return;
 
     try {
       const status = await gameContract.getGameStatus();
+      console.log('Game status update:', status); // Add logging
 
-      setGameStatus(status);
+      setGameStatus(prevStatus => ({
+        ...prevStatus,
+        timeRemaining: status.timeRemaining || 0,
+        currentAmount: status.currentAmount || "0.0009",
+        lastPlayer: status.lastPlayer, // Ensure lastPlayer is properly set
+        escalationActive: status.escalationActive || false,
+        gameEndBlock: status.gameEndBlock,
+        isGameWon: status.isGameWon || false,
+        isGameOver: status.isGameOver || false,
+        currentMultiplier: status.currentMultiplier || 1,
+        escalationPeriodTimeRemaining: status.escalationPeriodTimeRemaining || 0,
+        currentPeriodIndex: status.currentPeriodIndex || 0
+      }));
 
       if (playerHistory.length > 0 && (status.timeRemaining <= 0 || status.isGameWon)) {
         setGameWon(status.isGameWon);
@@ -417,11 +431,13 @@ export default function Home() {
 
       try {
         const status = await gameContract.getGameStatus();
+        console.log('Game status interval update:', status); // Add logging
+
         setGameStatus(prevStatus => ({
           ...prevStatus,
           timeRemaining: status.timeRemaining,
           currentAmount: status.currentAmount,
-          lastPlayer: status.lastPlayer,
+          lastPlayer: status.lastPlayer, // Ensure lastPlayer is updated in interval
           escalationActive: status.escalationActive,
           gameEndBlock: status.gameEndBlock,
           isGameWon: status.isGameWon,
