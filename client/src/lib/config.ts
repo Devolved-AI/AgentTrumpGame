@@ -41,7 +41,13 @@ export const CONTRACT_ABI = [
     "type": "constructor"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "response",
+        "type": "string"
+      }
+    ],
     "name": "submitGuess",
     "outputs": [],
     "stateMutability": "payable",
