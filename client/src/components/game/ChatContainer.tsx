@@ -33,11 +33,18 @@ export function ChatContainer({
 }: ChatContainerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Scroll to bottom whenever messages change
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 100); // Small delay to ensure content is rendered
     }
   }, [messages]);
+
+  console.log('ChatContainer messages:', messages); // Debug log
 
   return (
     <div className="relative w-full h-full rounded-[38px] bg-[#f2f2f7] shadow-xl overflow-hidden flex flex-col">
@@ -60,9 +67,9 @@ export function ChatContainer({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div ref={scrollRef} className="flex flex-col p-4 space-y-2">
-          {messages.map((msg) => (
+      <ScrollArea className="flex-1 min-h-0 px-4">
+        <div ref={scrollRef} className="flex flex-col py-4 space-y-2">
+          {messages && messages.map((msg) => (
             <ChatBubble
               key={msg.id}
               message={msg.message}

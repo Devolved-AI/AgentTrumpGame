@@ -30,6 +30,7 @@ export function useChat(address: string | null) {
   }, [messages, address]);
 
   const addMessage = (message: string, isUser: boolean, transactionHash?: string) => {
+    console.log('Adding message:', { message, isUser, transactionHash }); // Debug log
     const newMessage: ChatMessage = {
       id: `${Date.now()}-${Math.random()}`,
       message,
