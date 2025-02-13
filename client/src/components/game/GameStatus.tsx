@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 interface GameStatusProps {
   timeRemaining: number;
   currentAmount: string;
-  lastPlayer: string;
+  lastPlayer: string | null | undefined;
   escalationActive: boolean;
   persuasionScore: number;
   isGameWon: boolean;
@@ -43,6 +43,11 @@ function getProgressColor(score: number): string {
   if (score <= 25) return "bg-red-100";
   if (score >= 76) return "bg-green-100";
   return "bg-yellow-100";
+}
+
+function formatWalletAddress(address: string | null | undefined): string {
+  if (!address) return 'No players yet';
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 export function GameStatus({ 
@@ -142,7 +147,7 @@ export function GameStatus({
         </CardHeader>
         <CardContent>
           <div className="font-mono text-sm">
-            {lastPlayer ? `${lastPlayer.slice(0, 6)}...${lastPlayer.slice(-4)}` : 'No players yet'}
+            {formatWalletAddress(lastPlayer)}
           </div>
           {escalationActive && lastPlayer && !isGameOver && (
             <p className="text-xs text-orange-500 mt-1">
