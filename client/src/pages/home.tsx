@@ -245,31 +245,14 @@ export default function Home() {
         const contract = new GameContract(state.provider!, state.signer!);
         setGameContract(contract);
 
-        // Load persuasion score from localStorage
-        const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
-        if (stored) {
-          const scores = JSON.parse(stored);
-          const normalizedAddress = state.account.toLowerCase();
-          const score = scores[normalizedAddress] ?? 50;
-          setPersuasionScore(score);
-          console.log('Restored persuasion score:', score);
-        }
+        // Load stored values
+        const score = getStoredPersuasionScore(state.account);
+        console.log('Restored persuasion score:', score);
+        setPersuasionScore(score);
 
-        // Load transaction history from localStorage
-        const storedResponses = localStorage.getItem(PLAYER_RESPONSES_KEY);
-        if (storedResponses) {
-          const responses = JSON.parse(storedResponses);
-          const normalizedAddress = state.account.toLowerCase();
-          const history = responses[normalizedAddress] || [];
-          const validHistory = history.filter((item: PlayerHistoryItem) =>
-            item.blockNumber !== 0 &&
-            item.transactionHash !== null &&
-            item.timestamp > 946684800 &&
-            item.exists
-          ).sort((a: PlayerHistoryItem, b: PlayerHistoryItem) => b.timestamp - a.timestamp);
-          setPlayerHistory(validHistory);
-          console.log('Restored transaction history:', validHistory);
-        }
+        const history = getPlayerResponses(state.account);
+        console.log('Restored transaction history:', history);
+        setPlayerHistory(history);
 
         await initializeGameData(contract, state.account);
       }
@@ -290,7 +273,20 @@ export default function Home() {
     const initialState = await disconnectWallet();
     setWeb3State(initialState);
     setGameContract(null);
-    resetGame();
+
+    // Don't reset game progress on disconnect
+    setGameStatus({
+      timeRemaining: 0,
+      currentAmount: "0.0009",
+      lastPlayer: "",
+      escalationActive: false,
+      gameEndBlock: 0,
+      isGameWon: false,
+      isGameOver: false,
+      currentMultiplier: 1,
+      escalationPeriodTimeRemaining: 0,
+      currentPeriodIndex: 0
+    });
   }
 
   async function refreshGameStatus() {
@@ -620,11 +616,16 @@ function formatPacificTime(timestamp: number): string {
 function getStoredPersuasionScore(address: string): number {
   try {
     const stored = localStorage.getItem(PERSUASION_SCORE_KEY);
-    if (!stored) return 50;
+    if (!stored) {
+      console.log('No stored persuasion scores found, using default');
+      return 50;
+    }
 
     const scores = JSON.parse(stored);
     const normalizedAddress = address.toLowerCase();
-    return scores[normalizedAddress] ?? 50;
+    const score = scores[normalizedAddress] ?? 50;
+    console.log('Retrieved persuasion score:', score, 'for address:', normalizedAddress);
+    return score;
   } catch (error) {
     console.error('Error reading persuasion score:', error);
     return 50;
@@ -638,7 +639,7 @@ function storePersuasionScore(address: string, score: number) {
     const scores = JSON.parse(stored);
     scores[normalizedAddress] = Math.max(0, Math.min(100, score));
     localStorage.setItem(PERSUASION_SCORE_KEY, JSON.stringify(scores));
-    console.log('Stored persuasion score:', scores[normalizedAddress]);
+    console.log('Stored persuasion score:', scores[normalizedAddress], 'for address:', normalizedAddress);
   } catch (error) {
     console.error('Error storing persuasion score:', error);
   }
@@ -677,11 +678,23 @@ function storePlayerResponse(
 function getPlayerResponses(address: string): PlayerHistoryItem[] {
   try {
     const stored = localStorage.getItem(PLAYER_RESPONSES_KEY);
-    if (!stored) return [];
+    if (!stored) {
+      console.log('No stored player responses found');
+      return [];
+    }
 
     const responses = JSON.parse(stored);
     const normalizedAddress = address.toLowerCase();
-    return responses[normalizedAddress] || [];
+    const history = responses[normalizedAddress] || [];
+    const validHistory = history.filter((item: PlayerHistoryItem) =>
+      item.blockNumber !== 0 &&
+      item.transactionHash !== null &&
+      item.timestamp > 946684800 &&
+      item.exists
+    ).sort((a: PlayerHistoryItem, b: PlayerHistoryItem) => b.timestamp - a.timestamp);
+
+    console.log('Retrieved player history:', validHistory.length, 'items for address:', normalizedAddress);
+    return validHistory;
   } catch (error) {
     console.error('Error getting player responses:', error);
     return [];
