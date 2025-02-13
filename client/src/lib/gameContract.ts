@@ -119,6 +119,24 @@ export class GameContract {
     }
   }
 
+  async getPlayerHistory(address: string): Promise<PlayerHistoryItem[]> {
+    try {
+      const [responses, timestamps, exists] = await this.contract.getAllPlayerResponses(address);
+
+      return responses.map((response: string, index: number) => ({
+        response,
+        timestamp: Number(timestamps[index]),
+        blockNumber: 0, // We don't get this from the contract
+        transactionHash: null, // We don't get this from the contract
+        exists: exists[index],
+        scoreChange: 0 // We don't store this on-chain
+      }));
+    } catch (error) {
+      console.error('Error getting player history:', error);
+      return [];
+    }
+  }
+
   async submitResponse(response: string, amount: string) {
     if (!this.signer) throw new Error("No signer available");
 
@@ -126,7 +144,7 @@ export class GameContract {
       const parsedAmount = ethers.parseEther(amount);
       console.log('Submitting response with amount:', amount, 'ETH');
 
-      const tx = await this.contract.submitGuess({
+      const tx = await this.contract.submitGuess(response, {
         value: parsedAmount,
         gasLimit: 500000
       });
