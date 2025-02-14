@@ -299,6 +299,64 @@ class AgentTrump:
                 "score": current_score if 'current_score' in locals() else 50
             }
 
+    def evaluate_persuasion(self, user_input: str, current_score: int) -> int:
+        """Enhanced persuasion evaluation with improved scoring logic"""
+        try:
+            logger.info(f"Evaluating persuasion for input: {user_input[:50]}...")
+            score_change = 0
+
+            # Basic length check - encourage meaningful responses
+            words = user_input.split()
+            input_length = len(words)
+            if 5 <= input_length <= 100:
+                score_change += 5
+            elif input_length > 100:
+                score_change += 2  # Still reward longer messages but not as much
+
+            # Check for Trump-pleasing terms
+            trump_terms = ["tremendous", "huge", "great", "deal", "winning", "smart", "america"]
+            trump_points = sum(2 for term in trump_terms if term.lower() in user_input.lower())
+            score_change += trump_points
+
+            # Check for blockchain/web3 terms
+            web3_terms = ["blockchain", "web3", "smart contract", "base", "ethereum", "crypto"]
+            web3_points = sum(3 for term in web3_terms if term.lower() in user_input.lower())
+            score_change += web3_points
+
+            # Check for business/money terms
+            business_terms = ["business", "money", "profit", "investment", "billions"]
+            business_points = sum(2 for term in business_terms if term.lower() in user_input.lower())
+            score_change += business_points
+
+            # Add controlled randomness for unpredictability
+            random_factor = random.randint(-3, 7)
+            score_change += random_factor
+
+            # Ensure score changes are meaningful but not too extreme
+            score_change = max(-10, min(15, score_change))
+
+            # Calculate final score with bounds
+            final_score = max(0, min(100, current_score + score_change))
+
+            # Log detailed scoring breakdown
+            logger.info(f"Score calculation breakdown:")
+            logger.info(f"- Current score: {current_score}")
+            logger.info(f"- Trump terms points: {trump_points}")
+            logger.info(f"- Web3 points: {web3_points}")
+            logger.info(f"- Business points: {business_points}")
+            logger.info(f"- Random factor: {random_factor}")
+            logger.info(f"- Total change: {score_change}")
+            logger.info(f"- Final score: {final_score}")
+
+            return final_score
+
+        except Exception as e:
+            logger.error(f"Error in persuasion evaluation: {str(e)}")
+            # If evaluation fails, make a small positive change to keep the game moving
+            safe_score = max(0, min(100, current_score + random.randint(1, 3)))
+            return safe_score
+
+
 def main():
     parser = argparse.ArgumentParser(description='Agent Trump CLI')
     parser.add_argument('--address', required=True, help='Player wallet address')
