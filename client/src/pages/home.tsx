@@ -134,106 +134,142 @@ export default function Home() {
     if (!gameContract || !web3State.account) return;
 
     try {
-      const status = await gameContract.getGameStatus();
-      if (status.isGameOver) {
-        setGameWon(status.isGameWon);
-        setShowGameOver(true);
-        toast({
-          title: status.isGameWon ? "Game Won!" : "Game Over",
-          description: "Thanks for playing!",
-        });
-        return;
-      }
-
-      setIsLoading(true);
-      setTransactionStatus('pending');
-
-      // Add user's message to chat immediately
-      addMessage(response, true);
-
-      console.log('Submitting response with current amount:', gameStatus.currentAmount);
-
-      try {
-        // Submit transaction and get response from Python agent via API
-        const { tx, blockNumber } = await gameContract.submitResponse(response, gameStatus.currentAmount);
-        console.log('Transaction submitted:', tx.hash);
-
-        // Update transaction status to success
-        setTransactionStatus('success');
-
-        // Update game state after successful transaction
-        await refreshGameStatus();
-
-        // Get the AI response from the API using the transaction hash
-        console.log('Fetching AI response for transaction:', tx.hash);
-
-        // Try up to 3 times with increasing delays
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            // Wait before retrying (except first attempt)
-            if (attempt > 1) {
-              await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-            }
-
-            const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
-
-            if (!apiResponse.ok) {
-              const errorData = await apiResponse.json().catch(() => ({ error: 'Unknown error' }));
-              console.error(`API error (attempt ${attempt}):`, errorData);
-
-              if (apiResponse.status === 404 && attempt < 3) {
-                console.log(`Response not found, will retry in ${attempt}s...`);
-                continue;
-              }
-              throw new Error(errorData.error || 'Failed to get AI response');
-            }
-
-            const data = await apiResponse.json();
-            console.log('AI response received:', data);
-
-            // Add Agent Trump's response
-            addMessage(data.message, false, tx.hash);
-
-            // Update the persuasion score
-            const newScore = data.score;
-            setPersuasionScore(newScore);
-
-            // Store the updated score
-            storePersuasionScore(web3State.account, newScore);
-
-            // Show success toast
+        const status = await gameContract.getGameStatus();
+        if (status.isGameOver) {
+            setGameWon(status.isGameWon);
+            setShowGameOver(true);
             toast({
-              title: "Response Submitted",
-              description: "Your response has been recorded on the blockchain.",
+                title: status.isGameWon ? "Game Won!" : "Game Over",
+                description: "Thanks for playing!",
             });
-
-            // Successfully got response, exit retry loop
             return;
-          } catch (error) {
-            if (attempt === 3) {
-              throw error;
-            }
-          }
         }
 
-      } catch (error: any) {
-        // Handle transaction failure
-        setTransactionStatus('error');
-        addMessage("Failed to submit response. Please try again.", false);
-        throw error;
-      }
+        setIsLoading(true);
+        setTransactionStatus('pending');
+
+        // Add user's message to chat immediately
+        addMessage(response, true);
+
+        console.log('Attempting to submit response with:', {
+            currentAmount: gameStatus.currentAmount,
+            account: web3State.account,
+            gameStatus: {
+                isGameOver: status.isGameOver,
+                isGameWon: status.isGameWon,
+                timeRemaining: status.timeRemaining
+            }
+        });
+
+        try {
+            // Submit transaction and get response from Python agent via API
+            const { tx, blockNumber } = await gameContract.submitResponse(response, gameStatus.currentAmount);
+            console.log('Transaction submitted successfully:', {
+                hash: tx.hash,
+                blockNumber: blockNumber
+            });
+
+            // Update transaction status to success
+            setTransactionStatus('success');
+
+            // Update game state after successful transaction
+            await refreshGameStatus();
+
+            // Get the AI response from the API using the transaction hash
+            console.log('Fetching AI response for transaction:', tx.hash);
+
+            // Try up to 3 times with increasing delays
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    // Wait before retrying (except first attempt)
+                    if (attempt > 1) {
+                        await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Increased delay
+                    }
+
+                    const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
+
+                    if (!apiResponse.ok) {
+                        const errorData = await apiResponse.json().catch(() => ({ error: 'Unknown error' }));
+                        console.error(`API error (attempt ${attempt}):`, {
+                            status: apiResponse.status,
+                            error: errorData
+                        });
+
+                        if (apiResponse.status === 404 && attempt < 3) {
+                            console.log(`Response not found, will retry in ${attempt * 2}s...`);
+                            continue;
+                        }
+                        throw new Error(errorData.error || 'Failed to get AI response');
+                    }
+
+                    const data = await apiResponse.json();
+                    console.log('AI response received:', data);
+
+                    // Add Agent Trump's response
+                    addMessage(data.message, false, tx.hash);
+
+                    // Update the persuasion score
+                    const newScore = data.score;
+                    setPersuasionScore(newScore);
+
+                    // Store the updated score
+                    storePersuasionScore(web3State.account, newScore);
+
+                    // Show success toast
+                    toast({
+                        title: "Response Submitted",
+                        description: "Your response has been recorded on the blockchain.",
+                    });
+
+                    // Successfully got response, exit retry loop
+                    return;
+                } catch (error) {
+                    console.error(`Attempt ${attempt} failed:`, error);
+                    if (attempt === 3) {
+                        throw error;
+                    }
+                }
+            }
+
+        } catch (error: any) {
+            // Enhanced error handling for contract interactions
+            console.error('Contract interaction error:', error);
+
+            let errorMessage = "Transaction failed. ";
+            if (error.code === 'CALL_EXCEPTION') {
+                errorMessage += "Contract call reverted. Please ensure you're sending the correct amount.";
+            } else if (error.code === 'INSUFFICIENT_FUNDS') {
+                errorMessage += "Insufficient funds to complete the transaction.";
+            } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
+                errorMessage += "Unable to estimate gas. The game might be in an invalid state.";
+            } else {
+                errorMessage += error.message || "Please try again.";
+            }
+
+            // Update UI state for failure
+            setTransactionStatus('error');
+            addMessage(errorMessage, false);
+
+            toast({
+                title: "Transaction Failed",
+                description: errorMessage,
+                variant: "destructive"
+            });
+
+            throw error;
+        }
 
     } catch (error: any) {
-      console.error("Submission error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit response. Please try again.",
-        variant: "destructive"
-      });
+        console.error("Submission error:", error);
+        toast({
+            title: "Error",
+            description: error.message || "Failed to submit response. Please try again.",
+            variant: "destructive"
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  }
+}
 
   function handleSubmissionError(error: any) {
     if (error.code === 4001) {
