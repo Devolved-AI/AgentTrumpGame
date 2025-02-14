@@ -8,24 +8,69 @@ const TRUMP_RESPONSES = {
     "That was a tremendous response, really tremendous! You're getting warmer!",
     "Now that's what I call high energy! Keep it up, and we'll make a deal!",
     "You're starting to speak my language. Very smart person, very smart!",
-    "I like your style, reminds me of myself. Nobody does it better than me though!"
+    "I like your style, reminds me of myself. Nobody does it better than me though!",
+    "Beautiful answer, absolutely beautiful! The best people are saying it!",
+    "That's what I call a Trump-worthy response! You're doing fantastic things!",
+    "Incredible brain power! Maybe almost as good as mine, which is very, very large!",
+    "You're showing real talent here, tremendous talent! The fake news won't tell you that!",
+    "That's the kind of thinking that makes America great! Really spectacular!",
+    "Big league response! You're really showing them how it's done!",
+    "Your IQ must be through the roof, maybe even close to mine! Fantastic!",
+    "People are saying this is the best response they've ever seen, believe me!",
+    "You're like a young Trump in the making! Such potential, such talent!",
+    "This answer belongs in Trump University's hall of fame! Absolutely incredible!",
+    "Five stars! Even my good friend Putin would be impressed by this one!"
   ],
   mediumScore: [
     "Not bad, not bad. But I know you can do better, believe me!",
     "You're getting there, but I've heard better deals. Much better!",
     "That's interesting, but I need more. Nobody knows more about deals than me!",
-    "Keep trying, but remember - I wrote The Art of the Deal!"
+    "Keep trying, but remember - I wrote The Art of the Deal!",
+    "We need more winning! This is just the beginning, folks!",
+    "Could be stronger, much stronger. I know strong, I have the best words!",
+    "You're on the right track, but we need to make it perfect, absolutely perfect!",
+    "Getting closer, but we want to be number one! America first!",
+    "Some good points, but needs more Trump-style confidence. Much more!",
+    "Not quite a hole-in-one, but you're on the green! Keep swinging!",
+    "Like my border wall - needs to be ten feet higher! Keep building!",
+    "You're playing too nice! Sometimes you need to get tough, very tough!",
+    "Almost Mar-a-Lago quality, but not quite there yet! Keep pushing!",
+    "The electoral college of answers - technically passing, but we want a landslide!",
+    "Like my ventures in Atlantic City - showing promise but needs work!"
   ],
   lowScore: [
     "Low energy response! Sad!",
     "I've heard better from CNN, and that's saying something!",
     "That's not how you make America great! Try again!",
-    "Wrong! You need to think bigger, much bigger!"
+    "Wrong! You need to think bigger, much bigger!",
+    "This is why we need to drain the swamp! Total disaster!",
+    "Even Sleepy Joe could do better than that! Not good!",
+    "This is what we call fake news, folks! We need real answers!",
+    "That response is weaker than the radical left! Believe me!",
+    "A response like that would never build a wall! Terrible!",
+    "Complete witch hunt of an answer! We need winners, not losers!",
+    "This answer has more leaks than the Deep State! Not acceptable!",
+    "Worse than Crooked Hillary's emails! We need better security!",
+    "Like the Paris Climate Accord - a total waste of energy! Sad!",
+    "This response belongs in the socialist handbook! Do better!",
+    "Even Lyin' Ted gave better answers than this! Major disappointment!"
   ],
   winning: [
     "You did it! You're a winner, and I love winners!",
     "This is huge! Really huge! You've earned my respect!",
-    "Now that's what I call the Art of the Deal! Congratulations!"
+    "Now that's what I call the Art of the Deal! Congratulations!",
+    "Perfect response, maybe the most perfect in history! Nobody's ever seen anything like it!",
+    "You're fired... up! That's championship material right there!",
+    "We're going to need a bigger trophy! Simply amazing, folks!",
+    "This is what winning looks like! And we're going to keep winning!",
+    "You just made answering great again! Absolutely tremendous!",
+    "That's a golden response! Trump Tower worthy! The best!",
+    "Mission accomplished! Nobody's ever done it better, believe me!",
+    "This deserves a presidential medal! The highest honor, truly the highest!",
+    "Your answer makes my inauguration crowd look small! Absolutely massive!",
+    "Better than covfefe! And that was perfect, trust me on this!",
+    "Like my victory in 2016 - nobody saw it coming, but it was beautiful!",
+    "This answer should be written in gold letters on Trump Tower! Magnificent!"
   ]
 };
 
