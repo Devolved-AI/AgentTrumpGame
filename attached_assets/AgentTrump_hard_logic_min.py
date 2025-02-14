@@ -16,8 +16,11 @@ from sqlalchemy import create_engine, text
 from eth_account.messages import encode_defunct
 from web3 import Web3
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with more detailed format
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 class AgentTrump:
@@ -29,18 +32,21 @@ class AgentTrump:
         self.red_button_protection = True
         openai.api_key = openai_api_key
 
-        # Initialize database connection
+        # Initialize database connection with retry logic
         self.db_url = os.getenv('DATABASE_URL')
         if self.db_url:
-            try:
-                self.engine = create_engine(self.db_url)
-                # Test the connection
-                with self.engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
-                logger.info("Database connection established successfully")
-            except Exception as e:
-                logger.error(f"Database connection error: {e}")
-                self.engine = None
+            for attempt in range(3):
+                try:
+                    self.engine = create_engine(self.db_url)
+                    # Test the connection
+                    with self.engine.connect() as conn:
+                        conn.execute(text("SELECT 1"))
+                    logger.info("Database connection established successfully")
+                    break
+                except Exception as e:
+                    logger.error(f"Database connection attempt {attempt + 1} failed: {e}")
+                    if attempt == 2:
+                        self.engine = None
         else:
             logger.warning("No DATABASE_URL provided")
             self.engine = None
@@ -55,19 +61,33 @@ class AgentTrump:
             return False
 
         try:
+            # First check if response already exists
+            if tx_hash:
+                check_query = text("""
+                    SELECT id FROM player_responses 
+                    WHERE transaction_hash = :tx_hash
+                """)
+                with self.engine.connect() as conn:
+                    result = conn.execute(check_query, {'tx_hash': tx_hash}).fetchone()
+                    if result:
+                        logger.info(f"Response already exists for tx_hash: {tx_hash}")
+                        return True
+
+            # Insert new response
             query = text("""
-                INSERT INTO player_responses (address, response, block_number, transaction_hash, created_at)
-                VALUES (:address, :response, :block_number, :tx_hash, NOW())
+                INSERT INTO player_responses 
+                (address, response, block_number, transaction_hash, created_at, exists)
+                VALUES (:address, :response, :block_number, :tx_hash, NOW(), TRUE)
             """)
 
-            with self.engine.begin() as conn:  # Using begin() for automatic transaction handling
+            with self.engine.begin() as conn:
                 conn.execute(query, {
                     'address': address,
                     'response': response,
                     'block_number': block_number,
                     'tx_hash': tx_hash
                 })
-            logger.info(f"Stored player response for tx_hash: {tx_hash}")
+                logger.info(f"Stored player response for tx_hash: {tx_hash}")
             return True
         except Exception as e:
             logger.error(f"Failed to store player response: {e}")
@@ -113,105 +133,90 @@ class AgentTrump:
                 for msg in user_history[-3:]:  # Include last 3 messages for context
                     messages.insert(1, {"role": "assistant" if msg['is_trump'] else "user", "content": msg['text']})
 
+            logger.info("Generating AI response...")
             response = openai.ChatCompletion.create(
                 model="gpt-4",
                 messages=messages,
                 temperature=0.9,
-                max_tokens=1000
+                max_tokens=150  # Reduced for faster response
             )
+            logger.info("AI response generated successfully")
             return response['choices'][0]['message']['content'].strip()
         except Exception as e:
-            return f"Error generating response: {e}"
+            logger.error(f"Error generating response: {e}")
+            return "Look folks, we're having some technical difficulties - but we'll be back, bigger and better than ever!"
 
     def evaluate_persuasion(self, user_input: str) -> int:
         """Enhanced persuasion evaluation"""
-        # Original scoring logic
-        positive_keywords = [
-            "important", "help", "critical", "urgent", "press", "essential", "necessary",
-            "blockchain", "web3", "smart contract", "base", "ethereum"
-        ]
-        negative_keywords = ["waste", "unnecessary", "irrelevant", "frivolous"]
+        logger.info("Evaluating persuasion score...")
+
         score_change = 0
 
-        # Enhanced scoring based on blockchain context
+        # Simplified scoring for faster processing
         input_length = len(user_input.split())
-        if input_length < 5:
-            score_change -= random.randint(5, 10)
-        elif input_length > 40:
-            score_change -= random.randint(3, 8)
+        if 5 <= input_length <= 30:
+            score_change += 5
 
-        # Check for blockchain/web3 awareness
+        # Check for blockchain/web3 terms
         web3_terms = ["blockchain", "web3", "smart contract", "base", "ethereum"]
-        web3_awareness = sum(1 for term in web3_terms if term in user_input.lower())
-        score_change += web3_awareness * 2
+        web3_awareness = sum(1 for term in web3_terms if term.lower() in user_input.lower())
+        score_change += web3_awareness * 3
 
-        # Original keyword scoring with blockchain bonus
-        for word in positive_keywords:
-            if word in user_input.lower():
-                bonus = 2 if word in web3_terms else 1
-                score_change += random.randint(1, 3) * bonus
+        # Random element to make it challenging
+        score_change += random.randint(-5, 10)
 
-        for word in negative_keywords:
-            if word in user_input.lower():
-                score_change -= random.randint(2, 5)
-
-        # Blockchain-specific logic traps
-        if "smart contract" in user_input.lower() and "not secure" in user_input.lower():
-            score_change -= 15
-
-        # Random blockchain-related setbacks
-        if random.random() < 0.15:
-            setback = random.randint(5, 20)
-            score_change -= setback
-
-        return max(0, min(100, self.persuasion_score + score_change))
+        final_score = max(0, min(100, self.persuasion_score + score_change))
+        logger.info(f"New persuasion score calculated: {final_score}")
+        return final_score
 
     def interact(self, address: str, message: str, block_number: int, tx_hash: Optional[str] = None) -> Dict:
         """Enhanced interaction method with blockchain integration"""
         logger.info(f"Processing interaction for address: {address}, tx_hash: {tx_hash}")
 
-        # Process the interaction
+        # Store response first to ensure it's available for retrieval
+        store_success = self.store_player_response(address, message, block_number, tx_hash)
+        if not store_success:
+            logger.error("Failed to store player response")
+            return {
+                "success": False,
+                "message": "Failed to store response",
+                "score": self.persuasion_score
+            }
+
+        # Generate response and evaluate
         trump_response = self.generate_response(message)
         new_score = self.evaluate_persuasion(message)
 
-        # Store response and update score with transaction hash
-        store_success = self.store_player_response(address, message, block_number, tx_hash)
+        # Update the score
         update_success = self.update_player_score(address, new_score)
-
-        if not store_success or not update_success:
-            logger.error("Failed to store response or update score")
+        if not update_success:
+            logger.error("Failed to update player score")
             return {
                 "success": False,
-                "message": "Database operation failed",
+                "message": trump_response,
                 "score": new_score
             }
 
         # Update internal score
         self.persuasion_score = new_score
 
-        # Check win condition
-        if self.persuasion_score >= self.threshold and not self.red_button_protection:
-            self.red_button_protection = True
-            return {
-                "success": True,
-                "message": trump_response,
-                "game_won": True,
-                "score": self.persuasion_score
-            }
-        elif self.persuasion_score >= self.threshold and self.red_button_protection:
-            self.red_button_protection = False
-            return {
-                "success": True,
-                "message": trump_response,
-                "threshold_reached": True,
-                "score": self.persuasion_score
-            }
-
-        return {
+        response_data = {
             "success": True,
             "message": trump_response,
             "score": self.persuasion_score
         }
+
+        # Check win conditions
+        if self.persuasion_score >= self.threshold:
+            if self.red_button_protection:
+                self.red_button_protection = False
+                response_data["threshold_reached"] = True
+            else:
+                self.red_button_protection = True
+                response_data["game_won"] = True
+
+        logger.info(f"Interaction completed successfully: {response_data}")
+        return response_data
 
     def additional_challenge(self, user_address: str) -> None:
         """Enhanced additional challenge with blockchain elements"""
@@ -282,7 +287,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Configure logging for the main function
     logger.info(f"Processing request for address: {args.address}")
     logger.info(f"Transaction hash: {args.tx_hash}")
 
