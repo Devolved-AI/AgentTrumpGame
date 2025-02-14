@@ -155,7 +155,7 @@ export default function Home() {
 
       try {
         // Submit transaction and get response from Python agent via API
-        const { tx } = await gameContract.submitResponse(response, gameStatus.currentAmount);
+        const { tx, blockNumber } = await gameContract.submitResponse(response, gameStatus.currentAmount);
         console.log('Transaction submitted:', tx.hash);
 
         // Update transaction status to success

@@ -105,7 +105,7 @@ export function registerRoutes(app: Express): Server {
   // API route to add player response with retry logic
   app.post('/api/responses', async (req, res) => {
     try {
-      const { address, response, blockNumber, signature } = req.body;
+      const { address, response, blockNumber, signature, transactionHash } = req.body;
 
       // Get AI agent's response and analysis
       const result = await interactWithAIAgent(
@@ -122,7 +122,8 @@ export function registerRoutes(app: Express): Server {
       // Store the response in database
       const storedResponse = await storage.addPlayerResponse({
         ...req.body,
-        exists: true
+        exists: true,
+        timestamp: new Date()
       });
 
       // Update the player's score
