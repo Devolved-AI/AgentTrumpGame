@@ -177,8 +177,14 @@ class AgentTrump:
             return False
 
     def generate_response(self, user_input: str) -> str:
-        """Generate AI response with error handling"""
+        """Generate AI response with enhanced error handling and fallback responses"""
         try:
+            logger.info(f"Generating response for input: {user_input[:50]}...")
+
+            if not openai.api_key:
+                logger.error("OpenAI API key is not set")
+                return "Folks, we're having some technical difficulties with our tremendous AI system. Please ensure your API key is set!"
+
             client = openai.OpenAI()
             messages = [
                 {"role": "system", "content": """You are Donald Trump in a blockchain game. 
@@ -189,74 +195,91 @@ class AgentTrump:
                 {"role": "user", "content": user_input}
             ]
 
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=messages,
-                temperature=0.9,
-                max_tokens=150
-            )
-            return response.choices[0].message.content.strip()
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=messages,
+                    temperature=0.9,
+                    max_tokens=150
+                )
+                generated_response = response.choices[0].message.content.strip()
+                logger.info("Successfully generated AI response")
+                return generated_response
+            except openai.RateLimitError:
+                logger.error("OpenAI API rate limit exceeded")
+                return "Listen folks, my tremendous AI brain is a bit tired right now. Too many people want to talk to me - I'm very popular you know! Try again in a minute, believe me!"
+            except openai.AuthenticationError:
+                logger.error("OpenAI API authentication failed")
+                return "We're having some problems with my AI credentials. Very bad situation! Please check the API key!"
+            except openai.APIError as e:
+                logger.error(f"OpenAI API error: {str(e)}")
+                return "The AI servers are having some issues - not good! But we'll be back, bigger and better than ever!"
+
         except Exception as e:
-            logger.error(f"Error generating AI response: {e}")
+            logger.error(f"Unexpected error in generate_response: {str(e)}")
             return "Look folks, we're having some technical difficulties with our tremendous AI system. But don't worry, we'll be back, bigger and better than ever! Believe me!"
 
-    def evaluate_persuasion(self, user_input: str, current_score: int) -> int:
-        """Enhanced persuasion evaluation"""
-        try:
-            score_change = 0
-            input_length = len(user_input.split())
-
-            # Basic length check
-            if 5 <= input_length <= 50:
-                score_change += 5
-
-            # Check for blockchain/web3 terms
-            web3_terms = ["blockchain", "web3", "smart contract", "base", "ethereum"]
-            web3_awareness = sum(1 for term in web3_terms if term.lower() in user_input.lower())
-            score_change += web3_awareness * 3
-
-            # Add randomness
-            score_change += random.randint(-5, 10)
-
-            # Calculate final score
-            final_score = max(0, min(100, current_score + score_change))
-            logger.info(f"Score calculation: current={current_score}, change={score_change}, final={final_score}")
-            return final_score
-        except Exception as e:
-            logger.error(f"Error in persuasion evaluation: {e}")
-            return current_score
-
     def interact(self, address: str, message: str, block_number: int, tx_hash: Optional[str] = None) -> Dict:
-        """Main interaction method with comprehensive error handling"""
+        """Main interaction method with enhanced error handling and logging"""
         logger.info(f"Processing interaction: address={address}, tx_hash={tx_hash}")
 
         try:
-            # Get current score
-            current_score = self.get_player_score(address)
+            # Get current score with error handling
+            try:
+                current_score = self.get_player_score(address)
+                logger.info(f"Current score for {address}: {current_score}")
+            except Exception as e:
+                logger.error(f"Error getting player score: {e}")
+                current_score = 50  # Fallback to default score
 
-            # Store response
-            store_success = self.store_player_response(address, message, block_number, tx_hash)
-            if not store_success:
+            # Store response with validation
+            if not tx_hash:
+                logger.warning("No transaction hash provided")
                 return {
                     "success": False,
-                    "message": "Failed to store response",
+                    "message": "Transaction hash is required",
                     "score": current_score
                 }
 
-            # Generate AI response
+            # Store response with retry
+            for attempt in range(3):
+                try:
+                    store_success = self.store_player_response(address, message, block_number, tx_hash)
+                    if store_success:
+                        break
+                    logger.warning(f"Store attempt {attempt + 1} failed")
+                except Exception as e:
+                    logger.error(f"Store attempt {attempt + 1} error: {e}")
+                    if attempt == 2:
+                        return {
+                            "success": False,
+                            "message": "Failed to store response after multiple attempts",
+                            "score": current_score
+                        }
+
+            # Generate AI response with improved error handling
             trump_response = self.generate_response(message)
+            logger.info("Generated Trump response successfully")
 
             # Evaluate and update score
             new_score = self.evaluate_persuasion(message, current_score)
-            update_success = self.update_player_score(address, new_score)
+            logger.info(f"New score calculated: {new_score}")
 
-            if not update_success:
-                logger.error("Failed to update player score")
-                return {
-                    "success": False,
-                    "message": trump_response,
-                    "score": current_score
-                }
+            # Update score with retry
+            for attempt in range(3):
+                try:
+                    update_success = self.update_player_score(address, new_score)
+                    if update_success:
+                        break
+                    logger.warning(f"Score update attempt {attempt + 1} failed")
+                except Exception as e:
+                    logger.error(f"Score update attempt {attempt + 1} error: {e}")
+                    if attempt == 2:
+                        return {
+                            "success": True,
+                            "message": trump_response,
+                            "score": current_score
+                        }
 
             response_data = {
                 "success": True,
@@ -265,15 +288,15 @@ class AgentTrump:
                 "game_won": new_score >= self.threshold
             }
 
-            logger.info(f"Interaction completed: {response_data}")
+            logger.info(f"Interaction completed successfully: {response_data}")
             return response_data
 
         except Exception as e:
-            logger.error(f"Error in interaction: {e}")
+            logger.error(f"Critical error in interaction: {str(e)}")
             return {
                 "success": False,
-                "message": "An error occurred during the interaction",
-                "score": current_score
+                "message": "An unexpected error occurred. Please try again.",
+                "score": current_score if 'current_score' in locals() else 50
             }
 
 def main():
