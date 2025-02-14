@@ -5,6 +5,7 @@ export interface ChatMessage {
   message: string;
   isUser: boolean;
   timestamp: string;
+  isLoading?: boolean;
   transactionHash?: string;
 }
 
@@ -52,20 +53,27 @@ export function useChat(address: string | null) {
     }
   }, [messages, address]);
 
-  const addMessage = (message: string, isUser: boolean, transactionHash?: string) => {
-    console.log('Adding message:', { message, isUser, transactionHash }); // Debug log
+  const addMessage = (
+    message: string, 
+    isUser: boolean, 
+    messageId?: string, 
+    isLoading?: boolean, 
+    transactionHash?: string
+  ) => {
+    console.log('Adding message:', { message, isUser, messageId, isLoading, transactionHash }); // Debug log
 
-    // Don't add empty messages
-    if (!message.trim()) {
+    // Don't add empty messages unless it's a loading message
+    if (!message.trim() && !isLoading) {
       console.log('Skipping empty message');
       return;
     }
 
     const newMessage: ChatMessage = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: messageId || `${Date.now()}-${Math.random()}`,
       message: message.trim(),
       isUser,
       timestamp: new Date().toISOString(),
+      isLoading,
       transactionHash
     };
 
@@ -73,7 +81,8 @@ export function useChat(address: string | null) {
       // Check for duplicate messages (same content and transaction hash)
       const isDuplicate = prev.some(msg => 
         msg.message === newMessage.message && 
-        msg.transactionHash === newMessage.transactionHash
+        msg.transactionHash === newMessage.transactionHash &&
+        !msg.isLoading // Don't consider loading messages as duplicates
       );
 
       if (isDuplicate) {
@@ -96,6 +105,7 @@ export function useChat(address: string | null) {
   return {
     messages,
     addMessage,
-    clearChat
+    clearChat,
+    setMessages
   };
 }
