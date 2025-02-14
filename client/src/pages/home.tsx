@@ -169,7 +169,7 @@ export default function Home() {
                 blockNumber: blockNumber
             });
 
-            // Update the user's message with the transaction hash
+            // Only add the message after transaction confirmation with the hash
             addMessage(response, true, tx.hash);
 
             // Update transaction status to success
