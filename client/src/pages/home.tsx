@@ -548,8 +548,9 @@ function handleSubmissionError(error: any) {
     }, 1000); // Update every second
 
     return () => clearInterval(interval);
-  }, [gameContract, web3State.account, gameStatus.timeRemaining]);
+  }, [gameContract, web3State.account]);
 
+  // Prize pool update interval
   useEffect(() => {
     if (!gameContract || !web3State.account) return;
 
