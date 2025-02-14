@@ -128,7 +128,7 @@ export function registerRoutes(app: Express): Server {
 
       res.json({
         ...storedResponse,
-        aiResponse: result.message,
+        message: result.message,
         score: result.score,
         gameWon: result.game_won || false
       });
@@ -147,6 +147,41 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Get responses error:", error);
       res.status(500).json({ error: 'Failed to get responses' });
+    }
+  });
+
+  // API route to get response by transaction hash
+  app.get('/api/responses/tx/:hash', async (req, res) => {
+    try {
+      const { hash } = req.params;
+      const responses = await storage.getPlayerResponses("");
+      const response = responses.find(r => r.transactionHash === hash);
+
+      if (!response) {
+        return res.status(404).json({ error: 'Response not found' });
+      }
+
+      // Get the AI response for this response
+      const result = await interactWithAIAgent(
+        response.address,
+        response.response,
+        "",  // We don't need signature for viewing
+        response.blockNumber
+      );
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      res.json({
+        ...response,
+        message: result.message,
+        score: result.score,
+        gameWon: result.game_won || false
+      });
+    } catch (error) {
+      console.error("Get response by hash error:", error);
+      res.status(500).json({ error: 'Failed to get response' });
     }
   });
 

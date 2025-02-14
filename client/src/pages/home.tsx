@@ -154,11 +154,7 @@ export default function Home() {
       console.log('Submitting response with current amount:', gameStatus.currentAmount);
 
       try {
-        // Evaluate the response locally
-        const evaluation = await gameContract.evaluateResponse(response);
-        console.log('Response evaluation:', evaluation);
-
-        // Submit transaction with the evaluated score
+        // Submit transaction and get response from Python agent via API
         const { tx } = await gameContract.submitResponse(response, gameStatus.currentAmount);
         console.log('Transaction submitted:', tx.hash);
 
@@ -168,14 +164,18 @@ export default function Home() {
         // Update game state after successful transaction
         await refreshGameStatus();
 
-        // Get Trump's response based on the evaluation
-        const trumpResponse = gameContract.getTrumpResponse(evaluation.scoreIncrement);
+        // Get the AI response from the API using the transaction hash
+        const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
+        if (!apiResponse.ok) {
+          throw new Error('Failed to get AI response');
+        }
+        const data = await apiResponse.json();
 
         // Add Agent Trump's response
-        addMessage(trumpResponse, false, tx.hash);
+        addMessage(data.message, false, tx.hash);
 
         // Update the persuasion score
-        const newScore = Math.min(100, Math.max(0, persuasionScore + evaluation.scoreIncrement));
+        const newScore = data.score;
         setPersuasionScore(newScore);
 
         // Store the updated score
