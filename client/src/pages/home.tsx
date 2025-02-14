@@ -178,6 +178,16 @@ export default function Home() {
             // Get the AI response from the API using the transaction hash
             console.log('Fetching AI response for transaction:', tx.hash);
 
+            // Add temporary loading message
+            const loadingMessage = {
+                content: "Agent Trump is thinking...",
+                isUser: false,
+                isLoading: true,
+                timestamp: Date.now(),
+                txHash: tx.hash
+            };
+            addMessage(loadingMessage.content, false, tx.hash, true);
+
             // Try up to 3 times with increasing delays
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
@@ -205,7 +215,7 @@ export default function Home() {
                     const data = await apiResponse.json();
                     console.log('AI response received:', data);
 
-                    // Add Agent Trump's response
+                    // Remove loading message and add Agent Trump's response
                     addMessage(data.message, false, tx.hash);
 
                     // Update the persuasion score
@@ -222,7 +232,7 @@ export default function Home() {
                     });
 
                     // Successfully got response, exit retry loop
-                    return;
+                    break;
                 } catch (error) {
                     console.error(`Attempt ${attempt} failed:`, error);
                     if (attempt === 3) {
