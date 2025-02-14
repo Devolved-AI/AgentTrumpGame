@@ -9,7 +9,7 @@ export interface ChatMessage {
   message: string;
   isUser: boolean;
   timestamp: string;
-  transactionHash?: string;
+  isLoading?: boolean;
 }
 
 interface ChatContainerProps {
@@ -44,8 +44,6 @@ export function ChatContainer({
     }
   }, [messages]);
 
-  console.log('ChatContainer messages:', messages); // Debug log
-
   return (
     <div className="relative w-full h-full rounded-[38px] bg-[#f2f2f7] shadow-xl overflow-hidden flex flex-col">
       {/* iPhone Notch */}
@@ -75,7 +73,7 @@ export function ChatContainer({
               message={msg.message}
               isUser={msg.isUser}
               timestamp={new Date(msg.timestamp)}
-              transactionHash={msg.transactionHash}
+              isLoading={msg.isLoading}
             />
           ))}
         </div>

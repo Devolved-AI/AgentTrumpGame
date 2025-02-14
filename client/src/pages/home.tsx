@@ -175,25 +175,16 @@ export default function Home() {
             // Update game state after successful transaction
             await refreshGameStatus();
 
-            // Get the AI response from the API using the transaction hash
-            console.log('Fetching AI response for transaction:', tx.hash);
-
-            // Add temporary loading message
-            const loadingMessage = {
-                content: "Agent Trump is thinking...",
-                isUser: false,
-                isLoading: true,
-                timestamp: Date.now(),
-                txHash: tx.hash
-            };
-            addMessage(loadingMessage.content, false, tx.hash, true);
+            // Show loading animation in chat
+            const messageId = Date.now().toString();
+            addMessage("", false, messageId, true);
 
             // Try up to 3 times with increasing delays
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                     // Wait before retrying (except first attempt)
                     if (attempt > 1) {
-                        await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Increased delay
+                        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
                     }
 
                     const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
@@ -215,8 +206,8 @@ export default function Home() {
                     const data = await apiResponse.json();
                     console.log('AI response received:', data);
 
-                    // Remove loading message and add Agent Trump's response
-                    addMessage(data.message, false, tx.hash);
+                    // Replace loading message with AI response
+                    addMessage(data.message, false);
 
                     // Update the persuasion score
                     const newScore = data.score;
@@ -268,7 +259,6 @@ export default function Home() {
 
             throw error;
         }
-
     } catch (error: any) {
         console.error("Submission error:", error);
         toast({

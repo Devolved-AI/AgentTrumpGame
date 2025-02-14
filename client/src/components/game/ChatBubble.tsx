@@ -1,41 +1,14 @@
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
-import { ExternalLink } from "lucide-react";
-import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 interface ChatBubbleProps {
   message: string;
   isUser: boolean;
   timestamp: Date;
-  transactionHash?: string;
+  isLoading?: boolean;
 }
 
-export function ChatBubble({ message, isUser, timestamp, transactionHash }: ChatBubbleProps) {
-  const [displayedMessage, setDisplayedMessage] = useState("");
-  const [isTyping, setIsTyping] = useState(!isUser); // Only show typing for Trump's messages
-
-  // Typing animation effect
-  useEffect(() => {
-    if (!isUser) {
-      let currentIndex = 0;
-      setIsTyping(true);
-
-      const typingInterval = setInterval(() => {
-        if (currentIndex < message.length) {
-          setDisplayedMessage(message.substring(0, currentIndex + 1));
-          currentIndex++;
-        } else {
-          clearInterval(typingInterval);
-          setIsTyping(false);
-        }
-      }, 30); // Adjust typing speed here
-
-      return () => clearInterval(typingInterval);
-    } else {
-      setDisplayedMessage(message);
-    }
-  }, [message, isUser]);
-
+export function ChatBubble({ message, isUser, timestamp, isLoading }: ChatBubbleProps) {
   return (
     <motion.div 
       className={cn(
@@ -52,24 +25,16 @@ export function ChatBubble({ message, isUser, timestamp, transactionHash }: Chat
           ? "bg-[#007AFF] text-white rounded-br-[4px]" 
           : "bg-[#E9E9EB] text-[#000000] rounded-bl-[4px]"
       )}>
-        <p className="text-[15px] leading-5 break-words font-[-apple-system]">
-          {isUser ? message : displayedMessage}
-          {isTyping && <span className="animate-pulse">|</span>}
-        </p>
-
-        {transactionHash && (
-          <a 
-            href={`https://sepolia.basescan.org/tx/${transactionHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex items-center gap-1 text-[10px] mt-1 hover:underline",
-              isUser ? "text-white/70" : "text-black/50"
-            )}
-          >
-            <ExternalLink className="w-3 h-3" />
-            View transaction
-          </a>
+        {isLoading ? (
+          <div className="flex items-center space-x-1">
+            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+          </div>
+        ) : (
+          <p className="text-[15px] leading-5 break-words font-[-apple-system]">
+            {message}
+          </p>
         )}
 
         <p className={cn(

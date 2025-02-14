@@ -179,21 +179,23 @@ class AgentTrump:
     def generate_response(self, user_input: str) -> str:
         """Generate AI response with error handling"""
         try:
+            client = openai.OpenAI()
             messages = [
                 {"role": "system", "content": """You are Donald Trump in a blockchain game. 
                 You're evaluating players trying to convince you to press a red button.
                 Respond in Trump's distinctive style, incorporating blockchain and Web3 references.
-                Be entertaining but hard to convince. Reference cryptocurrency, smart contracts, and BASE network occasionally."""},
+                Be entertaining but hard to convince. Reference cryptocurrency, smart contracts, and BASE network occasionally.
+                Keep responses varied and dynamic - avoid repetition."""},
                 {"role": "user", "content": user_input}
             ]
 
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-4",
                 messages=messages,
                 temperature=0.9,
                 max_tokens=150
             )
-            return response['choices'][0]['message']['content'].strip()
+            return response.choices[0].message.content.strip()
         except Exception as e:
             logger.error(f"Error generating AI response: {e}")
             return "Look folks, we're having some technical difficulties with our tremendous AI system. But don't worry, we'll be back, bigger and better than ever! Believe me!"
