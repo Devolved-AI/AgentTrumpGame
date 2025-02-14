@@ -5,6 +5,6 @@
   "framework": "vite",
   "outputDirectory": "dist",
   "env": {
-    "VITE_BASE_CONTRACT_ADDRESS": "0x96E44cfCADA0068c0Eb7B9FFa38146ef059c5C54"
+    "VITE_BASE_CONTRACT_ADDRESS": "0xB15B10344cE62ECfa945A8CD3d1bbdf1F062F1f7"
   }
 }
