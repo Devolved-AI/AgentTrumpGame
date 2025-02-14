@@ -18,6 +18,7 @@ export interface IStorage {
   updatePlayerScore(address: string, score: number): Promise<PlayerScore>;
   addPlayerResponse(data: PlayerResponse): Promise<PlayerResponse>;
   getPlayerResponses(address: string): Promise<PlayerResponse[]>;
+  getResponseByHash(hash: string): Promise<PlayerResponse | undefined>;
 }
 
 class MemoryStorage implements IStorage {
@@ -46,7 +47,8 @@ class MemoryStorage implements IStorage {
     const response = {
       ...data,
       address: data.address.toLowerCase(),
-      timestamp: new Date()
+      timestamp: new Date(),
+      exists: true
     };
     this.responses.push(response);
     return response;
@@ -54,8 +56,12 @@ class MemoryStorage implements IStorage {
 
   async getPlayerResponses(address: string): Promise<PlayerResponse[]> {
     return this.responses
-      .filter(r => r.address.toLowerCase() === address.toLowerCase())
+      .filter(r => !address || r.address.toLowerCase() === address.toLowerCase())
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+
+  async getResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
+    return this.responses.find(r => r.transactionHash === hash);
   }
 }
 

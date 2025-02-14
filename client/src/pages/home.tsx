@@ -166,32 +166,55 @@ export default function Home() {
 
         // Get the AI response from the API using the transaction hash
         console.log('Fetching AI response for transaction:', tx.hash);
-        const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
 
-        if (!apiResponse.ok) {
-          const errorData = await apiResponse.json().catch(() => ({ error: 'Unknown error' }));
-          console.error('API error:', errorData);
-          throw new Error(errorData.error || 'Failed to get AI response');
+        // Try up to 3 times with increasing delays
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            // Wait before retrying (except first attempt)
+            if (attempt > 1) {
+              await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+            }
+
+            const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
+
+            if (!apiResponse.ok) {
+              const errorData = await apiResponse.json().catch(() => ({ error: 'Unknown error' }));
+              console.error(`API error (attempt ${attempt}):`, errorData);
+
+              if (apiResponse.status === 404 && attempt < 3) {
+                console.log(`Response not found, will retry in ${attempt}s...`);
+                continue;
+              }
+              throw new Error(errorData.error || 'Failed to get AI response');
+            }
+
+            const data = await apiResponse.json();
+            console.log('AI response received:', data);
+
+            // Add Agent Trump's response
+            addMessage(data.message, false, tx.hash);
+
+            // Update the persuasion score
+            const newScore = data.score;
+            setPersuasionScore(newScore);
+
+            // Store the updated score
+            storePersuasionScore(web3State.account, newScore);
+
+            // Show success toast
+            toast({
+              title: "Response Submitted",
+              description: "Your response has been recorded on the blockchain.",
+            });
+
+            // Successfully got response, exit retry loop
+            return;
+          } catch (error) {
+            if (attempt === 3) {
+              throw error;
+            }
+          }
         }
-
-        const data = await apiResponse.json();
-        console.log('AI response received:', data);
-
-        // Add Agent Trump's response
-        addMessage(data.message, false, tx.hash);
-
-        // Update the persuasion score
-        const newScore = data.score;
-        setPersuasionScore(newScore);
-
-        // Store the updated score
-        storePersuasionScore(web3State.account, newScore);
-
-        // Show success toast
-        toast({
-          title: "Response Submitted",
-          description: "Your response has been recorded on the blockchain.",
-        });
 
       } catch (error: any) {
         // Handle transaction failure

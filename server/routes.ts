@@ -49,6 +49,8 @@ async function interactWithAIAgent(address: string, message: string, signature: 
   });
 }
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export function registerRoutes(app: Express): Server {
   // API route to update player score
   app.post('/api/scores', async (req, res) => {
@@ -100,7 +102,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API route to add player response
+  // API route to add player response with retry logic
   app.post('/api/responses', async (req, res) => {
     try {
       const { address, response, blockNumber, signature } = req.body;
@@ -150,59 +152,65 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API route to get response by transaction hash
+  // API route to get response by transaction hash with retries
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      // Get all responses and filter by transaction hash
-      const responses = await storage.getPlayerResponses("");
-      console.log('Found responses:', responses);
+      // Try up to 3 times with a delay between attempts
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const response = await storage.getResponseByHash(hash);
 
-      const response = responses.find(r => r.transactionHash === hash);
-      console.log('Matched response:', response);
+        if (response) {
+          console.log('Found response:', response);
+          try {
+            // Get the AI response for this response
+            console.log('Calling AI agent with:', {
+              address: response.address,
+              response: response.response,
+              blockNumber: response.blockNumber
+            });
 
-      if (!response) {
-        console.log('No response found for hash:', hash);
-        return res.status(404).json({ error: 'Response not found' });
-      }
+            const result = await interactWithAIAgent(
+              response.address,
+              response.response,
+              "",  // We don't need signature for viewing
+              response.blockNumber
+            );
 
-      try {
-        // Get the AI response for this response
-        console.log('Calling AI agent with:', {
-          address: response.address,
-          response: response.response,
-          blockNumber: response.blockNumber
-        });
+            console.log('AI agent response:', result);
 
-        const result = await interactWithAIAgent(
-          response.address,
-          response.response,
-          "",  // We don't need signature for viewing
-          response.blockNumber
-        );
+            if (!result.success) {
+              console.error('AI agent error:', result.message);
+              return res.status(400).json({ error: result.message });
+            }
 
-        console.log('AI agent response:', result);
+            const responseData = {
+              ...response,
+              message: result.message,
+              score: result.score,
+              gameWon: result.game_won || false
+            };
+            console.log('Sending response:', responseData);
 
-        if (!result.success) {
-          console.error('AI agent error:', result.message);
-          return res.status(400).json({ error: result.message });
+            return res.json(responseData);
+          } catch (error) {
+            console.error('AI agent error:', error);
+            return res.status(500).json({ error: 'Failed to get AI response: ' + error.message });
+          }
         }
 
-        const responseData = {
-          ...response,
-          message: result.message,
-          score: result.score,
-          gameWon: result.game_won || false
-        };
-        console.log('Sending response:', responseData);
-
-        res.json(responseData);
-      } catch (error) {
-        console.error('AI agent error:', error);
-        res.status(500).json({ error: 'Failed to get AI response: ' + error.message });
+        // If response not found and not last attempt, wait before retry
+        if (attempt < 2) {
+          console.log(`Attempt ${attempt + 1}: Response not found, waiting before retry...`);
+          await sleep(1000); // Wait 1 second before retry
+        }
       }
+
+      // If we got here, we couldn't find the response after all retries
+      console.log('No response found after all retries');
+      return res.status(404).json({ error: 'Response not found' });
     } catch (error) {
       console.error("Get response by hash error:", error);
       res.status(500).json({ error: 'Failed to get response' });
