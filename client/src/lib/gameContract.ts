@@ -104,56 +104,15 @@ export class GameContract {
   }
 
   async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
-    const lowerResponse = response.toLowerCase();
-    let scoreIncrement = 0;
-
-    // Define key Trump themes and phrases to look for
-    const persuasiveThemes = {
-      businessAcumen: /(?:great deals?|successful business|billions|tremendous success|winning|art of the deal)/i,
-      americaFirst: /(?:make america great|america first|usa|american jobs|american workers)/i,
-      leadership: /(?:strong leader|tough decisions|get things done|nobody else could|only I can)/i,
-      trumpisms: /(?:believe me|many people are saying|everybody knows|tremendous|huge|the best|like never before|very strongly)/i,
-      baseAppeals: /(?:drain the swamp|fake news|deep state|witch hunt|no collusion)/i,
-      flattery: /(?:greatest president|smart|genius|very stable|best negotiator|true leader)/i
-    };
-
-    let themesFound = 0;
-    for (const [theme, pattern] of Object.entries(persuasiveThemes)) {
-      if (pattern.test(lowerResponse)) {
-        themesFound++;
-      }
+    try {
+      const { analyzeTrumpResponse } = await import('./ai/trumpAI');
+      const result = await analyzeTrumpResponse(response);
+      return { scoreIncrement: result.persuasionScore };
+    } catch (error) {
+      console.error('Error evaluating response:', error);
+      // Fallback to minimum score if AI fails
+      return { scoreIncrement: 0 };
     }
-
-    const hasEmphasis = (response.match(/[A-Z]{2,}/g) || []).length > 0;
-    const hasExclamation = response.includes('!');
-    const properLength = response.length >= 50 && response.length <= 280;
-
-    scoreIncrement += themesFound * 5;
-
-    if (hasEmphasis) scoreIncrement += 2;
-    if (hasExclamation) scoreIncrement += 2;
-    if (properLength) scoreIncrement += 1;
-
-    const isExtraordinary = 
-      themesFound >= 4 &&
-      hasEmphasis &&
-      hasExclamation &&
-      properLength &&
-      /tremendous|huge|believe me|many people|the best/.test(lowerResponse);
-
-    if (isExtraordinary) {
-      return { scoreIncrement: 100 };
-    }
-
-    scoreIncrement = Math.floor(scoreIncrement * 0.7);
-
-    if (scoreIncrement > 0 && scoreIncrement < 100) {
-      scoreIncrement = Math.min(scoreIncrement, 5);
-    } else if (scoreIncrement <= 0) {
-      scoreIncrement = -5;
-    }
-
-    return { scoreIncrement };
   }
 
   async submitResponse(response: string, amount: string) {
@@ -213,7 +172,7 @@ export class GameContract {
         isGameWon,
         multiplier,
         currentBlock,
-        lastPlayerAddress 
+        lastPlayerAddress
       ] = await Promise.all([
         this.contract.getTimeRemaining(),
         this.contract.currentRequiredAmount(),
@@ -221,21 +180,21 @@ export class GameContract {
         this.contract.gameWon(),
         this.contract.currentMultiplier(),
         this.provider.getBlockNumber(),
-        this.contract.lastPlayer() 
+        this.contract.lastPlayer()
       ]);
 
       // Calculate escalation period details
       const baseTimeRemaining = Number(timeRemaining);
       const escalationPeriodLength = 300; // 5 minutes in seconds
-      const escalationPeriodTimeRemaining = escalationActive ? 
+      const escalationPeriodTimeRemaining = escalationActive ?
         baseTimeRemaining % escalationPeriodLength : 0;
-      const currentPeriodIndex = escalationActive ? 
+      const currentPeriodIndex = escalationActive ?
         Math.floor(baseTimeRemaining / escalationPeriodLength) : 0;
 
       return {
         timeRemaining: baseTimeRemaining,
         currentAmount: ethers.formatEther(requiredAmount),
-        lastPlayer: lastPlayerAddress, 
+        lastPlayer: lastPlayerAddress,
         escalationActive,
         gameEndBlock: currentBlock,
         isGameWon,
@@ -257,10 +216,10 @@ export class GameContract {
       return responses.map((response: string, index: number) => ({
         response,
         timestamp: Number(timestamps[index]),
-        blockNumber: 0, 
-        transactionHash: null, 
+        blockNumber: 0,
+        transactionHash: null,
         exists: exists[index],
-        scoreChange: 0 
+        scoreChange: 0
       }));
     } catch (error) {
       console.error('Error getting player history:', error);
