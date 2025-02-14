@@ -22,7 +22,14 @@ export function useChat(address: string | null) {
         `${CHAT_HISTORY_KEY}_${address.toLowerCase()}`
       );
       if (storedMessages) {
-        setMessages(JSON.parse(storedMessages));
+        try {
+          const parsedMessages = JSON.parse(storedMessages);
+          setMessages(parsedMessages);
+          console.log('Loaded chat history:', parsedMessages);
+        } catch (error) {
+          console.error('Error parsing stored messages:', error);
+          setMessages([]);
+        }
       } else {
         // Start with empty messages for new game
         setMessages([]);
@@ -33,29 +40,56 @@ export function useChat(address: string | null) {
   // Save messages to localStorage whenever they change
   useEffect(() => {
     if (address && messages.length > 0) {
-      localStorage.setItem(
-        `${CHAT_HISTORY_KEY}_${address.toLowerCase()}`,
-        JSON.stringify(messages)
-      );
+      try {
+        localStorage.setItem(
+          `${CHAT_HISTORY_KEY}_${address.toLowerCase()}`,
+          JSON.stringify(messages)
+        );
+        console.log('Saved messages to storage:', messages);
+      } catch (error) {
+        console.error('Error saving messages:', error);
+      }
     }
   }, [messages, address]);
 
   const addMessage = (message: string, isUser: boolean, transactionHash?: string) => {
     console.log('Adding message:', { message, isUser, transactionHash }); // Debug log
+
+    // Don't add empty messages
+    if (!message.trim()) {
+      console.log('Skipping empty message');
+      return;
+    }
+
     const newMessage: ChatMessage = {
       id: `${Date.now()}-${Math.random()}`,
-      message,
+      message: message.trim(),
       isUser,
       timestamp: new Date().toISOString(),
       transactionHash
     };
-    setMessages(prev => [...prev, newMessage]);
+
+    setMessages(prev => {
+      // Check for duplicate messages (same content and transaction hash)
+      const isDuplicate = prev.some(msg => 
+        msg.message === newMessage.message && 
+        msg.transactionHash === newMessage.transactionHash
+      );
+
+      if (isDuplicate) {
+        console.log('Skipping duplicate message');
+        return prev;
+      }
+
+      return [...prev, newMessage];
+    });
   };
 
   const clearChat = () => {
     if (address) {
       localStorage.removeItem(`${CHAT_HISTORY_KEY}_${address.toLowerCase()}`);
       setMessages([]);
+      console.log('Chat history cleared');
     }
   };
 

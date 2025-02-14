@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Optional, Dict
 import os
 import json
+import argparse
 from sqlalchemy import create_engine, text
 from eth_account.messages import encode_defunct
 from web3 import Web3
@@ -91,8 +92,8 @@ class AgentTrump:
         except Exception as e:
             return f"Error generating response: {e}"
 
-    def evaluate_persuasion(self, user_input: str, user_address: str, block_number: int) -> None:
-        """Enhanced persuasion evaluation with blockchain integration"""
+    def evaluate_persuasion(self, user_input: str) -> int:
+        """Enhanced persuasion evaluation"""
         # Original scoring logic
         positive_keywords = [
             "important", "help", "critical", "urgent", "press", "essential", "necessary",
@@ -104,10 +105,8 @@ class AgentTrump:
         # Enhanced scoring based on blockchain context
         input_length = len(user_input.split())
         if input_length < 5:
-            print("[AgentTrump] Too short. You've got to put in more effort, like my tremendous blockchain deals!")
             score_change -= random.randint(5, 10)
         elif input_length > 40:
-            print("[AgentTrump] Too much rambling. Get to the point, like a smart contract!")
             score_change -= random.randint(3, 8)
 
         # Check for blockchain/web3 awareness
@@ -127,21 +126,51 @@ class AgentTrump:
 
         # Blockchain-specific logic traps
         if "smart contract" in user_input.lower() and "not secure" in user_input.lower():
-            print("[AgentTrump] Nobody knows smart contracts better than me. That's fake news!")
             score_change -= 15
 
         # Random blockchain-related setbacks
         if random.random() < 0.15:
             setback = random.randint(5, 20)
-            print(f"[AgentTrump] Bad luck! The BASE network is too busy. You lost {setback} points.")
             score_change -= setback
 
-        # Update score and store in database
-        self.persuasion_score = max(0, self.persuasion_score + score_change)
-        self.update_player_score(user_address, self.persuasion_score)
-        self.store_player_response(user_address, user_input, block_number)
+        return max(0, min(100, self.persuasion_score + score_change))
 
-        print(f"[AgentTrump] Persuasion score adjusted by {score_change}. Current score: {self.persuasion_score}")
+    def interact(self, address: str, message: str, block_number: int) -> Dict:
+        """Enhanced interaction method with blockchain integration"""
+        # Process the interaction
+        trump_response = self.generate_response(message)
+        new_score = self.evaluate_persuasion(message)
+
+        # Store response and update score
+        self.store_player_response(address, message, block_number)
+        self.update_player_score(address, new_score)
+
+        # Update internal score
+        self.persuasion_score = new_score
+
+        # Check win condition
+        if self.persuasion_score >= self.threshold and not self.red_button_protection:
+            self.red_button_protection = True
+            return {
+                "success": True,
+                "message": trump_response,
+                "game_won": True,
+                "score": self.persuasion_score
+            }
+        elif self.persuasion_score >= self.threshold and self.red_button_protection:
+            self.red_button_protection = False
+            return {
+                "success": True,
+                "message": trump_response,
+                "threshold_reached": True,
+                "score": self.persuasion_score
+            }
+
+        return {
+            "success": True,
+            "message": trump_response,
+            "score": self.persuasion_score
+        }
 
     def additional_challenge(self, user_address: str) -> None:
         """Enhanced additional challenge with blockchain elements"""
@@ -202,42 +231,28 @@ class AgentTrump:
         else:
             print("[AgentTrump] The smart contract isn't ready yet. Keep trying!")
 
-    def interact(self, user_address: str, message: str, signature: str, block_number: int) -> Dict:
-        """Enhanced interaction method with blockchain integration"""
-        if not self.verify_blockchain_signature(message, signature, user_address):
-            return {
-                "success": False,
-                "message": "Invalid signature! Nobody likes a fake signature, believe me!"
-            }
+def main():
+    parser = argparse.ArgumentParser(description='Agent Trump CLI')
+    parser.add_argument('--address', required=True, help='Player wallet address')
+    parser.add_argument('--message', required=True, help='Player message')
+    parser.add_argument('--signature', required=True, help='Message signature')
+    parser.add_argument('--block-number', required=True, type=int, help='Block number')
 
-        # Process the interaction
-        trump_response = self.generate_response(message)
-        self.evaluate_persuasion(message, user_address, block_number)
+    args = parser.parse_args()
 
-        # Determine if additional challenge is needed
-        if random.random() < 0.2:
-            self.additional_challenge(user_address)
+    agent = AgentTrump(
+        name="Donald Trump",
+        funds=1000000,
+        openai_api_key=os.getenv('OPENAI_API_KEY', '')
+    )
 
-        # Check win condition
-        if self.persuasion_score >= self.threshold and not self.red_button_protection:
-            self.press_red_button(user_address)
-            return {
-                "success": True,
-                "message": trump_response,
-                "game_won": True,
-                "score": self.persuasion_score
-            }
-        elif self.persuasion_score >= self.threshold and self.red_button_protection:
-            self.red_button_protection = False
-            return {
-                "success": True,
-                "message": trump_response,
-                "threshold_reached": True,
-                "score": self.persuasion_score
-            }
+    #Signature verification moved to main
+    if not agent.verify_blockchain_signature(args.message, args.signature, args.address):
+        print(json.dumps({"success": False, "message": "Invalid signature! Nobody likes a fake signature, believe me!"}))
+        return
 
-        return {
-            "success": True,
-            "message": trump_response,
-            "score": self.persuasion_score
-        }
+    result = agent.interact(args.address, args.message, args.block_number)
+    print(json.dumps(result))
+
+if __name__ == "__main__":
+    main()
