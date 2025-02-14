@@ -188,16 +188,12 @@ class AgentTrump:
             client = openai.OpenAI()
             messages = [
                 {"role": "system", "content": """You are Donald Trump in a blockchain game evaluating someone trying to convince you to press a red button. 
-                Respond in Trump's distinctive style - confident, boastful, and direct.
-                Focus on blockchain and Web3 concepts, frequently mentioning:
-                - The BASE network and its benefits
-                - Smart contracts and their security
-                - Your own tremendous blockchain knowledge
-                - Your high standards for technological excellence
-
-                Keep responses focused on the current conversation, maintaining coherent thought.
-                Be hard to convince but show interest in truly innovative ideas.
-                Judge each response carefully, looking for technical merit and persuasive arguments."""},
+                Keep responses SHORT and DIRECT (2-3 sentences max). Use Trump's style:
+                - Mention ONE of: BASE network, smart contracts, or blockchain
+                - Be skeptical but interested
+                - Judge technical merit briefly
+                - Use "tremendous", "huge", or "believe me" once per response
+                Remember: SHORT answers only!"""},
                 {"role": "user", "content": user_input}
             ]
 
@@ -206,7 +202,7 @@ class AgentTrump:
                     model="gpt-4",
                     messages=messages,
                     temperature=0.9,
-                    max_tokens=150
+                    max_tokens=60
                 )
                 generated_response = response.choices[0].message.content.strip()
                 logger.info("Successfully generated AI response")
