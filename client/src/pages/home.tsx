@@ -165,11 +165,17 @@ export default function Home() {
         await refreshGameStatus();
 
         // Get the AI response from the API using the transaction hash
+        console.log('Fetching AI response for transaction:', tx.hash);
         const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
+
         if (!apiResponse.ok) {
-          throw new Error('Failed to get AI response');
+          const errorData = await apiResponse.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('API error:', errorData);
+          throw new Error(errorData.error || 'Failed to get AI response');
         }
+
         const data = await apiResponse.json();
+        console.log('AI response received:', data);
 
         // Add Agent Trump's response
         addMessage(data.message, false, tx.hash);

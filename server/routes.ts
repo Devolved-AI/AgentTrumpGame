@@ -154,31 +154,55 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
+      console.log('Looking for response with transaction hash:', hash);
+
+      // Get all responses and filter by transaction hash
       const responses = await storage.getPlayerResponses("");
+      console.log('Found responses:', responses);
+
       const response = responses.find(r => r.transactionHash === hash);
+      console.log('Matched response:', response);
 
       if (!response) {
+        console.log('No response found for hash:', hash);
         return res.status(404).json({ error: 'Response not found' });
       }
 
-      // Get the AI response for this response
-      const result = await interactWithAIAgent(
-        response.address,
-        response.response,
-        "",  // We don't need signature for viewing
-        response.blockNumber
-      );
+      try {
+        // Get the AI response for this response
+        console.log('Calling AI agent with:', {
+          address: response.address,
+          response: response.response,
+          blockNumber: response.blockNumber
+        });
 
-      if (!result.success) {
-        return res.status(400).json({ error: result.message });
+        const result = await interactWithAIAgent(
+          response.address,
+          response.response,
+          "",  // We don't need signature for viewing
+          response.blockNumber
+        );
+
+        console.log('AI agent response:', result);
+
+        if (!result.success) {
+          console.error('AI agent error:', result.message);
+          return res.status(400).json({ error: result.message });
+        }
+
+        const responseData = {
+          ...response,
+          message: result.message,
+          score: result.score,
+          gameWon: result.game_won || false
+        };
+        console.log('Sending response:', responseData);
+
+        res.json(responseData);
+      } catch (error) {
+        console.error('AI agent error:', error);
+        res.status(500).json({ error: 'Failed to get AI response: ' + error.message });
       }
-
-      res.json({
-        ...response,
-        message: result.message,
-        score: result.score,
-        gameWon: result.game_won || false
-      });
     } catch (error) {
       console.error("Get response by hash error:", error);
       res.status(500).json({ error: 'Failed to get response' });
