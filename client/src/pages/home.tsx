@@ -96,7 +96,7 @@ export default function Home() {
   const [showTrumpDialog, setShowTrumpDialog] = useState(false);
   const [trumpMessage, setTrumpMessage] = useState("");
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
-  const { messages, addMessage, setMessages } = useChat(web3State.account);
+  const { messages, addMessage } = useChat(web3State.account);
 
   // Restore connection and state
   useEffect(() => {
@@ -134,143 +134,142 @@ export default function Home() {
     if (!gameContract || !web3State.account) return;
 
     try {
-      const status = await gameContract.getGameStatus();
-      if (status.isGameOver) {
-        setGameWon(status.isGameWon);
-        setShowGameOver(true);
-        toast({
-          title: status.isGameWon ? "Game Won!" : "Game Over",
-          description: "Thanks for playing!",
-        });
-        return;
-      }
+        const status = await gameContract.getGameStatus();
+        if (status.isGameOver) {
+            setGameWon(status.isGameWon);
+            setShowGameOver(true);
+            toast({
+                title: status.isGameWon ? "Game Won!" : "Game Over",
+                description: "Thanks for playing!",
+            });
+            return;
+        }
 
-      setIsLoading(true);
-      setTransactionStatus('pending');
+        setIsLoading(true);
+        setTransactionStatus('pending');
 
-      // Add user's message to chat immediately
-      const userMessageId = Date.now().toString();
-      addMessage(response, true, userMessageId);
+        // Add user's message to chat immediately
+        addMessage(response, true);
 
-      try {
-        // Submit transaction and get response from Python agent via API
-        const { tx, blockNumber } = await gameContract.submitResponse(response, gameStatus.currentAmount);
-        console.log('Transaction submitted successfully:', {
-          hash: tx.hash,
-          blockNumber: blockNumber
-        });
-
-        // Update transaction status to success
-        setTransactionStatus('success');
-
-        // Update the user's message with the transaction hash
-        setMessages(messages.map(msg =>
-          msg.id === userMessageId
-            ? { ...msg, transactionHash: tx.hash }
-            : msg
-        ));
-
-        // Update game state after successful transaction
-        await refreshGameStatus();
-
-        // Show loading animation in chat
-        const loadingMessageId = Date.now().toString();
-        addMessage("", false, loadingMessageId, true);
-
-        // Ensure loading animation shows for at least 3 seconds
-        await new Promise(resolve => setTimeout(resolve, 3000));
-
-        // Try up to 3 times with increasing delays
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            if (attempt > 1) {
-              await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+        console.log('Attempting to submit response with:', {
+            currentAmount: gameStatus.currentAmount,
+            account: web3State.account,
+            gameStatus: {
+                isGameOver: status.isGameOver,
+                isGameWon: status.isGameWon,
+                timeRemaining: status.timeRemaining
             }
+        });
 
-            const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
-
-            if (!apiResponse.ok) {
-              const errorData = await apiResponse.json().catch(() => ({ error: 'Unknown error' }));
-              console.error(`API error (attempt ${attempt}):`, {
-                status: apiResponse.status,
-                error: errorData
-              });
-
-              if (apiResponse.status === 404 && attempt < 3) {
-                console.log(`Response not found, will retry in ${attempt * 2}s...`);
-                continue;
-              }
-              throw new Error(errorData.error || 'Failed to get AI response');
-            }
-
-            const data = await apiResponse.json();
-            console.log('AI response received:', data);
-
-            // Remove loading message and add AI response
-            setMessages(prevMessages => {
-              const messagesWithoutLoading = prevMessages.filter(msg => msg.id !== loadingMessageId);
-              return [...messagesWithoutLoading, {
-                id: Date.now().toString(),
-                message: data.message,
-                isUser: false,
-                timestamp: new Date().toISOString()
-              }];
+        try {
+            // Submit transaction and get response from Python agent via API
+            const { tx, blockNumber } = await gameContract.submitResponse(response, gameStatus.currentAmount);
+            console.log('Transaction submitted successfully:', {
+                hash: tx.hash,
+                blockNumber: blockNumber
             });
 
-            // Update the persuasion score
-            const newScore = data.score;
-            setPersuasionScore(newScore);
-            storePersuasionScore(web3State.account, newScore);
+            // Update transaction status to success
+            setTransactionStatus('success');
+
+            // Update game state after successful transaction
+            await refreshGameStatus();
+
+            // Show loading animation in chat
+            const messageId = Date.now().toString();
+            addMessage("", false, messageId, true);
+
+            // Try up to 3 times with increasing delays
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    // Wait before retrying (except first attempt)
+                    if (attempt > 1) {
+                        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+                    }
+
+                    const apiResponse = await fetch(`/api/responses/tx/${tx.hash}`);
+
+                    if (!apiResponse.ok) {
+                        const errorData = await apiResponse.json().catch(() => ({ error: 'Unknown error' }));
+                        console.error(`API error (attempt ${attempt}):`, {
+                            status: apiResponse.status,
+                            error: errorData
+                        });
+
+                        if (apiResponse.status === 404 && attempt < 3) {
+                            console.log(`Response not found, will retry in ${attempt * 2}s...`);
+                            continue;
+                        }
+                        throw new Error(errorData.error || 'Failed to get AI response');
+                    }
+
+                    const data = await apiResponse.json();
+                    console.log('AI response received:', data);
+
+                    // Replace loading message with AI response
+                    addMessage(data.message, false);
+
+                    // Update the persuasion score
+                    const newScore = data.score;
+                    setPersuasionScore(newScore);
+
+                    // Store the updated score
+                    storePersuasionScore(web3State.account, newScore);
+
+                    // Show success toast
+                    toast({
+                        title: "Response Submitted",
+                        description: "Your response has been recorded on the blockchain.",
+                    });
+
+                    // Successfully got response, exit retry loop
+                    break;
+                } catch (error) {
+                    console.error(`Attempt ${attempt} failed:`, error);
+                    if (attempt === 3) {
+                        throw error;
+                    }
+                }
+            }
+
+        } catch (error: any) {
+            // Enhanced error handling for contract interactions
+            console.error('Contract interaction error:', error);
+
+            let errorMessage = "Transaction failed. ";
+            if (error.code === 'CALL_EXCEPTION') {
+                errorMessage += "Contract call reverted. Please ensure you're sending the correct amount.";
+            } else if (error.code === 'INSUFFICIENT_FUNDS') {
+                errorMessage += "Insufficient funds to complete the transaction.";
+            } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
+                errorMessage += "Unable to estimate gas. The game might be in an invalid state.";
+            } else {
+                errorMessage += error.message || "Please try again.";
+            }
+
+            // Update UI state for failure
+            setTransactionStatus('error');
+            addMessage(errorMessage, false);
 
             toast({
-              title: "Response Submitted",
-              description: "Your response has been recorded on the blockchain.",
+                title: "Transaction Failed",
+                description: errorMessage,
+                variant: "destructive"
             });
 
-            break;
-          } catch (error) {
-            console.error(`Attempt ${attempt} failed:`, error);
-            if (attempt === 3) {
-              throw error;
-            }
-          }
+            throw error;
         }
-      } catch (error: any) {
-        console.error('Contract interaction error:', error);
-
-        let errorMessage = "Transaction failed. ";
-        if (error.code === 'CALL_EXCEPTION') {
-          errorMessage += "Contract call reverted. Please ensure you're sending the correct amount.";
-        } else if (error.code === 'INSUFFICIENT_FUNDS') {
-          errorMessage += "Insufficient funds to complete the transaction.";
-        } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
-          errorMessage += "Unable to estimate gas. The game might be in an invalid state.";
-        } else {
-          errorMessage += error.message || "Please try again.";
-        }
-
-        setTransactionStatus('error');
-        addMessage(errorMessage, false);
-
-        toast({
-          title: "Transaction Failed",
-          description: errorMessage,
-          variant: "destructive"
-        });
-
-        throw error;
-      }
     } catch (error: any) {
-      console.error("Submission error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit response. Please try again.",
-        variant: "destructive"
-      });
+        console.error("Submission error:", error);
+        toast({
+            title: "Error",
+            description: error.message || "Failed to submit response. Please try again.",
+            variant: "destructive"
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  }
+}
 
   function handleSubmissionError(error: any) {
     if (error.code === 4001) {
@@ -549,10 +548,10 @@ export default function Home() {
       } catch (error) {
         console.error("Failed to refresh game status:", error);
       }
-    }, 1000); // Update every second instead of conditional timing
+    }, gameStatus.timeRemaining < 600 ? 3000 : 15000);
 
     return () => clearInterval(interval);
-  }, [gameContract, web3State.account]);
+  }, [gameContract, web3State.account, gameStatus.timeRemaining]);
 
   useEffect(() => {
     if (!gameContract || !web3State.account) return;

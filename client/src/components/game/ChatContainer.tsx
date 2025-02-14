@@ -1,10 +1,8 @@
 import { useEffect, useRef } from "react";
 import { ChatBubble } from "./ChatBubble";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Battery, Signal, Wifi, ExternalLink } from "lucide-react";
+import { Battery, Signal, Wifi } from "lucide-react";
 import { ResponseForm } from "./ResponseForm";
-import { Button } from "@/components/ui/button";
-import { NETWORK_CONFIG } from "@/lib/config";
 
 export interface ChatMessage {
   id: string;
@@ -12,7 +10,6 @@ export interface ChatMessage {
   isUser: boolean;
   timestamp: string;
   isLoading?: boolean;
-  transactionHash?: string;
 }
 
 interface ChatContainerProps {
@@ -47,10 +44,6 @@ export function ChatContainer({
     }
   }, [messages]);
 
-  const getExplorerUrl = (hash: string) => {
-    return `${NETWORK_CONFIG.blockExplorerUrls[0]}/tx/${hash}`;
-  };
-
   return (
     <div className="relative w-full h-full rounded-[38px] bg-[#f2f2f7] shadow-xl overflow-hidden flex flex-col">
       {/* iPhone Notch */}
@@ -74,37 +67,15 @@ export function ChatContainer({
       {/* Messages */}
       <ScrollArea className="flex-1 min-h-0 px-4">
         <div ref={scrollRef} className="flex flex-col py-4 space-y-2">
-          {messages.map((msg) => (
-            <div key={msg.id} className="space-y-1">
-              <ChatBubble
-                message={msg.message}
-                isUser={msg.isUser}
-                timestamp={new Date(msg.timestamp)}
-                isLoading={msg.isLoading}
-              />
-              {msg.isUser && msg.transactionHash && (
-                <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-blue-500 hover:text-blue-700"
-                    onClick={() => window.open(getExplorerUrl(msg.transactionHash!), '_blank')}
-                  >
-                    <ExternalLink className="w-3 h-3 mr-1" />
-                    View Transaction
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
-          {isLoading && (
+          {messages && messages.map((msg) => (
             <ChatBubble
-              message="..."
-              isUser={false}
-              timestamp={new Date()}
-              isLoading={true}
+              key={msg.id}
+              message={msg.message}
+              isUser={msg.isUser}
+              timestamp={new Date(msg.timestamp)}
+              isLoading={msg.isLoading}
             />
-          )}
+          ))}
         </div>
       </ScrollArea>
 
