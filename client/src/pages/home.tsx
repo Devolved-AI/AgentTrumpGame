@@ -102,6 +102,10 @@ export default function Home() {
   useEffect(() => {
     async function restoreConnection() {
       try {
+        // Clear all game state when starting fresh
+        clearAllGameState();
+        console.log('Game state cleared for new contract');
+
         const restored = await restoreWalletConnection();
         if (restored) {
           setWeb3State(restored);
