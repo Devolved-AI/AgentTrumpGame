@@ -74,7 +74,7 @@ export function ChatContainer({
       {/* Messages */}
       <ScrollArea className="flex-1 min-h-0 px-4">
         <div ref={scrollRef} className="flex flex-col py-4 space-y-2">
-          {messages && messages.map((msg) => (
+          {messages.map((msg) => (
             <div key={msg.id} className="space-y-1">
               <ChatBubble
                 message={msg.message}
@@ -82,7 +82,7 @@ export function ChatContainer({
                 timestamp={new Date(msg.timestamp)}
                 isLoading={msg.isLoading}
               />
-              {msg.transactionHash && (
+              {msg.isUser && msg.transactionHash && (
                 <div className="flex justify-end">
                   <Button
                     variant="ghost"

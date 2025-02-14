@@ -214,8 +214,15 @@ export default function Home() {
             const data = await apiResponse.json();
             console.log('AI response received:', data);
 
-            // Replace loading message with AI response and include transaction hash
-            addMessage(data.message, false, undefined, false, tx.hash);
+            // Remove loading message by filtering it out and add the actual response
+            const filteredMessages = messages.filter(msg => msg.id !== loadingMessageId);
+            setMessages([...filteredMessages, {
+              id: Date.now().toString(),
+              message: data.message,
+              isUser: false,
+              timestamp: new Date().toISOString(),
+              transactionHash: tx.hash
+            }]);
 
             // Update the persuasion score
             const newScore = data.score;
