@@ -148,8 +148,7 @@ export default function Home() {
         setIsLoading(true);
         setTransactionStatus('pending');
 
-        // Add user's message to chat immediately
-        addMessage(response, true);
+        // Removed addMessage here - we only want to show after confirmation
 
         console.log('Attempting to submit response with:', {
             currentAmount: gameStatus.currentAmount,
@@ -169,7 +168,7 @@ export default function Home() {
                 blockNumber: blockNumber
             });
 
-            // Only add the message after transaction confirmation with the hash
+            // Add message only after transaction confirmation with the hash
             addMessage(response, true, tx.hash);
 
             // Update transaction status to success
