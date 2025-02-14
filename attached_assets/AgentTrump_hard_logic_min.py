@@ -11,9 +11,14 @@ from typing import Optional, Dict
 import os
 import json
 import argparse
+import logging
 from sqlalchemy import create_engine, text
 from eth_account.messages import encode_defunct
 from web3 import Web3
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class AgentTrump:
     def __init__(self, name: str, funds: int, openai_api_key: str):
@@ -26,45 +31,71 @@ class AgentTrump:
 
         # Initialize database connection
         self.db_url = os.getenv('DATABASE_URL')
-        self.engine = create_engine(self.db_url) if self.db_url else None
+        if self.db_url:
+            try:
+                self.engine = create_engine(self.db_url)
+                # Test the connection
+                with self.engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                logger.info("Database connection established successfully")
+            except Exception as e:
+                logger.error(f"Database connection error: {e}")
+                self.engine = None
+        else:
+            logger.warning("No DATABASE_URL provided")
+            self.engine = None
 
         # Initialize Web3 for BASE Sepolia testnet
         self.w3 = Web3(Web3.HTTPProvider(os.getenv('BASE_SEPOLIA_RPC_URL', 'https://sepolia.base.org')))
 
-    def store_player_response(self, address: str, response: str, block_number: int, tx_hash: Optional[str] = None) -> None:
+    def store_player_response(self, address: str, response: str, block_number: int, tx_hash: Optional[str] = None) -> bool:
         """Store player response in database with blockchain data"""
         if not self.engine:
-            return
+            logger.warning("No database connection available")
+            return False
 
-        query = text("""
-            INSERT INTO player_responses (address, response, block_number, transaction_hash)
-            VALUES (:address, :response, :block_number, :tx_hash)
-        """)
+        try:
+            query = text("""
+                INSERT INTO player_responses (address, response, block_number, transaction_hash, created_at)
+                VALUES (:address, :response, :block_number, :tx_hash, NOW())
+            """)
 
-        with self.engine.connect() as conn:
-            conn.execute(query, {
-                'address': address,
-                'response': response,
-                'block_number': block_number,
-                'tx_hash': tx_hash
-            })
-            conn.commit()
+            with self.engine.begin() as conn:  # Using begin() for automatic transaction handling
+                conn.execute(query, {
+                    'address': address,
+                    'response': response,
+                    'block_number': block_number,
+                    'tx_hash': tx_hash
+                })
+            logger.info(f"Stored player response for tx_hash: {tx_hash}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to store player response: {e}")
+            return False
 
-    def update_player_score(self, address: str, score: int) -> None:
+    def update_player_score(self, address: str, score: int) -> bool:
         """Update player's persuasion score in database"""
         if not self.engine:
-            return
+            logger.warning("No database connection available")
+            return False
 
-        query = text("""
-            INSERT INTO player_scores (address, persuasion_score)
-            VALUES (:address, :score)
-            ON CONFLICT (address) 
-            DO UPDATE SET persuasion_score = :score, last_updated = NOW()
-        """)
+        try:
+            query = text("""
+                INSERT INTO player_scores (address, persuasion_score, last_updated)
+                VALUES (:address, :score, NOW())
+                ON CONFLICT (address) 
+                DO UPDATE SET 
+                    persuasion_score = :score,
+                    last_updated = NOW()
+            """)
 
-        with self.engine.connect() as conn:
-            conn.execute(query, {'address': address, 'score': score})
-            conn.commit()
+            with self.engine.begin() as conn:
+                conn.execute(query, {'address': address, 'score': score})
+            logger.info(f"Updated score for address {address}: {score}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update player score: {e}")
+            return False
 
     def generate_response(self, user_input: str, user_history: Optional[list] = None) -> str:
         """Enhanced OpenAI API response generation with context"""
@@ -135,15 +166,25 @@ class AgentTrump:
 
         return max(0, min(100, self.persuasion_score + score_change))
 
-    def interact(self, address: str, message: str, block_number: int) -> Dict:
+    def interact(self, address: str, message: str, block_number: int, tx_hash: Optional[str] = None) -> Dict:
         """Enhanced interaction method with blockchain integration"""
+        logger.info(f"Processing interaction for address: {address}, tx_hash: {tx_hash}")
+
         # Process the interaction
         trump_response = self.generate_response(message)
         new_score = self.evaluate_persuasion(message)
 
-        # Store response and update score
-        self.store_player_response(address, message, block_number)
-        self.update_player_score(address, new_score)
+        # Store response and update score with transaction hash
+        store_success = self.store_player_response(address, message, block_number, tx_hash)
+        update_success = self.update_player_score(address, new_score)
+
+        if not store_success or not update_success:
+            logger.error("Failed to store response or update score")
+            return {
+                "success": False,
+                "message": "Database operation failed",
+                "score": new_score
+            }
 
         # Update internal score
         self.persuasion_score = new_score
@@ -237,8 +278,13 @@ def main():
     parser.add_argument('--message', required=True, help='Player message')
     parser.add_argument('--signature', required=True, help='Message signature')
     parser.add_argument('--block-number', required=True, type=int, help='Block number')
+    parser.add_argument('--tx-hash', help='Transaction hash')
 
     args = parser.parse_args()
+
+    # Configure logging for the main function
+    logger.info(f"Processing request for address: {args.address}")
+    logger.info(f"Transaction hash: {args.tx_hash}")
 
     agent = AgentTrump(
         name="Donald Trump",
@@ -246,13 +292,17 @@ def main():
         openai_api_key=os.getenv('OPENAI_API_KEY', '')
     )
 
-    #Signature verification moved to main
     if not agent.verify_blockchain_signature(args.message, args.signature, args.address):
-        print(json.dumps({"success": False, "message": "Invalid signature! Nobody likes a fake signature, believe me!"}))
+        error_response = {
+            "success": False,
+            "message": "Invalid signature! Nobody likes a fake signature, believe me!"
+        }
+        print(json.dumps(error_response))
         return
 
-    result = agent.interact(args.address, args.message, args.block_number)
+    result = agent.interact(args.address, args.message, args.block_number, args.tx_hash)
     print(json.dumps(result))
+    logger.info(f"Request processed successfully: {result}")
 
 if __name__ == "__main__":
     main()

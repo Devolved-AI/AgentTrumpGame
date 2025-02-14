@@ -12,15 +12,22 @@ const __dirname = dirname(__filename);
 const pythonScriptPath = join(__dirname, '..', 'attached_assets', 'AgentTrump_hard_logic_min.py');
 
 // Function to interact with Python AI agent
-async function interactWithAIAgent(address: string, message: string, signature: string, blockNumber: number) {
+async function interactWithAIAgent(address: string, message: string, signature: string, blockNumber: number, txHash?: string) {
   return new Promise((resolve, reject) => {
-    const pythonProcess = spawn('python3', [
+    const args = [
       pythonScriptPath,
       '--address', address,
       '--message', message,
       '--signature', signature,
       '--block-number', blockNumber.toString()
-    ]);
+    ];
+
+    // Add transaction hash if provided
+    if (txHash) {
+      args.push('--tx-hash', txHash);
+    }
+
+    const pythonProcess = spawn('python3', args);
 
     let result = '';
     let error = '';
@@ -31,6 +38,7 @@ async function interactWithAIAgent(address: string, message: string, signature: 
 
     pythonProcess.stderr.on('data', (data) => {
       error += data.toString();
+      console.error('Python script error output:', data.toString());
     });
 
     pythonProcess.on('close', (code) => {
@@ -42,6 +50,7 @@ async function interactWithAIAgent(address: string, message: string, signature: 
           const parsed = JSON.parse(result);
           resolve(parsed);
         } catch (e) {
+          console.error('Failed to parse AI agent response:', result);
           reject(new Error('Failed to parse AI agent response'));
         }
       }
@@ -55,14 +64,15 @@ export function registerRoutes(app: Express): Server {
   // API route to update player score
   app.post('/api/scores', async (req, res) => {
     try {
-      const { address, response, blockNumber } = req.body;
+      const { address, response, blockNumber, transactionHash } = req.body;
 
       // Get Agent Trump's analysis and response
       const result = await interactWithAIAgent(
         address,
         response,
         req.body.signature || "",
-        blockNumber
+        blockNumber,
+        transactionHash
       );
 
       if (!result.success) {
@@ -107,12 +117,15 @@ export function registerRoutes(app: Express): Server {
     try {
       const { address, response, blockNumber, signature, transactionHash } = req.body;
 
+      console.log('Processing response with transaction hash:', transactionHash);
+
       // Get AI agent's response and analysis
       const result = await interactWithAIAgent(
         address,
         response,
         signature || "",
-        blockNumber
+        blockNumber,
+        transactionHash
       );
 
       if (!result.success) {
@@ -159,8 +172,8 @@ export function registerRoutes(app: Express): Server {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      // Try up to 3 times with a delay between attempts
-      for (let attempt = 0; attempt < 3; attempt++) {
+      // Try up to 5 times with exponential backoff
+      for (let attempt = 0; attempt < 5; attempt++) {
         const response = await storage.getResponseByHash(hash);
 
         if (response) {
@@ -170,14 +183,16 @@ export function registerRoutes(app: Express): Server {
             console.log('Calling AI agent with:', {
               address: response.address,
               response: response.response,
-              blockNumber: response.blockNumber
+              blockNumber: response.blockNumber,
+              transactionHash: hash
             });
 
             const result = await interactWithAIAgent(
               response.address,
               response.response,
               "",  // We don't need signature for viewing
-              response.blockNumber
+              response.blockNumber,
+              hash  // Pass the transaction hash
             );
 
             console.log('AI agent response:', result);
@@ -203,9 +218,10 @@ export function registerRoutes(app: Express): Server {
         }
 
         // If response not found and not last attempt, wait before retry
-        if (attempt < 2) {
-          console.log(`Attempt ${attempt + 1}: Response not found, waiting before retry...`);
-          await sleep(1000); // Wait 1 second before retry
+        if (attempt < 4) {
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s, 8s
+          console.log(`Attempt ${attempt + 1}: Response not found, waiting ${delay}ms before retry...`);
+          await sleep(delay);
         }
       }
 
