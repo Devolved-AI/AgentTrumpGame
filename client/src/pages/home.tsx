@@ -96,7 +96,7 @@ export default function Home() {
   const [showTrumpDialog, setShowTrumpDialog] = useState(false);
   const [trumpMessage, setTrumpMessage] = useState("");
   const [trumpMessageVariant, setTrumpMessageVariant] = useState<'success' | 'error'>('success');
-  const { messages, addMessage, setMessages } = useChat(web3State.account); // Added setMessages
+  const { messages, addMessage, setMessages } = useChat(web3State.account);
 
   // Restore connection and state
   useEffect(() => {
@@ -152,16 +152,6 @@ export default function Home() {
       const userMessageId = Date.now().toString();
       addMessage(response, true, userMessageId);
 
-      console.log('Attempting to submit response with:', {
-        currentAmount: gameStatus.currentAmount,
-        account: web3State.account,
-        gameStatus: {
-          isGameOver: status.isGameOver,
-          isGameWon: status.isGameWon,
-          timeRemaining: status.timeRemaining
-        }
-      });
-
       try {
         // Submit transaction and get response from Python agent via API
         const { tx, blockNumber } = await gameContract.submitResponse(response, gameStatus.currentAmount);
@@ -170,16 +160,15 @@ export default function Home() {
           blockNumber: blockNumber
         });
 
-        // Update transaction status to success and add transaction hash
+        // Update transaction status to success
         setTransactionStatus('success');
 
         // Update the user's message with the transaction hash
-        const updatedMessages = messages.map(msg =>
+        setMessages(messages.map(msg =>
           msg.id === userMessageId
             ? { ...msg, transactionHash: tx.hash }
             : msg
-        );
-        setMessages(updatedMessages);
+        ));
 
         // Update game state after successful transaction
         await refreshGameStatus();
@@ -187,6 +176,9 @@ export default function Home() {
         // Show loading animation in chat
         const loadingMessageId = Date.now().toString();
         addMessage("", false, loadingMessageId, true);
+
+        // Ensure loading animation shows for at least 3 seconds
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         // Try up to 3 times with increasing delays
         for (let attempt = 1; attempt <= 3; attempt++) {
@@ -214,15 +206,16 @@ export default function Home() {
             const data = await apiResponse.json();
             console.log('AI response received:', data);
 
-            // Remove loading message by filtering it out and add the actual response
-            const filteredMessages = messages.filter(msg => msg.id !== loadingMessageId);
-            setMessages([...filteredMessages, {
-              id: Date.now().toString(),
-              message: data.message,
-              isUser: false,
-              timestamp: new Date().toISOString(),
-              transactionHash: tx.hash
-            }]);
+            // Remove loading message and add AI response
+            setMessages(prevMessages => {
+              const messagesWithoutLoading = prevMessages.filter(msg => msg.id !== loadingMessageId);
+              return [...messagesWithoutLoading, {
+                id: Date.now().toString(),
+                message: data.message,
+                isUser: false,
+                timestamp: new Date().toISOString()
+              }];
+            });
 
             // Update the persuasion score
             const newScore = data.score;
@@ -556,10 +549,10 @@ export default function Home() {
       } catch (error) {
         console.error("Failed to refresh game status:", error);
       }
-    }, gameStatus.timeRemaining < 600 ? 3000 : 15000);
+    }, 1000); // Update every second instead of conditional timing
 
     return () => clearInterval(interval);
-  }, [gameContract, web3State.account, gameStatus.timeRemaining]);
+  }, [gameContract, web3State.account]);
 
   useEffect(() => {
     if (!gameContract || !web3State.account) return;
