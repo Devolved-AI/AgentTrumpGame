@@ -6,6 +6,7 @@ export interface ChatMessage {
   isUser: boolean;
   timestamp: string;
   transactionHash?: string;
+  isLoading?: boolean;
 }
 
 // Key format includes both contract and wallet address to separate different game instances
@@ -52,11 +53,11 @@ export function useChat(address: string | null) {
     }
   }, [messages, address]);
 
-  const addMessage = (message: string, isUser: boolean, transactionHash?: string) => {
-    console.log('Adding message:', { message, isUser, transactionHash }); // Debug log
+  const addMessage = (message: string, isUser: boolean, transactionHash?: string, isLoading?: boolean) => {
+    console.log('Adding message:', { message, isUser, transactionHash, isLoading }); // Debug log
 
     // Don't add empty messages
-    if (!message.trim()) {
+    if (!message.trim() && !isLoading) {
       console.log('Skipping empty message');
       return;
     }
@@ -66,7 +67,8 @@ export function useChat(address: string | null) {
       message: message.trim(),
       isUser,
       timestamp: new Date().toISOString(),
-      transactionHash
+      transactionHash,
+      isLoading
     };
 
     setMessages(prev => {

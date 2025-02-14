@@ -10,6 +10,7 @@ export interface ChatMessage {
   isUser: boolean;
   timestamp: string;
   isLoading?: boolean;
+  transactionHash?: string;
 }
 
 interface ChatContainerProps {
@@ -74,6 +75,7 @@ export function ChatContainer({
               isUser={msg.isUser}
               timestamp={new Date(msg.timestamp)}
               isLoading={msg.isLoading}
+              transactionHash={msg.transactionHash}
             />
           ))}
         </div>

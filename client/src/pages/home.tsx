@@ -177,7 +177,7 @@ export default function Home() {
 
             // Show loading animation in chat
             const messageId = Date.now().toString();
-            addMessage("", false, messageId, true);
+            addMessage("", false, undefined, true); //MODIFIED LINE
 
             // Try up to 3 times with increasing delays
             for (let attempt = 1; attempt <= 3; attempt++) {
@@ -271,7 +271,7 @@ export default function Home() {
     }
 }
 
-  function handleSubmissionError(error: any) {
+function handleSubmissionError(error: any) {
     if (error.code === 4001) {
       toast({
         title: "Transaction Cancelled",
