@@ -33,31 +33,22 @@ export function ChatBubble({
           ? "bg-[#007AFF] text-white rounded-br-[4px]" 
           : "bg-[#E9E9EB] text-[#000000] rounded-bl-[4px]"
       )}>
-        {isLoading ? (
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-            <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-          </div>
-        ) : (
-          <>
-            <p className="text-[15px] leading-5 break-words font-[-apple-system]">
-              {message}
-            </p>
-            {isUser && transactionHash && (
-              <a
-                href={`https://sepolia.basescan.org/tx/${transactionHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "flex items-center gap-1 text-xs mt-1",
-                  isUser ? "text-white/70 hover:text-white/90" : "text-black/50 hover:text-black/70"
-                )}
-              >
-                View transaction <ExternalLink className="h-3 w-3" />
-              </a>
+        <p className="text-[15px] leading-5 break-words font-[-apple-system]">
+          {message}
+        </p>
+
+        {isUser && transactionHash && (
+          <a
+            href={`https://sepolia.basescan.org/tx/${transactionHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "flex items-center gap-1 text-xs mt-1",
+              isUser ? "text-white/70 hover:text-white/90" : "text-black/50 hover:text-black/70"
             )}
-          </>
+          >
+            View transaction <ExternalLink className="h-3 w-3" />
+          </a>
         )}
 
         <p className={cn(

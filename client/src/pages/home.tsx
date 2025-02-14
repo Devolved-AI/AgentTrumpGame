@@ -175,11 +175,7 @@ export default function Home() {
             // Update game state after successful transaction
             await refreshGameStatus();
 
-            // Show loading animation in chat
-            const messageId = Date.now().toString();
-            addMessage("", false, undefined, true); //MODIFIED LINE
 
-            // Try up to 3 times with increasing delays
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                     // Wait before retrying (except first attempt)
