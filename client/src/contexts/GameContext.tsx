@@ -26,15 +26,6 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-const DEFAULT_GAME_STATE: GameState = {
-  multiplier: 1,
-  requiredAmount: "0.01",
-  isEscalationActive: false,
-  timeRemaining: 300,
-  lastPlayer: null,
-  persuasionScore: 50
-};
-
 export function GameProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,12 +34,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const refreshGameState = async () => {
     try {
+      if (!contract) {
+        console.log('Contract not initialized, skipping refresh');
+        return;
+      }
+
       setLoading(true);
       const state = await getGameState();
-      if (state && contract) {
+
+      if (state) {
         // Get current persuasion score from API
-        const scoreResponse = await apiRequest(`/api/scores/${await contract.signer.getAddress()}`);
-        const persuasionScore = scoreResponse?.persuasionScore ?? 50;
+        const address = await contract.signer.getAddress();
+        console.log('Fetching score for address:', address);
+
+        const scoreResponse = await fetch(`/api/scores/${address}`);
+        const scoreData = await scoreResponse.json();
+        console.log('Score data received:', scoreData);
+
+        const persuasionScore = scoreData?.persuasionScore ?? 50;
 
         setGameState({
           multiplier: state.multiplier,
@@ -87,26 +90,40 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // Get signer address
       const address = await contract.signer.getAddress();
 
+      // Generate signature for the message
+      const signature = await contract.signer.signMessage(response);
+
       // Submit to API with blockchain data
-      const result = await apiRequest('/api/responses', {
+      const result = await fetch('/api/responses', {
         method: 'POST',
-        body: {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           address,
           response,
           blockNumber,
           transactionHash: tx.hash,
+          signature,
           exists: true
-        }
+        })
       });
+
+      if (!result.ok) {
+        throw new Error('Failed to submit response to API');
+      }
+
+      const data = await result.json();
+      console.log('API response:', data);
 
       // Refresh game state to get updated score
       await refreshGameState();
 
       return {
-        message: result.aiResponse,
+        message: data.message,
         transactionHash: tx.hash,
-        score: result.score,
-        gameWon: result.gameWon
+        score: data.score,
+        gameWon: data.gameWon
       };
     } catch (error: any) {
       console.error('Error submitting response:', error);
@@ -117,6 +134,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // Initialize game state when contract is ready
   useEffect(() => {
     if (contract) {
+      console.log('Contract initialized, refreshing game state');
       refreshGameState();
       // Refresh state periodically
       const interval = setInterval(refreshGameState, 15000);
