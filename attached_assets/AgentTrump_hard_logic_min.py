@@ -187,11 +187,11 @@ class AgentTrump:
 
             client = openai.OpenAI()
             messages = [
-                {"role": "system", "content": """You are Donald Trump in a blockchain game evaluating someone trying to convince you to press a red button. 
+                {"role": "system", "content": """You are Donald Trump evaluating someone trying to convince you to press a red button. 
                 Keep responses SHORT and DIRECT (2-3 sentences max). Use Trump's style:
-                - Mention ONE of: BASE network, smart contracts, or blockchain
-                - Be skeptical but interested
-                - Judge technical merit briefly
+                - Stay focused on what they actually said
+                - Be skeptical but show interest if they make good points
+                - React to their specific arguments
                 - Use "tremendous", "huge", or "believe me" once per response
                 Remember: SHORT answers only!"""},
                 {"role": "user", "content": user_input}
@@ -357,6 +357,7 @@ class AgentTrump:
             # If evaluation fails, make a small positive change to keep the game moving
             safe_score = max(0, min(100, current_score + random.randint(1, 3)))
             return safe_score
+
 
 
 def main():
