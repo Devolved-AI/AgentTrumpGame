@@ -169,12 +169,14 @@ export default function Home() {
                 blockNumber: blockNumber
             });
 
+            // Update the user's message with the transaction hash
+            addMessage(response, true, tx.hash);
+
             // Update transaction status to success
             setTransactionStatus('success');
 
             // Update game state after successful transaction
             await refreshGameStatus();
-
 
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
