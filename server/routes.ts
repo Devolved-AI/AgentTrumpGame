@@ -79,12 +79,10 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: result.message });
       }
 
-      // Update player's persuasion score in the database
-      const updatedScore = await storage.updatePlayerScore(address, result.score);
-
+      // Update player's persuasion score in Redis (handled by Python script)
       res.json({
-        ...updatedScore,
         message: result.message,
+        score: result.score,
         gameWon: result.game_won || false
       });
     } catch (error) {
@@ -93,26 +91,28 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API route to get player score
+  // API route to get player score (score is now handled by Python script with Redis)
   app.get('/api/scores/:address', async (req, res) => {
     try {
       const { address } = req.params;
-      const score = await storage.getPlayerScore(address);
+      const result = await interactWithAIAgent(
+        address,
+        "",  // Empty message for score query
+        "",  // No signature needed for score query
+        0,   // Block number not needed for score query
+        undefined
+      );
 
-      if (!score) {
-        // If no score exists, create initial score
-        const initialScore = await storage.updatePlayerScore(address, 50);
-        return res.json(initialScore);
-      }
-
-      res.json(score);
+      res.json({
+        score: result.score || 50  // Default to 50 if no score exists
+      });
     } catch (error) {
       console.error("Get score error:", error);
       res.status(500).json({ error: 'Failed to get score' });
     }
   });
 
-  // API route to add player response with retry logic
+  // API route to add player response
   app.post('/api/responses', async (req, res) => {
     try {
       const { address, response, blockNumber, signature, transactionHash } = req.body;
@@ -132,18 +132,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: result.message });
       }
 
-      // Store the response in database
-      const storedResponse = await storage.addPlayerResponse({
-        ...req.body,
-        exists: true,
-        timestamp: new Date()
-      });
-
-      // Update the player's score
-      await storage.updatePlayerScore(address, result.score);
-
       res.json({
-        ...storedResponse,
         message: result.message,
         score: result.score,
         gameWon: result.game_won || false
@@ -154,78 +143,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API route to get player responses
-  app.get('/api/responses/:address', async (req, res) => {
-    try {
-      const { address } = req.params;
-      const responses = await storage.getPlayerResponses(address);
-      res.json(responses);
-    } catch (error) {
-      console.error("Get responses error:", error);
-      res.status(500).json({ error: 'Failed to get responses' });
-    }
-  });
-
   // API route to get response by transaction hash with retries
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      // Try up to 5 times with exponential backoff
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const response = await storage.getResponseByHash(hash);
+      // Try up to 3 times with exponential backoff
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const result = await interactWithAIAgent(
+            "",  // Empty address for response query
+            "",  // Empty message for response query
+            "",  // No signature needed for response query
+            0,   // Block number not needed for response query
+            hash // Pass the transaction hash
+          );
 
-        if (response) {
-          console.log('Found response:', response);
-          try {
-            // Get the AI response for this response
-            console.log('Calling AI agent with:', {
-              address: response.address,
-              response: response.response,
-              blockNumber: response.blockNumber,
-              transactionHash: hash
-            });
-
-            const result = await interactWithAIAgent(
-              response.address,
-              response.response,
-              "",  // We don't need signature for viewing
-              response.blockNumber,
-              hash  // Pass the transaction hash
-            );
-
-            console.log('AI agent response:', result);
-
-            if (!result.success) {
-              console.error('AI agent error:', result.message);
-              return res.status(400).json({ error: result.message });
-            }
-
-            const responseData = {
-              ...response,
+          if (result.success) {
+            return res.json({
               message: result.message,
               score: result.score,
               gameWon: result.game_won || false
-            };
-            console.log('Sending response:', responseData);
-
-            return res.json(responseData);
-          } catch (error) {
-            console.error('AI agent error:', error);
-            return res.status(500).json({ error: 'Failed to get AI response: ' + error.message });
+            });
           }
+        } catch (error) {
+          console.error(`Attempt ${attempt + 1} failed:`, error);
         }
 
-        // If response not found and not last attempt, wait before retry
-        if (attempt < 4) {
-          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s, 8s
-          console.log(`Attempt ${attempt + 1}: Response not found, waiting ${delay}ms before retry...`);
+        // If not last attempt, wait before retry
+        if (attempt < 2) {
+          const delay = Math.pow(2, attempt) * 500;  // 500ms, 1s, 2s
+          console.log(`Attempt ${attempt + 1}: Waiting ${delay}ms before retry...`);
           await sleep(delay);
         }
       }
 
-      // If we got here, we couldn't find the response after all retries
       console.log('No response found after all retries');
       return res.status(404).json({ error: 'Response not found' });
     } catch (error) {

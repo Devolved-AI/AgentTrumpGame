@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Enhanced AgentTrump with blockchain and database integration
+Enhanced AgentTrump with Redis integration for faster response handling
 """
 
 import random
@@ -12,7 +12,7 @@ import os
 import json
 import argparse
 import logging
-from sqlalchemy import create_engine, text
+import redis
 from eth_account.messages import encode_defunct
 from web3 import Web3
 
@@ -32,85 +32,71 @@ class AgentTrump:
         self.red_button_protection = True
         openai.api_key = openai_api_key
 
-        # Initialize database connection with retry logic
-        self.db_url = os.getenv('DATABASE_URL')
-        if self.db_url:
-            for attempt in range(3):
-                try:
-                    self.engine = create_engine(self.db_url)
-                    # Test the connection
-                    with self.engine.connect() as conn:
-                        conn.execute(text("SELECT 1"))
-                    logger.info("Database connection established successfully")
-                    break
-                except Exception as e:
-                    logger.error(f"Database connection attempt {attempt + 1} failed: {e}")
-                    if attempt == 2:
-                        self.engine = None
-        else:
-            logger.warning("No DATABASE_URL provided")
-            self.engine = None
+        # Initialize Redis connection with retry logic
+        redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        for attempt in range(3):
+            try:
+                self.redis = redis.from_url(redis_url)
+                self.redis.ping()  # Test connection
+                logger.info("Redis connection established successfully")
+                break
+            except Exception as e:
+                logger.error(f"Redis connection attempt {attempt + 1} failed: {e}")
+                if attempt == 2:
+                    self.redis = None
 
         # Initialize Web3 for BASE Sepolia testnet
         self.w3 = Web3(Web3.HTTPProvider(os.getenv('BASE_SEPOLIA_RPC_URL', 'https://sepolia.base.org')))
 
     def store_player_response(self, address: str, response: str, block_number: int, tx_hash: Optional[str] = None) -> bool:
-        """Store player response in database with blockchain data"""
-        if not self.engine:
-            logger.warning("No database connection available")
+        """Store player response in Redis"""
+        if not self.redis:
+            logger.warning("No Redis connection available")
             return False
 
         try:
-            # First check if response already exists
+            # Create response data
+            response_data = {
+                'address': address,
+                'response': response,
+                'block_number': block_number,
+                'transaction_hash': tx_hash,
+                'created_at': datetime.utcnow().isoformat(),
+                'exists': True
+            }
+
+            # Store by transaction hash
             if tx_hash:
-                check_query = text("""
-                    SELECT id FROM player_responses 
-                    WHERE transaction_hash = :tx_hash
-                """)
-                with self.engine.connect() as conn:
-                    result = conn.execute(check_query, {'tx_hash': tx_hash}).fetchone()
-                    if result:
-                        logger.info(f"Response already exists for tx_hash: {tx_hash}")
-                        return True
+                response_key = f"response:{tx_hash}"
+                if self.redis.exists(response_key):
+                    logger.info(f"Response already exists for tx_hash: {tx_hash}")
+                    return True
 
-            # Insert new response
-            query = text("""
-                INSERT INTO player_responses 
-                (address, response, block_number, transaction_hash, created_at, exists)
-                VALUES (:address, :response, :block_number, :tx_hash, NOW(), TRUE)
-            """)
-
-            with self.engine.begin() as conn:
-                conn.execute(query, {
-                    'address': address,
-                    'response': response,
-                    'block_number': block_number,
-                    'tx_hash': tx_hash
-                })
+                self.redis.set(response_key, json.dumps(response_data))
                 logger.info(f"Stored player response for tx_hash: {tx_hash}")
+
+                # Add to user's response list
+                user_responses_key = f"user_responses:{address}"
+                self.redis.rpush(user_responses_key, tx_hash)
+
             return True
         except Exception as e:
             logger.error(f"Failed to store player response: {e}")
             return False
 
     def update_player_score(self, address: str, score: int) -> bool:
-        """Update player's persuasion score in database"""
-        if not self.engine:
-            logger.warning("No database connection available")
+        """Update player's persuasion score in Redis"""
+        if not self.redis:
+            logger.warning("No Redis connection available")
             return False
 
         try:
-            query = text("""
-                INSERT INTO player_scores (address, persuasion_score, last_updated)
-                VALUES (:address, :score, NOW())
-                ON CONFLICT (address) 
-                DO UPDATE SET 
-                    persuasion_score = :score,
-                    last_updated = NOW()
-            """)
-
-            with self.engine.begin() as conn:
-                conn.execute(query, {'address': address, 'score': score})
+            score_key = f"score:{address}"
+            score_data = {
+                'persuasion_score': score,
+                'last_updated': datetime.utcnow().isoformat()
+            }
+            self.redis.set(score_key, json.dumps(score_data))
             logger.info(f"Updated score for address {address}: {score}")
             return True
         except Exception as e:
@@ -218,39 +204,21 @@ class AgentTrump:
         logger.info(f"Interaction completed successfully: {response_data}")
         return response_data
 
-    def additional_challenge(self, user_address: str) -> None:
-        """Enhanced additional challenge with blockchain elements"""
-        challenges = [
-            "Tell me how BASE is going to change the world of blockchain gaming.",
-            "Explain why our smart contracts are the most tremendous contracts ever.",
-            "Quote something I've said about cryptocurrency - make it huge!",
-            "Tell me why Web3 needs more Trump-style leadership.",
-            "Explain in one sentence why this is the smartest blockchain decision ever.",
-            "Tell me why I should trust you with these digital assets."
-        ]
-        challenge = random.choice(challenges)
-        print(f"[AgentTrump] Before I press the button, complete this challenge: {challenge}")
+    def get_response_by_hash(self, tx_hash: str) -> Optional[Dict]:
+        """Retrieve response by transaction hash from Redis"""
+        if not self.redis or not tx_hash:
+            return None
 
-        user_input = input("Your response: ").strip()
-        success_chance = 0.2
+        try:
+            response_key = f"response:{tx_hash}"
+            response_data = self.redis.get(response_key)
 
-        if len(user_input.split()) > 10:
-            print("[AgentTrump] That's detailed, like my smart contracts!")
-            success_chance += 0.1
-
-        if "blockchain" in user_input.lower() or "web3" in user_input.lower():
-            print("[AgentTrump] You know your Web3, I like that!")
-            success_chance += 0.15
-
-        success = random.random() < success_chance
-        if success:
-            print("[AgentTrump] That was tremendous! Very Web3, very cool.")
-            self.persuasion_score += random.randint(15, 25)
-        else:
-            print("[AgentTrump] Not impressed. Even my smart contracts are better than that.")
-            self.persuasion_score -= random.randint(10, 20)
-
-        self.update_player_score(user_address, self.persuasion_score)
+            if response_data:
+                return json.loads(response_data)
+            return None
+        except Exception as e:
+            logger.error(f"Error retrieving response by hash: {e}")
+            return None
 
     def verify_blockchain_signature(self, message: str, signature: str, address: str) -> bool:
         """Verify that the message was signed by the claimed address"""
@@ -259,23 +227,8 @@ class AgentTrump:
             signer = self.w3.eth.account.recover_message(message_hash, signature=signature)
             return signer.lower() == address.lower()
         except Exception as e:
-            print(f"[AgentTrump] Error verifying signature: {e}")
+            logger.error(f"Error verifying signature: {e}")
             return False
-
-    def press_red_button(self, user_address: str) -> None:
-        """Enhanced button press with blockchain event"""
-        if not self.red_button_protection:
-            print(f"[AgentTrump] You convinced me! This is huge for Web3!")
-            print(f"[AgentTrump] Initiating smart contract interaction for {self.funds} tokens!")
-
-            # Reset protection and funds
-            self.red_button_protection = True
-            self.funds = 0
-
-            # Update final score in database
-            self.update_player_score(user_address, self.persuasion_score)
-        else:
-            print("[AgentTrump] The smart contract isn't ready yet. Keep trying!")
 
 def main():
     parser = argparse.ArgumentParser(description='Agent Trump CLI')
