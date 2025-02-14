@@ -545,7 +545,7 @@ function handleSubmissionError(error: any) {
       } catch (error) {
         console.error("Failed to refresh game status:", error);
       }
-    }, gameStatus.timeRemaining < 600 ? 3000 : 15000);
+    }, 1000); // Update every second
 
     return () => clearInterval(interval);
   }, [gameContract, web3State.account, gameStatus.timeRemaining]);
