@@ -2,55 +2,6 @@ import { ethers } from 'ethers';
 import { toast } from '@/hooks/use-toast';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from './config';
 
-// Trump's possible responses based on different scenarios
-const TRUMP_RESPONSES = {
-  highScore: [
-    "That was a tremendous response, really tremendous! You're getting warmer!",
-    "Now that's what I call high energy! Keep it up, and we'll make a deal!",
-    "You're starting to speak my language. Very smart person, very smart!",
-    "I like your style, reminds me of myself. Nobody does it better than me though!"
-  ],
-  mediumScore: [
-    "Not bad, not bad. But I know you can do better, believe me!",
-    "You're getting there, but I've heard better deals. Much better!",
-    "That's interesting, but I need more. Nobody knows more about deals than me!",
-    "Keep trying, but remember - I wrote The Art of the Deal!"
-  ],
-  lowScore: [
-    "Low energy response! Sad!",
-    "I've heard better from CNN, and that's saying something!",
-    "That's not how you make America great! Try again!",
-    "Wrong! You need to think bigger, much bigger!"
-  ],
-  winning: [
-    "You did it! You're a winner, and I love winners!",
-    "This is huge! Really huge! You've earned my respect!",
-    "Now that's what I call the Art of the Deal! Congratulations!"
-  ]
-};
-
-// Trump's reaction GIFs mapped to different moods
-export const TRUMP_GIFS = {
-  positive: [
-    '/gifs/trump-thumbs-up.gif',
-    '/gifs/trump-happy.gif',
-    '/gifs/trump-victory.gif'
-  ],
-  neutral: [
-    '/gifs/trump-thinking.gif',
-    '/gifs/trump-talking.gif'
-  ],
-  negative: [
-    '/gifs/trump-wrong.gif',
-    '/gifs/trump-angry.gif',
-    '/gifs/trump-sad.gif'
-  ],
-  winning: [
-    '/gifs/trump-winning.gif',
-    '/gifs/trump-celebration.gif'
-  ]
-};
-
 export interface PlayerHistoryItem {
   response: string;
   timestamp: number;
@@ -71,47 +22,25 @@ export class GameContract {
     this.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
   }
 
-  private getRandomResponse(responses: string[]): string {
-    return responses[Math.floor(Math.random() * responses.length)];
-  }
-
-  private getTrumpResponse(scoreIncrement: number, isWinning: boolean = false): string {
-    if (isWinning) {
-      return this.getRandomResponse(TRUMP_RESPONSES.winning);
-    }
-
-    if (scoreIncrement >= 15) {
-      return this.getRandomResponse(TRUMP_RESPONSES.highScore);
-    } else if (scoreIncrement >= 5) {
-      return this.getRandomResponse(TRUMP_RESPONSES.mediumScore);
-    } else {
-      return this.getRandomResponse(TRUMP_RESPONSES.lowScore);
-    }
-  }
-
-  private getTrumpGif(scoreIncrement: number, isWinning: boolean = false): string {
-    if (isWinning) {
-      return TRUMP_GIFS.winning[Math.floor(Math.random() * TRUMP_GIFS.winning.length)];
-    }
-
-    if (scoreIncrement >= 15) {
-      return TRUMP_GIFS.positive[Math.floor(Math.random() * TRUMP_GIFS.positive.length)];
-    } else if (scoreIncrement >= 5) {
-      return TRUMP_GIFS.neutral[Math.floor(Math.random() * TRUMP_GIFS.neutral.length)];
-    } else {
-      return TRUMP_GIFS.negative[Math.floor(Math.random() * TRUMP_GIFS.negative.length)];
-    }
-  }
-
   async evaluateResponse(response: string): Promise<{scoreIncrement: number}> {
     try {
       const { analyzeTrumpResponse } = await import('./ai/trumpAI');
       const result = await analyzeTrumpResponse(response);
-      return { scoreIncrement: result.persuasionScore };
+
+      // Convert AI score (0-100) to increments of 5
+      let scoreIncrement = 0;
+      if (result.persuasionScore >= 95) {
+        scoreIncrement = 100; // Winning condition
+      } else if (result.persuasionScore > 50) {
+        scoreIncrement = 5; // Good response
+      } else {
+        scoreIncrement = -5; // Poor response
+      }
+
+      return { scoreIncrement };
     } catch (error) {
       console.error('Error evaluating response:', error);
-      // Fallback to minimum score if AI fails
-      return { scoreIncrement: 0 };
+      return { scoreIncrement: -5 };
     }
   }
 
@@ -134,7 +63,6 @@ export class GameContract {
         throw new Error("Amount mismatch - please refresh and try again");
       }
 
-      // Use the correct contract function name - submitGuess
       const tx = await this.contract.submitGuess(response, {
         value: parsedAmount
       });
@@ -143,11 +71,18 @@ export class GameContract {
       const receipt = await tx.wait();
       console.log("Transaction confirmed:", receipt);
 
-      const evaluation = await this.evaluateResponse(response);
-      const trumpResponse = this.getTrumpResponse(evaluation.scoreIncrement, evaluation.scoreIncrement >= 100);
-      const trumpGif = this.getTrumpGif(evaluation.scoreIncrement, evaluation.scoreIncrement >= 100);
+      // Get AI evaluation and response
+      const { analyzeTrumpResponse } = await import('./ai/trumpAI');
+      const aiResult = await analyzeTrumpResponse(response);
 
-      return { tx, evaluation, receipt, trumpResponse, trumpGif };
+      return { 
+        tx, 
+        evaluation: { scoreIncrement: aiResult.persuasionScore >= 95 ? 100 : aiResult.persuasionScore > 50 ? 5 : -5 },
+        receipt,
+        trumpResponse: aiResult.response,
+        trumpGif: aiResult.reactionGif 
+      };
+
     } catch (error: any) {
       console.error("Transaction error:", error);
       if (error.code === 'INSUFFICIENT_FUNDS') {
