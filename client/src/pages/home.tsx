@@ -31,9 +31,9 @@ declare global {
 
 // Modified clearAllGameState function with better console output
 function clearAllGameState() {
-  console.log('Clearing all game state...');
+  console.log('Clearing game state (preserving scores)...');
   try {
-    // Clear everything from localStorage
+    // Clear chat history but preserve scores
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
       if (key.startsWith(CHAT_HISTORY_KEY)) {
@@ -42,11 +42,8 @@ function clearAllGameState() {
       }
     });
 
-    // Reset persuasion scores to initial state
-    localStorage.setItem(PERSUASION_SCORE_KEY, '{}');
-    console.log('Reset persuasion scores');
-
-    console.log('All game state cleared successfully');
+    // Don't reset persuasion scores anymore
+    console.log('Preserved persuasion scores');
   } catch (error) {
     console.error('Error clearing game state:', error);
   }
@@ -355,9 +352,8 @@ function handleSubmissionError(error: any) {
 
   async function initializeGameData(contract: GameContract, account: string) {
     try {
-      // Clear all game state when starting a new game
-      clearAllGameState();
-      console.log('Game state cleared for new game initialization');
+      // Remove clearAllGameState calls to preserve scores
+      console.log('Initializing game data for account:', account);
 
       const [status, totalPool] = await Promise.all([
         contract.getGameStatus(),
@@ -422,9 +418,10 @@ function handleSubmissionError(error: any) {
         const contract = new GameContract(state.provider!, state.signer!);
         setGameContract(contract);
 
-        // Maintain existing persuasion score instead of resetting
+        // Get the stored score for this account
         const score = getStoredPersuasionScore(state.account);
         setPersuasionScore(score);
+        console.log('Restored persuasion score:', score);
 
         await initializeGameData(contract, state.account);
       }
