@@ -13,58 +13,6 @@ interface AIResponse {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export function registerRoutes(app: Express): Server {
-  // API route to update player score
-  app.post('/api/scores', async (req, res) => {
-    try {
-      const { address, response, blockNumber, transactionHash } = req.body;
-      if (!address || !response || !blockNumber || !transactionHash) {
-        return res.status(400).json({ error: 'Missing required fields' });
-      }
-
-      // Get or initialize player score
-      const score = await storage.getPlayerScore(address) || {
-        address,
-        persuasionScore: 50,
-        lastUpdated: new Date()
-      };
-
-      res.json({
-        success: true,
-        message: "Score updated",
-        score: score.persuasionScore,
-        game_won: score.persuasionScore >= 100
-      });
-    } catch (error: any) {
-      console.error("Score update error:", error);
-      res.status(500).json({ error: 'Failed to update score', details: error.message });
-    }
-  });
-
-  // API route to get player score
-  app.get('/api/scores/:address', async (req, res) => {
-    try {
-      const { address } = req.params;
-      if (!address) {
-        return res.status(400).json({ error: 'Address is required' });
-      }
-
-      // Get or initialize player score
-      const score = await storage.getPlayerScore(address) || {
-        address,
-        persuasionScore: 50,
-        lastUpdated: new Date()
-      };
-
-      res.json({
-        success: true,
-        score: score.persuasionScore
-      });
-    } catch (error: any) {
-      console.error("Get score error:", error);
-      res.status(500).json({ error: 'Failed to get score', details: error.message });
-    }
-  });
-
   // API route to handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
@@ -98,9 +46,10 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Stored response:', storedResponse);
 
+      // Send back just the basic info needed for initial confirmation
       res.json({
         success: true,
-        message: "Response processed",
+        message: "Response stored successfully",
         score: score.persuasionScore,
         game_won: score.persuasionScore >= 100
       });
@@ -119,8 +68,8 @@ export function registerRoutes(app: Express): Server {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      const maxRetries = 5;  // Increased from 3 to 5
-      const baseDelay = 1000; // Increased from 500 to 1000ms
+      const maxRetries = 5;
+      const baseDelay = 1000;
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         const response = await storage.getPlayerResponseByHash(hash);
@@ -136,23 +85,21 @@ export function registerRoutes(app: Express): Server {
 
           return res.json({
             success: true,
-            message: "Response retrieved",
+            message: response.response, // Send back the original response for processing
             score: score.persuasionScore,
             game_won: score.persuasionScore >= 100
           });
         }
 
-        // Calculate exponential backoff delay
-        const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`Attempt ${attempt + 1}: Waiting ${delay}ms before retry...`);
-        await sleep(delay);
+        console.log(`Attempt ${attempt + 1}: Waiting ${baseDelay}ms before retry...`);
+        await sleep(baseDelay);
       }
 
       console.log('No response found after all retries');
       return res.status(404).json({ 
         success: false,
         error: 'Response not found',
-        message: "Failed to find your response. Please try again."
+        message: "Trump's response is still being processed. Please try again."
       });
     } catch (error: any) {
       console.error("Get response by hash error:", error);
@@ -160,8 +107,32 @@ export function registerRoutes(app: Express): Server {
         success: false,
         error: 'Failed to get response',
         details: error.message,
-        message: "Failed to process your response. Please try again."
+        message: "Failed to get Trump's response. Please try again."
       });
+    }
+  });
+
+  // API route to get player score
+  app.get('/api/scores/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      if (!address) {
+        return res.status(400).json({ error: 'Address is required' });
+      }
+
+      const score = await storage.getPlayerScore(address) || {
+        address,
+        persuasionScore: 50,
+        lastUpdated: new Date()
+      };
+
+      res.json({
+        success: true,
+        score: score.persuasionScore
+      });
+    } catch (error: any) {
+      console.error("Get score error:", error);
+      res.status(500).json({ error: 'Failed to get score', details: error.message });
     }
   });
 
