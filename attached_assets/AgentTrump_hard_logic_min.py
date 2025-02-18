@@ -187,8 +187,8 @@ class AgentTrump:
 {history_context}
 
 REQUIREMENTS:
-1. ALWAYS respond directly to their specific message first
-2. Reference previous conversation points when relevant
+1. ALWAYS respond directly to their specific message first.
+2. Reference previous conversation points when relevant.
 3. Use these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
    - Use CAPS for emphasis
@@ -243,6 +243,17 @@ Keep responses on-topic and in Trump's voice at all times!"""
             # Convert to lowercase for analysis
             normalized_input = user_input.lower()
 
+            # Check for insults and negative comments
+            insult_terms = [
+                'idiot', 'stupid', 'dumb', 'moron', 'loser', 'terrible',
+                'worst', 'hate', 'awful', 'fake', 'weak', 'trash'
+            ]
+            insult_count = sum(1 for term in insult_terms if term in normalized_input)
+
+            if insult_count > 0:
+                score_change -= 5 * insult_count  # Penalize each insult
+                logger.info(f"Detected {insult_count} insults, applying penalty")
+
             # Check for threatening content
             negative_terms = [
                 'kill', 'death', 'murder', 'threat', 'die', 'destroy',
@@ -254,7 +265,6 @@ Keep responses on-topic and in Trump's voice at all times!"""
             if threat_count > 0:
                 score_change -= 20 * threat_count
                 logger.info(f"Detected {threat_count} threatening terms, applying penalty")
-                return max(0, current_score + score_change)
 
             # Basic length check
             words = user_input.split()
@@ -288,8 +298,8 @@ Keep responses on-topic and in Trump's voice at all times!"""
             context_points = sum(4 for term in context_terms if term in normalized_input)
             score_change += context_points
 
-            # Add controlled randomness
-            random_factor = random.randint(-2, 4)
+            # Add controlled randomness with reduced range
+            random_factor = random.randint(-1, 2)  # Reduced from (-2, 4) to (-1, 2)
             score_change += random_factor
 
             # Ensure score changes are meaningful but not too extreme
