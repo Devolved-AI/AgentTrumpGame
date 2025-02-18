@@ -188,7 +188,7 @@ export async function analyzeTrumpResponse(
     });
 
     if (!response.success) {
-      throw new Error(response.message);
+      throw new Error(response.message || 'Failed to process response');
     }
 
     // Generate new score
@@ -215,15 +215,18 @@ export async function analyzeTrumpResponse(
 
   } catch (error) {
     console.error('Error analyzing response:', error);
+
+    // Provide more informative error toast
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     toast({
-      title: "Error",
-      description: "Failed to get Trump's response. Please try again.",
+      title: "Error Processing Response",
+      description: errorMessage,
       variant: "destructive"
     });
 
-    // Fallback response
+    // Return a context-aware fallback response
     return {
-      response: "Look folks, the server's not working great right now - NOT GOOD! We'll fix it, believe me!",
+      response: "Look folks, we're having some TECHNICAL DIFFICULTIES (nobody likes those, believe me!). Give it another shot - I know you can do better than the FAKE ERROR MESSAGES! SAD!!!",
       persuasionScore: 0,
       sentiment: 'negative',
       reactionGif: TRUMP_GIFS.negative[0]

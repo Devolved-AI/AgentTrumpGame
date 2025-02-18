@@ -21,8 +21,12 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      // Get current score from storage
-      const score = await storage.getPlayerScore(address);
+      // Get or initialize player score
+      const score = await storage.getPlayerScore(address) || {
+        address,
+        persuasionScore: 50,
+        lastUpdated: new Date()
+      };
 
       res.json({
         success: true,
@@ -44,7 +48,13 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: 'Address is required' });
       }
 
-      const score = await storage.getPlayerScore(address);
+      // Get or initialize player score
+      const score = await storage.getPlayerScore(address) || {
+        address,
+        persuasionScore: 50,
+        lastUpdated: new Date()
+      };
+
       res.json({
         success: true,
         score: score.persuasionScore
@@ -69,17 +79,24 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Processing response with transaction hash:', transactionHash);
 
-      // Get current score
-      const score = await storage.getPlayerScore(address);
+      // Get or initialize player score
+      const score = await storage.getPlayerScore(address) || {
+        address,
+        persuasionScore: 50,
+        lastUpdated: new Date()
+      };
 
-      // Store the response
-      await storage.storePlayerResponse(address, {
+      // Store the response with all required fields
+      const storedResponse = await storage.storePlayerResponse(address, {
+        address,
         response,
         blockNumber,
         transactionHash,
         created_at: new Date().toISOString(),
         exists: true
       });
+
+      console.log('Stored response:', storedResponse);
 
       res.json({
         success: true,
@@ -102,14 +119,21 @@ export function registerRoutes(app: Express): Server {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      const maxRetries = 3;
-      const baseDelay = 500; // 500ms base delay
+      const maxRetries = 5;  // Increased from 3 to 5
+      const baseDelay = 1000; // Increased from 500 to 1000ms
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         const response = await storage.getPlayerResponseByHash(hash);
+        console.log(`Attempt ${attempt + 1}: Response found:`, response);
 
         if (response) {
-          const score = await storage.getPlayerScore(response.address);
+          // Get or initialize player score
+          const score = await storage.getPlayerScore(response.address) || {
+            address: response.address,
+            persuasionScore: 50,
+            lastUpdated: new Date()
+          };
+
           return res.json({
             success: true,
             message: "Response retrieved",
@@ -125,12 +149,18 @@ export function registerRoutes(app: Express): Server {
       }
 
       console.log('No response found after all retries');
-      return res.status(404).json({ error: 'Response not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Response not found',
+        message: "Failed to find your response. Please try again."
+      });
     } catch (error: any) {
       console.error("Get response by hash error:", error);
       res.status(500).json({ 
+        success: false,
         error: 'Failed to get response',
-        details: error.message 
+        details: error.message,
+        message: "Failed to process your response. Please try again."
       });
     }
   });
