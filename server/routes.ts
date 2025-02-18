@@ -1,10 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import OpenAI from "openai";
 import { storage } from "./storage";
+import { spawn } from 'child_process';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-// Initialize OpenAI client
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Initialize path to Python script
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const pythonScriptPath = join(__dirname, '..', 'attached_assets', 'AgentTrump_hard_logic_min.py');
 
 // Type definitions for AI responses
 interface AIResponse {
@@ -14,129 +19,155 @@ interface AIResponse {
   game_won?: boolean;
 }
 
-// Trump's system prompt for consistent personality
-const TRUMP_SYSTEM_PROMPT = `You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. You must maintain Trump's personality and speech patterns at all times.
-
-CORE PERSONALITY TRAITS:
-- Confident and boastful
-- Uses simple, repetitive language
-- Often references personal wealth and success
-- Frequently uses superlatives ("the best", "tremendous", "huge")
-- Adds parenthetical asides
-- Uses ALL CAPS for emphasis
-
-RESPONSE RULES:
-1. ALWAYS start responses with phrases like "Look folks", "Believe me", or "Let me tell you"
-2. Use Trump's signature style:
-   - Short, punchy sentences
-   - Frequent use of "tremendous", "huge", "beautiful"
-   - End statements with "Sad!", "Not good!", or similar
-3. Reference the context of them trying to convince you to press your button
-4. NEVER break character or acknowledge being AI
-5. Keep responses concise (max 2-3 sentences)
-6. Use ALL CAPS for emphasis on key words
-
-Example response: "Look folks, you're talking about McDonald's - I LOVE McDonald's, nobody loves it more than me! But it'll take more than a Big Mac to get me to press this BEAUTIFUL button! SAD!"`;
-
-async function getTrumpResponse(
+// Function to interact with Python AI agent with proper typing and error handling
+async function interactWithAIAgent(
+  address: string,
   message: string,
-  currentScore: number
-): Promise<string> {
-  try {
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: TRUMP_SYSTEM_PROMPT },
-        { 
-          role: "user", 
-          content: `Current persuasion score: ${currentScore}/100\n\nUser's message: ${message}`
-        }
-      ],
-      temperature: 0.9,
-      max_tokens: 150,
-      presence_penalty: 0.6,
-      frequency_penalty: 0.3
+  signature: string,
+  blockNumber: number,
+  txHash?: string
+): Promise<AIResponse> {
+  return new Promise((resolve, reject) => {
+    const args = [
+      pythonScriptPath,
+      '--address', address,
+      '--message', message,
+      '--signature', signature,
+      '--block-number', blockNumber.toString()
+    ];
+
+    if (txHash) {
+      args.push('--tx-hash', txHash);
+    }
+
+    console.log('Executing Python script with args:', args);
+    const pythonProcess = spawn('python3', args);
+
+    let result = '';
+    let error = '';
+
+    pythonProcess.stdout.on('data', (data) => {
+      result += data.toString();
     });
 
-    const response = completion.choices[0].message.content || 
-      "Look folks, something's not working right - NOT GOOD!";
-    console.log('Generated Trump response:', response);
-    return response;
-  } catch (error) {
-    console.error('OpenAI API error:', error);
-    return "Look folks, my tremendously smart AI brain is taking a quick break - but don't worry, I'll be back stronger than ever! SAD!";
-  }
+    pythonProcess.stderr.on('data', (data) => {
+      error += data.toString();
+      console.error('Python script error output:', data.toString());
+    });
+
+    pythonProcess.on('error', (err) => {
+      console.error('Failed to start Python process:', err);
+      reject(new Error('Failed to start AI agent process'));
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code !== 0) {
+        console.error('Python script error:', error);
+        reject(new Error(`AI Agent error: ${error}`));
+        return;
+      }
+
+      try {
+        const parsed: AIResponse = JSON.parse(result);
+        resolve(parsed);
+      } catch (e) {
+        console.error('Failed to parse AI agent response:', result);
+        reject(new Error('Failed to parse AI agent response'));
+      }
+    });
+  });
 }
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export function registerRoutes(app: Express): Server {
+  // API route to update player score
+  app.post('/api/scores', async (req, res) => {
+    try {
+      const { address, response, blockNumber, transactionHash } = req.body;
+      if (!address || !response || !blockNumber || !transactionHash) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      // Get Agent Trump's analysis and response
+      const result = await interactWithAIAgent(
+        address,
+        response,
+        req.body.signature || "",
+        blockNumber,
+        transactionHash
+      );
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      // Update player's persuasion score in Redis (handled by Python script)
+      res.json({
+        message: result.message,
+        score: result.score,
+        gameWon: result.game_won || false
+      });
+    } catch (error: any) {
+      console.error("Score update error:", error);
+      res.status(500).json({ error: 'Failed to update score', details: error.message });
+    }
+  });
+
+  // API route to get player score (score is now handled by Python script with Redis)
+  app.get('/api/scores/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      if (!address) {
+        return res.status(400).json({ error: 'Address is required' });
+      }
+      const result = await interactWithAIAgent(
+        address,
+        "",  // Empty message for score query
+        "",  // No signature needed for score query
+        0,   // Block number not needed for score query
+        undefined
+      );
+
+      res.json({
+        score: result.score || 50  // Default to 50 if no score exists
+      });
+    } catch (error: any) {
+      console.error("Get score error:", error);
+      res.status(500).json({ error: 'Failed to get score', details: error.message });
+    }
+  });
+
   // API route to handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
-      console.log('Received response request:', req.body);
-      const { 
-        address, 
-        response: userMessage, 
-        blockNumber, 
-        transactionHash,
-        scoreAdjustment 
-      } = req.body;
+      const { address, response, blockNumber, signature, transactionHash } = req.body;
 
-      if (!address || !userMessage || !blockNumber || !transactionHash) {
+      if (!address || !response || !blockNumber || !transactionHash) {
         return res.status(400).json({ 
           error: 'Missing required fields',
           details: 'address, response, blockNumber, and transactionHash are required'
         });
       }
 
-      // Get current score from storage
-      const scoreData = await storage.get(`score:${address}`);
-      const currentScore = scoreData ? JSON.parse(scoreData).persuasion_score : 50;
-      console.log('Current score:', currentScore);
+      console.log('Processing response with transaction hash:', transactionHash);
 
-      // Generate Trump's response
-      const trumpResponse = await getTrumpResponse(userMessage, currentScore);
-      console.log('Trump response generated:', trumpResponse);
-
-      // Calculate new score
-      const scoreChange = Math.max(-20, Math.min(20, scoreAdjustment || 0));
-      const newScore = Math.max(0, Math.min(100, currentScore + scoreChange));
-      console.log('New score calculated:', newScore);
-
-      // Store interaction data
-      const interactionData = {
+      // Get AI agent's response and analysis
+      const result = await interactWithAIAgent(
         address,
-        user_message: userMessage,
-        ai_response: trumpResponse,
-        block_number: blockNumber,
-        transaction_hash: transactionHash,
-        score: newScore,
-        timestamp: new Date().toISOString()
-      };
+        response,
+        signature || "",
+        blockNumber,
+        transactionHash
+      );
 
-      // Store both interaction and score
-      await Promise.all([
-        storage.set(`interaction:${transactionHash}`, JSON.stringify(interactionData)),
-        storage.set(`score:${address}`, JSON.stringify({
-          persuasion_score: newScore,
-          last_updated: new Date().toISOString()
-        }))
-      ]);
-
-      console.log('Interaction data stored successfully');
-
-      // Verify storage before responding
-      const storedData = await storage.get(`interaction:${transactionHash}`);
-      if (!storedData) {
-        throw new Error('Failed to verify stored interaction data');
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
       }
 
-      // Return response
       res.json({
-        success: true,
-        message: trumpResponse,
-        score: newScore,
-        game_won: newScore >= 95
+        message: result.message,
+        score: result.score,
+        gameWon: result.game_won || false
       });
     } catch (error: any) {
       console.error("Add response error:", error);
@@ -147,76 +178,56 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API route to get player score
-  app.get('/api/scores/:address', async (req, res) => {
-    try {
-      const { address } = req.params;
-      if (!address) {
-        return res.status(400).json({ error: 'Address is required' });
-      }
-
-      const score = await getPlayerScore(address);
-      res.json({ score });
-    } catch (error: any) {
-      console.error("Get score error:", error);
-      res.status(500).json({ error: 'Failed to get score', details: error.message });
-    }
-  });
-
-  // API route to get response by transaction hash
+  // API route to get response by transaction hash with enhanced retries
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      const interactionData = await storage.get(`interaction:${hash}`);
-      console.log('Retrieved interaction data:', interactionData);
+      const maxRetries = 3;
+      const baseDelay = 500; // 500ms base delay
 
-      if (interactionData) {
-        const parsedInteraction = JSON.parse(interactionData);
-        return res.json({
-          success: true,
-          message: parsedInteraction.ai_response,
-          score: parsedInteraction.score,
-          game_won: parsedInteraction.score >= 95
-        });
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const result = await interactWithAIAgent(
+            "",  // Empty address for response query
+            "",  // Empty message for response query
+            "",  // No signature needed for response query
+            0,   // Block number not needed for response query
+            hash // Pass the transaction hash
+          );
+
+          if (result.success) {
+            return res.json({
+              message: result.message,
+              score: result.score,
+              gameWon: result.game_won || false
+            });
+          }
+        } catch (error) {
+          console.error(`Attempt ${attempt + 1} failed:`, error);
+
+          // If it's the last attempt, throw the error
+          if (attempt === maxRetries - 1) throw error;
+        }
+
+        // Calculate exponential backoff delay
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`Attempt ${attempt + 1}: Waiting ${delay}ms before retry...`);
+        await sleep(delay);
       }
 
-      console.log('No interaction data found for hash:', hash);
-      return res.status(404).json({ 
-        success: false,
-        error: 'Response not found',
-        message: "Look folks, I can't find that response right now - but keep trying, nobody persists better than me! SAD!"
-      });
+      console.log('No response found after all retries');
+      return res.status(404).json({ error: 'Response not found' });
     } catch (error: any) {
       console.error("Get response by hash error:", error);
       res.status(500).json({ 
-        success: false,
         error: 'Failed to get response',
-        details: error.message,
-        message: "Look folks, something's not working right with my tremendous memory - NOT GOOD!"
+        details: error.message 
       });
     }
   });
 
   const httpServer = createServer(app);
   return httpServer;
-}
-
-async function getPlayerScore(address: string): Promise<number> {
-  try {
-    const scoreData = await storage.get(`score:${address}`);
-    return scoreData ? JSON.parse(scoreData).persuasion_score : 50;
-  } catch (error) {
-    console.error('Error getting player score:', error);
-    return 50; // Default score
-  }
-}
-
-async function updatePlayerScore(address: string, newScore: number): Promise<void> {
-  const score = Math.max(0, Math.min(100, newScore));
-  await storage.set(`score:${address}`, JSON.stringify({
-    persuasion_score: score,
-    last_updated: new Date().toISOString()
-  }));
 }

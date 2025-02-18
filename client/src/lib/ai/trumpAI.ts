@@ -30,49 +30,6 @@ export interface AIResponse {
   game_won?: boolean;
 }
 
-// Score adjustment based on message content
-function calculatePersuasionScoreAdjustment(message: string): number {
-  const lowerMessage = message.toLowerCase();
-  let adjustment = 0;
-
-  // Positive keywords that Trump would like
-  const positiveTerms = [
-    'great', 'best', 'huge', 'tremendous', 'america', 'win', 'deal', 
-    'smart', 'beautiful', 'success', 'amazing', 'fantastic', 'perfect',
-    'maga', 'strong', 'powerful', 'billion', 'million', 'money', 'business'
-  ];
-
-  // Negative keywords that Trump wouldn't like
-  const negativeTerms = [
-    'hate', 'bad', 'weak', 'loser', 'fake', 'wrong', 'fail', 'poor',
-    'stupid', 'corrupt', 'horrible', 'disaster', 'mess', 'sad', 'democrat',
-    'socialist', 'communist'
-  ];
-
-  // Add points for positive terms
-  positiveTerms.forEach(term => {
-    if (lowerMessage.includes(term)) {
-      adjustment += 5;
-    }
-  });
-
-  // Subtract points for negative terms
-  negativeTerms.forEach(term => {
-    if (lowerMessage.includes(term)) {
-      adjustment -= 5;
-    }
-  });
-
-  // Extra points for key phrases
-  if (lowerMessage.includes('make america great')) adjustment += 15;
-  if (lowerMessage.includes('trump')) adjustment += 3;
-  if (lowerMessage.includes('deal')) adjustment += 5;
-  if (lowerMessage.includes('billions')) adjustment += 8;
-
-  // Cap the adjustment to prevent extreme changes
-  return Math.max(-20, Math.min(20, adjustment));
-}
-
 export async function analyzeTrumpResponse(
   userMessage: string, 
   address: string,
@@ -86,16 +43,15 @@ export async function analyzeTrumpResponse(
   reactionGif?: string;
 }> {
   try {
-    // Call backend API that uses OpenAI
-    const response = await apiRequest<AIResponse>('/api/responses', {
+    // Call backend API that uses Python AgentTrump
+    const response: AIResponse = await apiRequest('/api/responses', {
       method: 'POST',
       body: {
         address,
         response: userMessage,
         blockNumber,
         transactionHash,
-        signature,
-        scoreAdjustment: calculatePersuasionScoreAdjustment(userMessage)
+        signature
       }
     });
 
