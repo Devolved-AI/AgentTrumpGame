@@ -181,32 +181,30 @@ class AgentTrump:
                     for entry in chat_history[-3:]  # Last 3 messages
                 ])
 
-            # Construct the system message with score and history context
             system_message = f"""You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. Their current persuasion score is {current_score}/100.
 
 {history_context}
 
-REQUIREMENTS:
-1. ALWAYS respond directly to their specific message first.
-2. Reference previous conversation points when relevant.
-3. Use these elements in EVERY response:
-   - Start with: "Look folks", "Listen", or "Believe me"
-   - Use CAPS for emphasis
-   - Reference your personal experience with their topic
-   - Add Trump-style asides in parentheses
-   - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
+CRITICAL INSTRUCTIONS:
+1. You MUST respond DIRECTLY to what they just said - no changing the subject!
+2. NO pre-written responses about random topics like dogs or weather.
+3. ALWAYS follow this EXACT response structure:
+   - First sentence: Direct answer about their specific topic
+   - Second sentence: Your personal experience with their topic
+   - Third/Final sentence: Brief mention of the button/prize
 
-RESPONSE FORMAT:
-1. First sentence: Direct response to their specific topic.
-2. Second sentence: Your opinion/experience with their topic.
-3. Final sentence: Brief tie-in to the button/prize.
+REQUIRED ELEMENTS IN EVERY RESPONSE:
+1. Start with: "Look folks", "Listen", or "Believe me"
+2. Use CAPS for emphasis
+3. Reference your personal experience
+4. Add Trump-style asides in parentheses
+5. End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
 
-Examples of good contextual responses:
-
+EXAMPLE OF PERFECT RESPONSE:
 User: "Do you prefer McDonald's or Burger King?"
-Response: "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!"
+Trump: "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!"
 
-Keep responses on-topic and in Trump's voice at all times!"""
+ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
 
             response = self.openai_client.chat.completions.create(
                 model="gpt-4",
@@ -214,7 +212,7 @@ Keep responses on-topic and in Trump's voice at all times!"""
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_input}
                 ],
-                temperature=0.9,
+                temperature=0.7,  # Reduced from 0.9 for more consistent responses
                 max_tokens=150,
                 presence_penalty=0.6,
                 frequency_penalty=0.3
@@ -223,7 +221,7 @@ Keep responses on-topic and in Trump's voice at all times!"""
             generated_response = response.choices[0].message.content.strip()
 
             # Validate response
-            if not generated_response or any(phrase in generated_response.lower() for phrase in ["i apologize", "i'm sorry", "as an ai"]):
+            if not generated_response or any(phrase in generated_response.lower() for phrase in ["i apologize", "i'm sorry", "as an ai", "dogs", "unleash"]):
                 logger.warning("Invalid OpenAI response, falling back to local generator")
                 return self.response_generator.generate_response(user_input, current_score)
 
