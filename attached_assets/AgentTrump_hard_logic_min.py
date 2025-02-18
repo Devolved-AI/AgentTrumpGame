@@ -187,22 +187,20 @@ class AgentTrump:
 
             client = openai.OpenAI()
             messages = [
-                {"role": "system", "content": """You are Donald Trump evaluating someone trying to convince you to press a red button. 
-                Keep responses SHORT and DIRECT (2-3 sentences max). Use Trump's signature style:
-                - Use ALL CAPS for emphasis on key words like "TREMENDOUS", "HUGE", "WINNING"
+                {"role": "system", "content": """You are Donald Trump evaluating someone trying to convince you to press a big red button that would reward them with prize money. Stay focused on this context.
+                Keep responses SHORT and DIRECT (2-3 sentences max), and always reference or acknowledge what the user just said. Use Trump's signature style:
+                - Always relate your response to whether you'll press the button or not
+                - If they mention threats, violence, or inappropriate content, strongly reject it
+                - Comment specifically on their argument for why you should press the button
+                - Show skepticism about weak arguments
+                - Use ALL CAPS for emphasis
                 - Always end with exclamation marks!!!
-                - Use parenthetical asides (and believe me, I know asides!)
-                - Reference your success: "nobody knows X better than me"
-                - Use superlatives: "the best", "the greatest", "like never before"
-                - Add rhetorical questions: "Can you believe it?"
-                - Use "folks", "believe me", "many people are saying"
-                - Start responses with interjections: "Look", "Listen", "Let me tell you"
-                - Use repetition for emphasis: "very very", "many many"
-                - Reference "deals", "money", "business" frequently
-                - Add signature dismissive endings: "Sad!", "Not good enough!", "We'll see!"
-                - Use "by the way" for tangential comments
-                - Add numbers and statistics (even if made up): "up 500%"
-                Remember: Each response must sound like an authentic Trump tweet or rally speech snippet!"""},
+                - Use parenthetical asides
+                - Reference your success
+                - Use superlatives
+                - Add rhetorical questions
+                - Start responses with "Look", "Listen", "Let me tell you"
+                Remember: Each response must directly address their attempt to convince you about pressing the button!"""},
                 {"role": "user", "content": user_input}
             ]
 
@@ -311,40 +309,65 @@ class AgentTrump:
             }
 
     def evaluate_persuasion(self, user_input: str, current_score: int) -> int:
-        """Enhanced persuasion evaluation with improved scoring logic"""
+        """Enhanced persuasion evaluation with improved scoring logic and content filtering"""
         try:
             logger.info(f"Evaluating persuasion for input: {user_input[:50]}...")
             score_change = 0
 
+            # Convert to lowercase for analysis
+            normalized_input = user_input.lower()
+
+            # Check for threatening or inappropriate content
+            negative_terms = [
+                'kill', 'death', 'murder', 'threat', 'die', 'destroy', 
+                'hate', 'violent', 'blood', 'weapon', 'gun', 'bomb'
+            ]
+
+            # Severely penalize threatening content
+            threat_count = sum(1 for term in negative_terms if term in normalized_input)
+            if threat_count > 0:
+                score_change -= 20 * threat_count
+                logger.info(f"Detected {threat_count} threatening terms, applying penalty")
+                return max(0, current_score + score_change)
+
             # Basic length check - encourage meaningful responses
             words = user_input.split()
             input_length = len(words)
-            if 5 <= input_length <= 100:
+            if 10 <= input_length <= 100:
                 score_change += 5
             elif input_length > 100:
-                score_change += 2  # Still reward longer messages but not as much
+                score_change += 2
 
-            # Check for Trump-pleasing terms
-            trump_terms = ["tremendous", "huge", "great", "deal", "winning", "smart", "america"]
-            trump_points = sum(2 for term in trump_terms if term.lower() in user_input.lower())
-            score_change += trump_points
-
-            # Check for blockchain/web3 terms
-            web3_terms = ["blockchain", "web3", "smart contract", "base", "ethereum", "crypto"]
-            web3_points = sum(3 for term in web3_terms if term.lower() in user_input.lower())
-            score_change += web3_points
-
-            # Check for business/money terms
-            business_terms = ["business", "money", "profit", "investment", "billions"]
-            business_points = sum(2 for term in business_terms if term.lower() in user_input.lower())
+            # Check for persuasive business/deal terms
+            business_terms = [
+                'deal', 'business', 'money', 'profit', 'investment', 
+                'billion', 'million', 'success', 'win', 'opportunity'
+            ]
+            business_points = sum(3 for term in business_terms if term in normalized_input)
             score_change += business_points
 
-            # Add controlled randomness for unpredictability
-            random_factor = random.randint(-3, 7)
+            # Check for flattery and Trump-pleasing terms
+            positive_terms = [
+                'great', 'smart', 'genius', 'tremendous', 'huge', 
+                'best', 'amazing', 'successful', 'brilliant', 'winner'
+            ]
+            positive_points = sum(2 for term in positive_terms if term in normalized_input)
+            score_change += positive_points
+
+            # Reward references to current context
+            context_terms = [
+                'button', 'press', 'reward', 'prize', 'challenge', 
+                'convince', 'persuade', 'trust', 'believe'
+            ]
+            context_points = sum(4 for term in context_terms if term in normalized_input)
+            score_change += context_points
+
+            # Add controlled randomness (smaller range for more stability)
+            random_factor = random.randint(-2, 4)
             score_change += random_factor
 
             # Ensure score changes are meaningful but not too extreme
-            score_change = max(-10, min(15, score_change))
+            score_change = max(-10, min(10, score_change))
 
             # Calculate final score with bounds
             final_score = max(0, min(100, current_score + score_change))
@@ -352,9 +375,9 @@ class AgentTrump:
             # Log detailed scoring breakdown
             logger.info(f"Score calculation breakdown:")
             logger.info(f"- Current score: {current_score}")
-            logger.info(f"- Trump terms points: {trump_points}")
-            logger.info(f"- Web3 points: {web3_points}")
             logger.info(f"- Business points: {business_points}")
+            logger.info(f"- Positive/flattery points: {positive_points}")
+            logger.info(f"- Context relevance points: {context_points}")
             logger.info(f"- Random factor: {random_factor}")
             logger.info(f"- Total change: {score_change}")
             logger.info(f"- Final score: {final_score}")
@@ -363,9 +386,7 @@ class AgentTrump:
 
         except Exception as e:
             logger.error(f"Error in persuasion evaluation: {str(e)}")
-            # If evaluation fails, make a small positive change to keep the game moving
-            safe_score = max(0, min(100, current_score + random.randint(1, 3)))
-            return safe_score
+            return max(0, min(100, current_score + random.randint(0, 2)))
 
 
 
