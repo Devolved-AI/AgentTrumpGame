@@ -7,12 +7,13 @@ interface PlayerScore {
 interface PlayerResponse {
   address: string;
   response: string;
-  ai_response: string; // Trump's response
+  ai_response: string;
   created_at?: string;
   timestamp?: Date;
   blockNumber: number;
   transactionHash: string | null;
   exists: boolean;
+  score?: number;
 }
 
 export interface IStorage {
@@ -25,7 +26,8 @@ export interface IStorage {
 
 class MemoryStorage implements IStorage {
   private scores: Map<string, PlayerScore> = new Map();
-  private responses: PlayerResponse[] = [];
+  private responses: Map<string, PlayerResponse> = new Map();
+  private addressResponses: Map<string, string[]> = new Map();
 
   async getPlayerScore(address: string): Promise<PlayerScore | undefined> {
     return this.scores.get(address.toLowerCase()) || {
@@ -46,7 +48,7 @@ class MemoryStorage implements IStorage {
   }
 
   async storePlayerResponse(address: string, data: Omit<PlayerResponse, "timestamp">): Promise<PlayerResponse> {
-    // Create the response object with both user's message and Trump's response
+    // Create the response object
     const response: PlayerResponse = {
       ...data,
       address: address.toLowerCase(),
@@ -54,21 +56,35 @@ class MemoryStorage implements IStorage {
       exists: true
     };
 
-    // Store in memory
-    this.responses.push(response);
+    // Store by transaction hash
+    if (response.transactionHash) {
+      console.log('Storing response with hash:', response.transactionHash);
+      this.responses.set(response.transactionHash, response);
+
+      // Store transaction hash in address's response list
+      const addressLower = address.toLowerCase();
+      const txHashes = this.addressResponses.get(addressLower) || [];
+      txHashes.push(response.transactionHash);
+      this.addressResponses.set(addressLower, txHashes);
+    }
 
     console.log('Stored response:', response);
     return response;
   }
 
   async getPlayerResponses(address: string): Promise<PlayerResponse[]> {
-    return this.responses
-      .filter(r => !address || r.address.toLowerCase() === address.toLowerCase())
+    const addressLower = address.toLowerCase();
+    const txHashes = this.addressResponses.get(addressLower) || [];
+    const responses = txHashes
+      .map(hash => this.responses.get(hash))
+      .filter((r): r is PlayerResponse => r !== undefined)
       .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+
+    return responses;
   }
 
   async getPlayerResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
-    const response = this.responses.find(r => r.transactionHash === hash);
+    const response = this.responses.get(hash);
     console.log('Retrieved response for hash:', hash, response);
     return response;
   }
