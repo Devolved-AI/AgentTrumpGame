@@ -1,81 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { spawn } from 'child_process';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
-// Initialize path to Python script
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const pythonScriptPath = join(__dirname, '..', 'attached_assets', 'AgentTrump_hard_logic_min.py');
-
-// Type definitions for AI responses
+// Type definitions for responses
 interface AIResponse {
   success: boolean;
   message: string;
   score: number;
   game_won?: boolean;
-}
-
-// Function to interact with Python AI agent with proper typing and error handling
-async function interactWithAIAgent(
-  address: string,
-  message: string,
-  signature: string,
-  blockNumber: number,
-  txHash?: string
-): Promise<AIResponse> {
-  return new Promise((resolve, reject) => {
-    const args = [
-      pythonScriptPath,
-      '--address', address,
-      '--message', message,
-      '--signature', signature,
-      '--block-number', blockNumber.toString()
-    ];
-
-    if (txHash) {
-      args.push('--tx-hash', txHash);
-    }
-
-    console.log('Executing Python script with args:', args);
-    const pythonProcess = spawn('python3', args);
-
-    let result = '';
-    let error = '';
-
-    pythonProcess.stdout.on('data', (data) => {
-      result += data.toString();
-    });
-
-    pythonProcess.stderr.on('data', (data) => {
-      error += data.toString();
-      console.error('Python script error output:', data.toString());
-    });
-
-    pythonProcess.on('error', (err) => {
-      console.error('Failed to start Python process:', err);
-      reject(new Error('Failed to start AI agent process'));
-    });
-
-    pythonProcess.on('close', (code) => {
-      if (code !== 0) {
-        console.error('Python script error:', error);
-        reject(new Error(`AI Agent error: ${error}`));
-        return;
-      }
-
-      try {
-        const parsed: AIResponse = JSON.parse(result);
-        resolve(parsed);
-      } catch (e) {
-        console.error('Failed to parse AI agent response:', result);
-        reject(new Error('Failed to parse AI agent response'));
-      }
-    });
-  });
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -88,24 +20,14 @@ export function registerRoutes(app: Express): Server {
       if (!address || !response || !blockNumber || !transactionHash) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
-      // Get Agent Trump's analysis and response
-      const result = await interactWithAIAgent(
-        address,
-        response,
-        req.body.signature || "",
-        blockNumber,
-        transactionHash
-      );
 
-      if (!result.success) {
-        return res.status(400).json({ error: result.message });
-      }
+      // Get current score from storage
+      const currentScore = await storage.getPlayerScore(address) ?? 50;
 
-      // Update player's persuasion score in Redis (handled by Python script)
       res.json({
-        message: result.message,
-        score: result.score,
-        gameWon: result.game_won || false
+        message: "Score updated",
+        score: currentScore,
+        gameWon: currentScore >= 100
       });
     } catch (error: any) {
       console.error("Score update error:", error);
@@ -113,24 +35,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API route to get player score (score is now handled by Python script with Redis)
+  // API route to get player score
   app.get('/api/scores/:address', async (req, res) => {
     try {
       const { address } = req.params;
       if (!address) {
         return res.status(400).json({ error: 'Address is required' });
       }
-      const result = await interactWithAIAgent(
-        address,
-        "",  // Empty message for score query
-        "",  // No signature needed for score query
-        0,   // Block number not needed for score query
-        undefined
-      );
 
-      res.json({
-        score: result.score || 50  // Default to 50 if no score exists
-      });
+      const score = await storage.getPlayerScore(address) ?? 50;
+      res.json({ score });
     } catch (error: any) {
       console.error("Get score error:", error);
       res.status(500).json({ error: 'Failed to get score', details: error.message });
@@ -140,7 +54,7 @@ export function registerRoutes(app: Express): Server {
   // API route to handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
-      const { address, response, blockNumber, signature, transactionHash } = req.body;
+      const { address, response, blockNumber, transactionHash } = req.body;
 
       if (!address || !response || !blockNumber || !transactionHash) {
         return res.status(400).json({ 
@@ -151,23 +65,23 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Processing response with transaction hash:', transactionHash);
 
-      // Get AI agent's response and analysis
-      const result = await interactWithAIAgent(
-        address,
-        response,
-        signature || "",
-        blockNumber,
-        transactionHash
-      );
+      // Get current score
+      const currentScore = await storage.getPlayerScore(address) ?? 50;
 
-      if (!result.success) {
-        return res.status(400).json({ error: result.message });
-      }
+      // Store the response
+      await storage.storePlayerResponse(address, {
+        response,
+        blockNumber,
+        transactionHash,
+        created_at: new Date().toISOString(),
+        exists: true
+      });
 
       res.json({
-        message: result.message,
-        score: result.score,
-        gameWon: result.game_won || false
+        success: true,
+        message: "Response processed",
+        score: currentScore,
+        gameWon: currentScore >= 100
       });
     } catch (error: any) {
       console.error("Add response error:", error);
@@ -178,7 +92,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API route to get response by transaction hash with enhanced retries
+  // API route to get response by transaction hash
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
@@ -188,27 +102,16 @@ export function registerRoutes(app: Express): Server {
       const baseDelay = 500; // 500ms base delay
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          const result = await interactWithAIAgent(
-            "",  // Empty address for response query
-            "",  // Empty message for response query
-            "",  // No signature needed for response query
-            0,   // Block number not needed for response query
-            hash // Pass the transaction hash
-          );
+        const response = await storage.getPlayerResponseByHash(hash);
 
-          if (result.success) {
-            return res.json({
-              message: result.message,
-              score: result.score,
-              gameWon: result.game_won || false
-            });
-          }
-        } catch (error) {
-          console.error(`Attempt ${attempt + 1} failed:`, error);
-
-          // If it's the last attempt, throw the error
-          if (attempt === maxRetries - 1) throw error;
+        if (response) {
+          const score = await storage.getPlayerScore(response.address) ?? 50;
+          return res.json({
+            success: true,
+            message: "Response retrieved",
+            score,
+            gameWon: score >= 100
+          });
         }
 
         // Calculate exponential backoff delay
