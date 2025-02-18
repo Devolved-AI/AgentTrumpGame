@@ -26,32 +26,29 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Processing response with transaction hash:', transactionHash);
 
-      // Get player score
-      const score = await storage.getPlayerScore(address) || {
-        address,
-        persuasionScore: 50,
-        lastUpdated: new Date()
-      };
-
       // Generate Trump's response and calculate new score
-      const trumpResponse = generateTrumpResponse(response, score.persuasionScore);
+      const trumpResponse = generateTrumpResponse(response);
       const newScore = analyzeTrumpyResponse(response);
 
-      // Store both user's response and Trump's response
-      const storedResponse = await storage.storePlayerResponse(address, {
+      // Store response data
+      const responseData = {
         address,
         response: response, // User's message
         ai_response: trumpResponse, // Trump's response
         blockNumber,
         transactionHash,
         created_at: new Date().toISOString(),
-        exists: true
-      });
+        exists: true,
+        score: newScore
+      };
+
+      // Store both user's response and Trump's response
+      await storage.storePlayerResponse(address, responseData);
 
       // Update player's score
       await storage.updatePlayerScore(address, newScore);
 
-      console.log('Stored response:', storedResponse);
+      console.log('Stored response for hash:', transactionHash);
 
       // Send back Trump's response
       res.json({
@@ -76,20 +73,14 @@ export function registerRoutes(app: Express): Server {
       console.log('Looking for response with transaction hash:', hash);
 
       const response = await storage.getPlayerResponseByHash(hash);
+      console.log('Retrieved response for hash:', hash, response);
 
       if (response) {
-        // Get player score
-        const score = await storage.getPlayerScore(response.address);
-
-        if (!score) {
-          throw new Error('Player score not found');
-        }
-
         return res.json({
           success: true,
-          message: response.ai_response, // Return Trump's response
-          score: score.persuasionScore,
-          game_won: score.persuasionScore >= 100
+          message: response.ai_response,
+          score: response.score || 50,
+          game_won: (response.score || 50) >= 100
         });
       }
 
@@ -137,8 +128,8 @@ export function registerRoutes(app: Express): Server {
   return httpServer;
 }
 
-// Function to generate Trump-like response based on message content and score
-function generateTrumpResponse(message: string, currentScore: number): string {
+// Function to generate Trump-like response based on message content
+function generateTrumpResponse(message: string): string {
   const input = message.toLowerCase();
 
   // Introductions
@@ -195,15 +186,6 @@ function generateTrumpResponse(message: string, currentScore: number): string {
 
   if (input.includes('deal') || input.includes('business') || input.includes('negotiate')) {
     return `${intro}, you're trying to make a deal here ${buttonRef}. I wrote the book on deals, literally THE BEST book! But this deal? NOT GOOD ENOUGH!!!`;
-  }
-
-  // Score-based responses
-  if (currentScore >= 90) {
-    return `${intro}, you're getting VERY close to convincing me ${buttonRef}! Keep going, maybe you'll be the one to make me press this ${emph} button!!!`;
-  }
-
-  if (currentScore <= 20) {
-    return `${intro}, that's a TERRIBLE argument! You'll never get me to press my ${emph} button with talk like that! ${closing}`;
   }
 
   // Default response
