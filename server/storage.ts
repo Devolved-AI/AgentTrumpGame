@@ -7,6 +7,7 @@ interface PlayerScore {
 interface PlayerResponse {
   address: string;
   response: string;
+  ai_response: string; // Trump's response
   created_at?: string;
   timestamp?: Date;
   blockNumber: number;
@@ -45,13 +46,18 @@ class MemoryStorage implements IStorage {
   }
 
   async storePlayerResponse(address: string, data: Omit<PlayerResponse, "timestamp">): Promise<PlayerResponse> {
+    // Create the response object with both user's message and Trump's response
     const response: PlayerResponse = {
       ...data,
       address: address.toLowerCase(),
       timestamp: new Date(),
       exists: true
     };
+
+    // Store in memory
     this.responses.push(response);
+
+    console.log('Stored response:', response);
     return response;
   }
 
@@ -62,7 +68,9 @@ class MemoryStorage implements IStorage {
   }
 
   async getPlayerResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
-    return this.responses.find(r => r.transactionHash === hash);
+    const response = this.responses.find(r => r.transactionHash === hash);
+    console.log('Retrieved response for hash:', hash, response);
+    return response;
   }
 }
 

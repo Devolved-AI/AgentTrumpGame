@@ -27,7 +27,7 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Processing response with transaction hash:', transactionHash);
 
-      // Get or initialize player score
+      // Get player score
       const score = await storage.getPlayerScore(address) || {
         address,
         persuasionScore: 50,
@@ -37,10 +37,11 @@ export function registerRoutes(app: Express): Server {
       // Generate Trump's response based on the input
       const trumpResponse = generateTrumpResponse(response, score.persuasionScore);
 
-      // Store both the user's response and Trump's response
+      // Store both user's response and Trump's response
       const storedResponse = await storage.storePlayerResponse(address, {
         address,
-        response: trumpResponse, // Store Trump's response
+        response: response, // User's message
+        ai_response: trumpResponse, // Trump's response
         blockNumber,
         transactionHash,
         created_at: new Date().toISOString(),
@@ -49,7 +50,7 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Stored response:', storedResponse);
 
-      // Send back Trump's response immediately
+      // Send back Trump's response
       res.json({
         success: true,
         message: trumpResponse,
@@ -74,7 +75,7 @@ export function registerRoutes(app: Express): Server {
       const response = await storage.getPlayerResponseByHash(hash);
 
       if (response) {
-        // Get or initialize player score
+        // Get player score
         const score = await storage.getPlayerScore(response.address) || {
           address: response.address,
           persuasionScore: 50,
@@ -83,7 +84,7 @@ export function registerRoutes(app: Express): Server {
 
         return res.json({
           success: true,
-          message: response.response,
+          message: response.ai_response, // Return Trump's response
           score: score.persuasionScore,
           game_won: score.persuasionScore >= 100
         });
