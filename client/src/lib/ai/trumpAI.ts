@@ -176,9 +176,9 @@ export async function analyzeTrumpResponse(
 }> {
   try {
     // Call backend API for blockchain verification and score tracking
-    const response: AIResponse = await apiRequest('/api/responses', {
+    const response = await apiRequest<AIResponse>('/api/responses', {
       method: 'POST',
-      body: {
+      data: {
         address,
         response: userMessage,
         blockNumber,

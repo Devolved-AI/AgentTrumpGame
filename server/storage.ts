@@ -7,7 +7,8 @@ interface PlayerScore {
 interface PlayerResponse {
   address: string;
   response: string;
-  timestamp: Date;
+  created_at?: string;
+  timestamp?: Date;
   blockNumber: number;
   transactionHash: string | null;
   exists: boolean;
@@ -16,9 +17,9 @@ interface PlayerResponse {
 export interface IStorage {
   getPlayerScore(address: string): Promise<PlayerScore | undefined>;
   updatePlayerScore(address: string, score: number): Promise<PlayerScore>;
-  addPlayerResponse(data: PlayerResponse): Promise<PlayerResponse>;
+  storePlayerResponse(address: string, data: Omit<PlayerResponse, "timestamp">): Promise<PlayerResponse>;
   getPlayerResponses(address: string): Promise<PlayerResponse[]>;
-  getResponseByHash(hash: string): Promise<PlayerResponse | undefined>;
+  getPlayerResponseByHash(hash: string): Promise<PlayerResponse | undefined>;
 }
 
 class MemoryStorage implements IStorage {
@@ -43,10 +44,10 @@ class MemoryStorage implements IStorage {
     return newScore;
   }
 
-  async addPlayerResponse(data: PlayerResponse): Promise<PlayerResponse> {
-    const response = {
+  async storePlayerResponse(address: string, data: Omit<PlayerResponse, "timestamp">): Promise<PlayerResponse> {
+    const response: PlayerResponse = {
       ...data,
-      address: data.address.toLowerCase(),
+      address: address.toLowerCase(),
       timestamp: new Date(),
       exists: true
     };
@@ -57,10 +58,10 @@ class MemoryStorage implements IStorage {
   async getPlayerResponses(address: string): Promise<PlayerResponse[]> {
     return this.responses
       .filter(r => !address || r.address.toLowerCase() === address.toLowerCase())
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
   }
 
-  async getResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
+  async getPlayerResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
     return this.responses.find(r => r.transactionHash === hash);
   }
 }

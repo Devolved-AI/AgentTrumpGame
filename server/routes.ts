@@ -22,12 +22,13 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Get current score from storage
-      const currentScore = await storage.getPlayerScore(address) ?? 50;
+      const score = await storage.getPlayerScore(address);
 
       res.json({
+        success: true,
         message: "Score updated",
-        score: currentScore,
-        gameWon: currentScore >= 100
+        score: score.persuasionScore,
+        game_won: score.persuasionScore >= 100
       });
     } catch (error: any) {
       console.error("Score update error:", error);
@@ -43,8 +44,11 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: 'Address is required' });
       }
 
-      const score = await storage.getPlayerScore(address) ?? 50;
-      res.json({ score });
+      const score = await storage.getPlayerScore(address);
+      res.json({
+        success: true,
+        score: score.persuasionScore
+      });
     } catch (error: any) {
       console.error("Get score error:", error);
       res.status(500).json({ error: 'Failed to get score', details: error.message });
@@ -66,7 +70,7 @@ export function registerRoutes(app: Express): Server {
       console.log('Processing response with transaction hash:', transactionHash);
 
       // Get current score
-      const currentScore = await storage.getPlayerScore(address) ?? 50;
+      const score = await storage.getPlayerScore(address);
 
       // Store the response
       await storage.storePlayerResponse(address, {
@@ -80,8 +84,8 @@ export function registerRoutes(app: Express): Server {
       res.json({
         success: true,
         message: "Response processed",
-        score: currentScore,
-        gameWon: currentScore >= 100
+        score: score.persuasionScore,
+        game_won: score.persuasionScore >= 100
       });
     } catch (error: any) {
       console.error("Add response error:", error);
@@ -105,12 +109,12 @@ export function registerRoutes(app: Express): Server {
         const response = await storage.getPlayerResponseByHash(hash);
 
         if (response) {
-          const score = await storage.getPlayerScore(response.address) ?? 50;
+          const score = await storage.getPlayerScore(response.address);
           return res.json({
             success: true,
             message: "Response retrieved",
-            score,
-            gameWon: score >= 100
+            score: score.persuasionScore,
+            game_won: score.persuasionScore >= 100
           });
         }
 
