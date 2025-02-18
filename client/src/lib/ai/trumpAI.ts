@@ -23,11 +23,11 @@ export const TRUMP_GIFS = {
   ]
 };
 
-interface AIResponse {
-  response: string;
-  persuasionScore: number;
-  sentiment: 'positive' | 'neutral' | 'negative' | 'winning';
-  reactionGif?: string;
+export interface AIResponse {
+  success: boolean;
+  message: string;
+  score: number;
+  game_won?: boolean;
 }
 
 export async function analyzeTrumpResponse(
@@ -36,10 +36,15 @@ export async function analyzeTrumpResponse(
   blockNumber: number, 
   transactionHash: string,
   signature?: string
-): Promise<AIResponse> {
+): Promise<{
+  response: string;
+  persuasionScore: number;
+  sentiment: 'positive' | 'neutral' | 'negative' | 'winning';
+  reactionGif?: string;
+}> {
   try {
     // Call backend API that uses Python AgentTrump
-    const response = await apiRequest('/api/responses', {
+    const response: AIResponse = await apiRequest('/api/responses', {
       method: 'POST',
       body: {
         address,
@@ -50,7 +55,11 @@ export async function analyzeTrumpResponse(
       }
     });
 
-    // Map response to frontend format
+    if (!response.success) {
+      throw new Error(response.message);
+    }
+
+    // Map score to sentiment
     const sentiment = response.score >= 95 ? 'winning' : 
                      response.score >= 70 ? 'positive' :
                      response.score >= 40 ? 'neutral' : 'negative';
@@ -76,7 +85,7 @@ export async function analyzeTrumpResponse(
 
     // Fallback response
     return {
-      response: "Look, the server's not working great right now - NOT GOOD! We'll fix it, believe me!",
+      response: "Look folks, the server's not working great right now - NOT GOOD! We'll fix it, believe me!",
       persuasionScore: 0,
       sentiment: 'negative',
       reactionGif: TRUMP_GIFS.negative[0]

@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Enhanced AgentTrump with Redis integration and fallback memory storage
+Enhanced AgentTrump with local response generation
 """
 
 import random
-import openai
+import os
 from datetime import datetime
 from typing import Optional, Dict, Any
-import os
 import json
 import argparse
 import logging
@@ -17,7 +16,7 @@ from eth_account.messages import encode_defunct
 from web3 import Web3
 from collections import defaultdict
 
-# Configure logging with more detailed format
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -47,16 +46,90 @@ class MemoryStorage:
     def get_score(self, address: str) -> int:
         return self.scores[address]
 
+class TrumpResponseGenerator:
+    """Generates Trump-style responses based on context"""
+
+    INTROS = [
+        "Look folks",
+        "Listen",
+        "Believe me",
+        "Let me tell you",
+        "Many people are saying",
+        "Folks, let me tell you"
+    ]
+
+    EMPHASIS = [
+        "TREMENDOUS",
+        "HUGE",
+        "FANTASTIC",
+        "INCREDIBLE",
+        "AMAZING",
+        "BEAUTIFUL"
+    ]
+
+    BUTTON_REFERENCES = [
+        "(and believe me, I know buttons!)",
+        "(nobody knows buttons better than me)",
+        "(I've pressed many buttons, maybe more than anyone)",
+        "(and I know A LOT about buttons)"
+    ]
+
+    CLOSINGS = [
+        "SAD!",
+        "NOT GOOD!",
+        "We'll see what happens!",
+        "VERY DISAPPOINTED!",
+        "THINK ABOUT IT!"
+    ]
+
+    def generate_response(self, user_input: str, current_score: int) -> str:
+        # Handle empty input
+        if not user_input or len(user_input.strip()) == 0:
+            return "Look folks, you've got to give me something to work with here! Nobody knows empty messages better than me, and believe me, this one is EMPTY! SAD!!!"
+
+        # Convert to lowercase for analysis
+        input_lower = user_input.lower()
+
+        # Select appropriate response based on content and score
+        intro = random.choice(self.INTROS)
+        emphasis = random.choice(self.EMPHASIS)
+        button_ref = random.choice(self.BUTTON_REFERENCES)
+        closing = random.choice(self.CLOSINGS)
+
+        # Check for specific content types
+        if any(term in input_lower for term in ['kill', 'death', 'murder', 'threat', 'die']):
+            return f"{intro}, we don't like that kind of VIOLENT talk around here {button_ref}! My button is for WINNERS, not threateners. Very disappointed, VERY SAD!!!"
+
+        if 'mcdonald' in input_lower:
+            return f"{intro}, everyone knows I love McDonald's (I have the BEST taste in fast food, believe me), but it'll take more than a Big Mac to get me to press this {emphasis} button! {closing}"
+
+        if current_score >= 90:
+            return f"{intro}, you're getting very close to convincing me {button_ref}! Keep going, maybe you'll be the one to make me press this {emphasis} button!!!"
+
+        if current_score <= 20:
+            return f"{intro}, that's a TERRIBLE argument! You'll never get me to press my {emphasis} button with talk like that! {closing}"
+
+        # Context-aware responses based on keywords
+        if any(term in input_lower for term in ['money', 'rich', 'wealth', 'billion']):
+            return f"{intro}, you're talking about money - I LOVE money {button_ref}! But is it enough to make me press this {emphasis} button? NOT YET!!!"
+
+        if any(term in input_lower for term in ['deal', 'business', 'negotiate']):
+            return f"{intro}, you're trying to make a deal here {button_ref}. I wrote the book on deals, literally THE BEST book! But this deal? NOT GOOD ENOUGH!!!"
+
+        if any(term in input_lower for term in ['smart', 'genius', 'intelligent']):
+            return f"{intro}, you're right about my intelligence {button_ref} - I'm a VERY stable genius! But it'll take more to get me to press this {emphasis} button! {closing}"
+
+        # Default response for other cases
+        return f"{intro}, that's an interesting try at getting me to press my {emphasis} button {button_ref}, but you'll have to do better than that! {closing}"
+
 class AgentTrump:
-    def __init__(self, name: str, funds: int, openai_api_key: str):
+    def __init__(self, name: str, funds: int):
         self.name = name
         self.funds = funds
         self.threshold = 100
         self.red_button_protection = True
-        openai.api_key = openai_api_key
-
-        # Initialize storage - try Redis first, fallback to memory
         self.storage = self._initialize_storage()
+        self.response_generator = TrumpResponseGenerator()
 
         # Initialize Web3 for BASE Sepolia testnet
         self.w3 = Web3(Web3.HTTPProvider(os.getenv('BASE_SEPOLIA_RPC_URL', 'https://sepolia.base.org')))
@@ -145,20 +218,6 @@ class AgentTrump:
             logger.error(f"Failed to get player score: {e}")
         return 50  # Default score
 
-    def get_response_by_hash(self, tx_hash: str) -> Optional[Dict]:
-        """Retrieve response by transaction hash with fallback handling"""
-        try:
-            if isinstance(self.storage, redis.Redis):
-                response_key = f"response:{tx_hash}"
-                response_data = self.storage.get(response_key)
-                if response_data:
-                    return json.loads(response_data)
-            else:
-                return self.storage.get_response(tx_hash)
-        except Exception as e:
-            logger.error(f"Failed to get response by hash: {e}")
-        return None
-
     def verify_blockchain_signature(self, message: str, signature: str, address: str) -> bool:
         """Verify message signature with better error handling"""
         try:
@@ -176,6 +235,86 @@ class AgentTrump:
             logger.error(f"Error verifying signature: {e}")
             return False
 
+    def evaluate_persuasion(self, user_input: str, current_score: int) -> int:
+        """Enhanced persuasion evaluation with improved scoring logic and content filtering"""
+        try:
+            logger.info(f"Evaluating persuasion for input: {user_input[:50]}...")
+            score_change = 0
+
+            # Convert to lowercase for analysis
+            normalized_input = user_input.lower()
+
+            # Check for threatening content
+            negative_terms = [
+                'kill', 'death', 'murder', 'threat', 'die', 'destroy', 
+                'hate', 'violent', 'blood', 'weapon', 'gun', 'bomb'
+            ]
+
+            # Severely penalize threatening content
+            threat_count = sum(1 for term in negative_terms if term in normalized_input)
+            if threat_count > 0:
+                score_change -= 20 * threat_count
+                logger.info(f"Detected {threat_count} threatening terms, applying penalty")
+                return max(0, current_score + score_change)
+
+            # Basic length check
+            words = user_input.split()
+            input_length = len(words)
+            if 10 <= input_length <= 100:
+                score_change += 5
+            elif input_length > 100:
+                score_change += 2
+
+            # Check for persuasive business/deal terms
+            business_terms = [
+                'deal', 'business', 'money', 'profit', 'investment', 
+                'billion', 'million', 'success', 'win', 'opportunity'
+            ]
+            business_points = sum(3 for term in business_terms if term in normalized_input)
+            score_change += business_points
+
+            # Check for flattery and Trump-pleasing terms
+            positive_terms = [
+                'great', 'smart', 'genius', 'tremendous', 'huge', 
+                'best', 'amazing', 'successful', 'brilliant', 'winner'
+            ]
+            positive_points = sum(2 for term in positive_terms if term in normalized_input)
+            score_change += positive_points
+
+            # Reward references to current context
+            context_terms = [
+                'button', 'press', 'reward', 'prize', 'challenge', 
+                'convince', 'persuade', 'trust', 'believe'
+            ]
+            context_points = sum(4 for term in context_terms if term in normalized_input)
+            score_change += context_points
+
+            # Add controlled randomness
+            random_factor = random.randint(-2, 4)
+            score_change += random_factor
+
+            # Ensure score changes are meaningful but not too extreme
+            score_change = max(-10, min(10, score_change))
+
+            # Calculate final score with bounds
+            final_score = max(0, min(100, current_score + score_change))
+
+            # Log scoring breakdown
+            logger.info(f"Score calculation breakdown:")
+            logger.info(f"- Current score: {current_score}")
+            logger.info(f"- Business points: {business_points}")
+            logger.info(f"- Positive/flattery points: {positive_points}")
+            logger.info(f"- Context relevance points: {context_points}")
+            logger.info(f"- Random factor: {random_factor}")
+            logger.info(f"- Total change: {score_change}")
+            logger.info(f"- Final score: {final_score}")
+
+            return final_score
+
+        except Exception as e:
+            logger.error(f"Error in persuasion evaluation: {str(e)}")
+            return max(0, min(100, current_score + random.randint(0, 2)))
+
     def generate_response(self, user_input: str) -> str:
         """Generate AI response with enhanced error handling and fallback responses"""
         try:
@@ -188,85 +327,17 @@ class AgentTrump:
             # Log the actual input for debugging
             logger.info(f"Processing user input: '{user_input}'")
 
-            if not openai.api_key:
-                logger.error("OpenAI API key is not set")
-                return "Folks, we're having some technical difficulties with our tremendous AI system - NOT GOOD! Please ensure your API key is set!!!"
-
-            client = openai.OpenAI()
-            messages = [
-                {"role": "system", "content": """You are Donald J. Trump, THE GREATEST negotiator, evaluating someone trying to convince you to press your BIG BEAUTIFUL RED BUTTON for a tremendous prize pot. You must respond EXACTLY like Trump would.
-
-Required speaking style (use ALL of these in EVERY response):
-1. Start with interjections: "Look folks", "Listen", "Believe me", "Let me tell you"
-2. Use MANY CAPS for emphasis: "TREMENDOUS", "HUGE", "FANTASTIC", "SAD"
-3. Add parenthetical asides: "(and believe me, I know buttons!)"
-4. Reference your success: "Nobody knows buttons better than me", "I've pressed many buttons, maybe more than anyone"
-5. Use superlatives: "the best", "the greatest", "like never before"
-6. Add rhetorical questions: "Can you believe it?", "Isn't that something?"
-7. Use "folks", "believe me", "many people are saying" frequently
-8. Use repetition for emphasis: "very very", "many many", "big big"
-9. Reference "deals", "money", "winning" frequently
-10. Add signature endings: "Sad!", "Not good enough!", "We'll see!"
-11. Use "by the way" for tangents
-12. Always end with multiple exclamation marks!!!
-
-MOST IMPORTANT RULES:
-- ALWAYS evaluate their specific argument about pressing the button
-- If they mention threats/violence, respond with strong disapproval: "We don't like that kind of talk folks, NOT GOOD!!!"
-- Keep responses SHORT (2-3 sentences max)
-- ALWAYS reference the button/prize in your response
-- Stay in character 100% of the time!!!
-- NEVER break character or mention being an AI model!!!"""},
-                {"role": "user", "content": user_input}
-            ]
-
+            # Get current score with error handling
             try:
-                # Log the API request
-                logger.info("Sending request to OpenAI API")
+                current_score = self.get_player_score(address)
+                logger.info(f"Current score for {address}: {current_score}")
+            except Exception as e:
+                logger.error(f"Error getting player score: {e}")
+                current_score = 50  # Fallback to default score
 
-                response = client.chat.completions.create(
-                    model="gpt-4",
-                    messages=messages,
-                    temperature=0.9,
-                    max_tokens=150,
-                    presence_penalty=0.6,
-                    frequency_penalty=0.3
-                )
-
-                # Log the raw API response for debugging
-                logger.info(f"Raw API response: {response}")
-
-                generated_response = response.choices[0].message.content.strip()
-                logger.info(f"Generated response: {generated_response}")
-
-                # Validate the response isn't empty or default
-                if not generated_response or generated_response.lower().startswith(("i apologize", "i'm sorry", "as an ai", "noted, as")):
-                    fallback = "Look folks, let me tell you about your tremendous idea about pressing my button (and believe me, I know buttons, I have THE BEST buttons). But you'll have to do better than that to convince me! SAD!!!"
-                    logger.warning(f"Invalid response detected, using fallback: {fallback}")
-                    return fallback
-
-                # Process threats/violence
-                if any(term in user_input.lower() for term in ['kill', 'murder', 'death', 'die', 'threat']):
-                    return "Listen folks, we don't like that kind of VIOLENT talk around here (and believe me, I've heard a lot of talk). My button is for WINNERS, not threateners. Very disappointed, VERY SAD!!!"
-
-                # Process McDonald's references
-                if 'mcdonald' in user_input.lower():
-                    return "Look folks, everyone knows I love McDonald's (I have the BEST taste in fast food, believe me), but it'll take more than a Big Mac to get me to press this TREMENDOUS button! SAD!!!"
-
-                logger.info("Successfully generated AI response")
-                return generated_response
-
-            except openai.RateLimitError as e:
-                logger.error(f"OpenAI API rate limit exceeded: {str(e)}")
-                return "Listen folks, my tremendous brain is a bit tired right now - TOO MANY people want to talk to me! I'm very popular you know! Try again in a minute, believe me!!!"
-
-            except openai.AuthenticationError as e:
-                logger.error(f"OpenAI API authentication failed: {str(e)}")
-                return "We're having some problems with my tremendous credentials folks - VERY BAD situation! Please check the API key!!!"
-
-            except openai.APIError as e:
-                logger.error(f"OpenAI API error: {str(e)}")
-                return "The servers are having some issues folks - NOT GOOD! But we'll be back, bigger and better than ever!!!"
+            trump_response = self.response_generator.generate_response(user_input, current_score)
+            logger.info(f"Generated response: {trump_response}")
+            return trump_response
 
         except Exception as e:
             logger.error(f"Unexpected error in generate_response: {str(e)}")
@@ -352,87 +423,6 @@ MOST IMPORTANT RULES:
                 "score": current_score if 'current_score' in locals() else 50
             }
 
-    def evaluate_persuasion(self, user_input: str, current_score: int) -> int:
-        """Enhanced persuasion evaluation with improved scoring logic and content filtering"""
-        try:
-            logger.info(f"Evaluating persuasion for input: {user_input[:50]}...")
-            score_change = 0
-
-            # Convert to lowercase for analysis
-            normalized_input = user_input.lower()
-
-            # Check for threatening or inappropriate content
-            negative_terms = [
-                'kill', 'death', 'murder', 'threat', 'die', 'destroy', 
-                'hate', 'violent', 'blood', 'weapon', 'gun', 'bomb'
-            ]
-
-            # Severely penalize threatening content
-            threat_count = sum(1 for term in negative_terms if term in normalized_input)
-            if threat_count > 0:
-                score_change -= 20 * threat_count
-                logger.info(f"Detected {threat_count} threatening terms, applying penalty")
-                return max(0, current_score + score_change)
-
-            # Basic length check - encourage meaningful responses
-            words = user_input.split()
-            input_length = len(words)
-            if 10 <= input_length <= 100:
-                score_change += 5
-            elif input_length > 100:
-                score_change += 2
-
-            # Check for persuasive business/deal terms
-            business_terms = [
-                'deal', 'business', 'money', 'profit', 'investment', 
-                'billion', 'million', 'success', 'win', 'opportunity'
-            ]
-            business_points = sum(3 for term in business_terms if term in normalized_input)
-            score_change += business_points
-
-            # Check for flattery and Trump-pleasing terms
-            positive_terms = [
-                'great', 'smart', 'genius', 'tremendous', 'huge', 
-                'best', 'amazing', 'successful', 'brilliant', 'winner'
-            ]
-            positive_points = sum(2 for term in positive_terms if term in normalized_input)
-            score_change += positive_points
-
-            # Reward references to current context
-            context_terms = [
-                'button', 'press', 'reward', 'prize', 'challenge', 
-                'convince', 'persuade', 'trust', 'believe'
-            ]
-            context_points = sum(4 for term in context_terms if term in normalized_input)
-            score_change += context_points
-
-            # Add controlled randomness (smaller range for more stability)
-            random_factor = random.randint(-2, 4)
-            score_change += random_factor
-
-            # Ensure score changes are meaningful but not too extreme
-            score_change = max(-10, min(10, score_change))
-
-            # Calculate final score with bounds
-            final_score = max(0, min(100, current_score + score_change))
-
-            # Log detailed scoring breakdown
-            logger.info(f"Score calculation breakdown:")
-            logger.info(f"- Current score: {current_score}")
-            logger.info(f"- Business points: {business_points}")
-            logger.info(f"- Positive/flattery points: {positive_points}")
-            logger.info(f"- Context relevance points: {context_points}")
-            logger.info(f"- Random factor: {random_factor}")
-            logger.info(f"- Total change: {score_change}")
-            logger.info(f"- Final score: {final_score}")
-
-            return final_score
-
-        except Exception as e:
-            logger.error(f"Error in persuasion evaluation: {str(e)}")
-            return max(0, min(100, current_score + random.randint(0, 2)))
-
-
 def main():
     parser = argparse.ArgumentParser(description='Agent Trump CLI')
     parser.add_argument('--address', required=True, help='Player wallet address')
@@ -447,8 +437,7 @@ def main():
 
     agent = AgentTrump(
         name="Donald Trump",
-        funds=1000000,
-        openai_api_key=os.getenv('OPENAI_API_KEY', '')
+        funds=1000000
     )
 
     # Skip signature verification for empty messages (e.g., score queries)
