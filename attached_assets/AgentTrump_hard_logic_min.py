@@ -181,9 +181,13 @@ class AgentTrump:
         try:
             logger.info(f"Generating response for input: {user_input[:50]}...")
 
+            # Input validation
+            if not user_input or not user_input.strip():
+                return "Look folks, you've got to give me something to work with here! Nobody knows empty messages better than me, and believe me, this one is EMPTY! SAD!!!"
+
             if not openai.api_key:
                 logger.error("OpenAI API key is not set")
-                return "Folks, we're having some technical difficulties with our tremendous AI system. Please ensure your API key is set!"
+                return "Folks, we're having some technical difficulties with our tremendous AI system - NOT GOOD! Please ensure your API key is set!!!"
 
             client = openai.OpenAI()
             messages = [
@@ -208,7 +212,8 @@ MOST IMPORTANT RULES:
 - If they mention threats/violence, respond with strong disapproval: "We don't like that kind of talk folks, NOT GOOD!!!"
 - Keep responses SHORT (2-3 sentences max)
 - ALWAYS reference the button/prize in your response
-- Stay in character 100% of the time!!!"""},
+- Stay in character 100% of the time!!!
+- NEVER break character or mention being an AI model!!!"""},
                 {"role": "user", "content": user_input}
             ]
 
@@ -217,24 +222,34 @@ MOST IMPORTANT RULES:
                     model="gpt-4",
                     messages=messages,
                     temperature=0.9,
-                    max_tokens=60
+                    max_tokens=150,
+                    presence_penalty=0.6,
+                    frequency_penalty=0.3
                 )
                 generated_response = response.choices[0].message.content.strip()
+
+                # Validate the response isn't empty or default
+                if not generated_response or generated_response.lower().startswith(("i apologize", "i'm sorry", "as an ai", "noted, as")):
+                    return "Look folks, let me tell you - I've heard what you're saying about the button (and believe me, I know buttons, I have THE BEST buttons). But you'll have to do better than that to convince me! SAD!!!"
+
                 logger.info("Successfully generated AI response")
                 return generated_response
+
             except openai.RateLimitError:
                 logger.error("OpenAI API rate limit exceeded")
-                return "Listen folks, my tremendous AI brain is a bit tired right now. Too many people want to talk to me - I'm very popular you know! Try again in a minute, believe me!"
+                return "Listen folks, my tremendous brain is a bit tired right now - TOO MANY people want to talk to me! I'm very popular you know! Try again in a minute, believe me!!!"
+
             except openai.AuthenticationError:
                 logger.error("OpenAI API authentication failed")
-                return "We're having some problems with my AI credentials. Very bad situation! Please check the API key!"
+                return "We're having some problems with my tremendous credentials folks - VERY BAD situation! Please check the API key!!!"
+
             except openai.APIError as e:
                 logger.error(f"OpenAI API error: {str(e)}")
-                return "The AI servers are having some issues - not good! But we'll be back, bigger and better than ever!"
+                return "The servers are having some issues folks - NOT GOOD! But we'll be back, bigger and better than ever!!!"
 
         except Exception as e:
             logger.error(f"Unexpected error in generate_response: {str(e)}")
-            return "Look folks, we're having some technical difficulties with our tremendous AI system. But don't worry, we'll be back, bigger and better than ever! Believe me!"
+            return "Look folks, we're having some TREMENDOUS technical difficulties. But don't worry, we'll be back, bigger and better than ever! Believe me!!!"
 
     def interact(self, address: str, message: str, block_number: int, tx_hash: Optional[str] = None) -> Dict:
         """Main interaction method with enhanced error handling and logging"""
@@ -395,7 +410,6 @@ MOST IMPORTANT RULES:
         except Exception as e:
             logger.error(f"Error in persuasion evaluation: {str(e)}")
             return max(0, min(100, current_score + random.randint(0, 2)))
-
 
 
 def main():
