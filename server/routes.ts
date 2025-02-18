@@ -38,27 +38,6 @@ RESPONSE RULES:
 
 Example response: "Look folks, you're talking about McDonald's - I LOVE McDonald's, nobody loves it more than me! But it'll take more than a Big Mac to get me to press this BEAUTIFUL button! SAD!"`;
 
-// Function to get player's current score
-async function getPlayerScore(address: string): Promise<number> {
-  try {
-    const scoreData = await storage.get(`score:${address}`);
-    return scoreData ? JSON.parse(scoreData).persuasion_score : 50;
-  } catch (error) {
-    console.error('Error getting player score:', error);
-    return 50; // Default score
-  }
-}
-
-// Function to update player's score
-async function updatePlayerScore(address: string, newScore: number): Promise<void> {
-  const score = Math.max(0, Math.min(100, newScore));
-  await storage.set(`score:${address}`, JSON.stringify({
-    persuasion_score: score,
-    last_updated: new Date().toISOString()
-  }));
-}
-
-// Function to get Trump's response using OpenAI
 async function getTrumpResponse(
   message: string,
   currentScore: number
@@ -80,7 +59,10 @@ async function getTrumpResponse(
       frequency_penalty: 0.3
     });
 
-    return completion.choices[0].message.content || "Look folks, something's not working right - NOT GOOD!";
+    const response = completion.choices[0].message.content || 
+      "Look folks, something's not working right - NOT GOOD!";
+    console.log('Generated Trump response:', response);
+    return response;
   } catch (error) {
     console.error('OpenAI API error:', error);
     return "Look folks, my tremendously smart AI brain is taking a quick break - but don't worry, I'll be back stronger than ever! SAD!";
@@ -91,35 +73,40 @@ export function registerRoutes(app: Express): Server {
   // API route to handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
+      console.log('Received response request:', req.body);
       const { 
         address, 
-        response, 
+        response: userMessage, 
         blockNumber, 
         transactionHash,
         scoreAdjustment 
       } = req.body;
 
-      if (!address || !response || !blockNumber || !transactionHash) {
+      if (!address || !userMessage || !blockNumber || !transactionHash) {
         return res.status(400).json({ 
           error: 'Missing required fields',
           details: 'address, response, blockNumber, and transactionHash are required'
         });
       }
 
-      // Get current score
-      const currentScore = await getPlayerScore(address);
+      // Get current score from storage
+      const scoreData = await storage.get(`score:${address}`);
+      const currentScore = scoreData ? JSON.parse(scoreData).persuasion_score : 50;
+      console.log('Current score:', currentScore);
 
       // Generate Trump's response
-      const trumpResponse = await getTrumpResponse(response, currentScore);
+      const trumpResponse = await getTrumpResponse(userMessage, currentScore);
+      console.log('Trump response generated:', trumpResponse);
 
       // Calculate new score
       const scoreChange = Math.max(-20, Math.min(20, scoreAdjustment || 0));
       const newScore = Math.max(0, Math.min(100, currentScore + scoreChange));
+      console.log('New score calculated:', newScore);
 
-      // Store interaction in storage first
+      // Store interaction data
       const interactionData = {
         address,
-        user_message: response,
+        user_message: userMessage,
         ai_response: trumpResponse,
         block_number: blockNumber,
         transaction_hash: transactionHash,
@@ -127,10 +114,22 @@ export function registerRoutes(app: Express): Server {
         timestamp: new Date().toISOString()
       };
 
-      await storage.set(`interaction:${transactionHash}`, JSON.stringify(interactionData));
+      // Store both interaction and score
+      await Promise.all([
+        storage.set(`interaction:${transactionHash}`, JSON.stringify(interactionData)),
+        storage.set(`score:${address}`, JSON.stringify({
+          persuasion_score: newScore,
+          last_updated: new Date().toISOString()
+        }))
+      ]);
 
-      // Update score after storing interaction
-      await updatePlayerScore(address, newScore);
+      console.log('Interaction data stored successfully');
+
+      // Verify storage before responding
+      const storedData = await storage.get(`interaction:${transactionHash}`);
+      if (!storedData) {
+        throw new Error('Failed to verify stored interaction data');
+      }
 
       // Return response
       res.json({
@@ -170,8 +169,8 @@ export function registerRoutes(app: Express): Server {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      // Try to get the stored interaction immediately
       const interactionData = await storage.get(`interaction:${hash}`);
+      console.log('Retrieved interaction data:', interactionData);
 
       if (interactionData) {
         const parsedInteraction = JSON.parse(interactionData);
@@ -179,11 +178,11 @@ export function registerRoutes(app: Express): Server {
           success: true,
           message: parsedInteraction.ai_response,
           score: parsedInteraction.score,
-          gameWon: parsedInteraction.score >= 95
+          game_won: parsedInteraction.score >= 95
         });
       }
 
-      // If not found, return a proper error
+      console.log('No interaction data found for hash:', hash);
       return res.status(404).json({ 
         success: false,
         error: 'Response not found',
@@ -202,4 +201,22 @@ export function registerRoutes(app: Express): Server {
 
   const httpServer = createServer(app);
   return httpServer;
+}
+
+async function getPlayerScore(address: string): Promise<number> {
+  try {
+    const scoreData = await storage.get(`score:${address}`);
+    return scoreData ? JSON.parse(scoreData).persuasion_score : 50;
+  } catch (error) {
+    console.error('Error getting player score:', error);
+    return 50; // Default score
+  }
+}
+
+async function updatePlayerScore(address: string, newScore: number): Promise<void> {
+  const score = Math.max(0, Math.min(100, newScore));
+  await storage.set(`score:${address}`, JSON.stringify({
+    persuasion_score: score,
+    last_updated: new Date().toISOString()
+  }));
 }
