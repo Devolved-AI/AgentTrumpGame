@@ -145,8 +145,6 @@ export default function Home() {
         setIsLoading(true);
         setTransactionStatus('pending');
 
-        // Removed addMessage here - we only want to show after confirmation
-
         console.log('Attempting to submit response with:', {
             currentAmount: gameStatus.currentAmount,
             account: web3State.account,
@@ -171,12 +169,14 @@ export default function Home() {
             // Update transaction status to success
             setTransactionStatus('success');
 
-            // Update game state after successful transaction
-            await refreshGameStatus();
+            // Update game state and prize pool after successful transaction
+            await Promise.all([
+                refreshGameStatus(),
+                updatePrizePool()
+            ]);
 
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
-                    // Wait before retrying (except first attempt)
                     if (attempt > 1) {
                         await new Promise(resolve => setTimeout(resolve, attempt * 2000));
                     }
@@ -227,7 +227,6 @@ export default function Home() {
             }
 
         } catch (error: any) {
-            // Enhanced error handling for contract interactions
             console.error('Contract interaction error:', error);
 
             let errorMessage = "Transaction failed. ";
@@ -241,7 +240,6 @@ export default function Home() {
                 errorMessage += error.message || "Please try again.";
             }
 
-            // Update UI state for failure
             setTransactionStatus('error');
             addMessage(errorMessage, false);
 
@@ -352,7 +350,6 @@ function handleSubmissionError(error: any) {
 
   async function initializeGameData(contract: GameContract, account: string) {
     try {
-      // Remove clearAllGameState calls to preserve scores
       console.log('Initializing game data for account:', account);
 
       const [status, totalPool] = await Promise.all([
@@ -360,7 +357,6 @@ function handleSubmissionError(error: any) {
         contract.getTotalPrizePool()
       ]);
 
-      // Add more detailed error checking for contract calls
       if (!status || !totalPool) {
         throw new Error("Failed to fetch game data from contract");
       }
@@ -384,7 +380,6 @@ function handleSubmissionError(error: any) {
     } catch (error: any) {
       console.error("Failed to initialize game data:", error);
 
-      // More specific error messages based on error type
       let errorMessage = "Failed to load game data. ";
       if (error.code === 'NETWORK_ERROR') {
         errorMessage += "Please check your internet connection.";
@@ -402,7 +397,6 @@ function handleSubmissionError(error: any) {
         variant: "destructive"
       });
 
-      // Re-throw to be handled by caller
       throw error;
     }
   }

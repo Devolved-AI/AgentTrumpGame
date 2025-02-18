@@ -119,6 +119,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // Refresh game state to get updated score
       await refreshGameState();
 
+      // Return full response data including transaction hash
       return {
         message: data.message,
         transactionHash: tx.hash,
