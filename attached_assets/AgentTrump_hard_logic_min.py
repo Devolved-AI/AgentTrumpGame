@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Enhanced AgentTrump with local response generation
+Enhanced AgentTrump with OpenAI integration and local fallback
 """
 
 import random
@@ -15,6 +15,7 @@ import redis
 from eth_account.messages import encode_defunct
 from web3 import Web3
 from collections import defaultdict
+import openai
 
 # Configure logging
 logging.basicConfig(
@@ -47,7 +48,7 @@ class MemoryStorage:
         return self.scores[address]
 
 class TrumpResponseGenerator:
-    """Generates Trump-style responses based on context"""
+    """Local Trump-style response generator for fallback"""
 
     INTROS = [
         "Look folks",
@@ -130,6 +131,7 @@ class AgentTrump:
         self.red_button_protection = True
         self.storage = self._initialize_storage()
         self.response_generator = TrumpResponseGenerator()
+        self.openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
         # Initialize Web3 for BASE Sepolia testnet
         self.w3 = Web3(Web3.HTTPProvider(os.getenv('BASE_SEPOLIA_RPC_URL', 'https://sepolia.base.org')))
@@ -150,93 +152,58 @@ class AgentTrump:
                     logger.info("Falling back to in-memory storage")
                     return MemoryStorage()
 
-    def store_player_response(self, address: str, response: str, block_number: int, tx_hash: Optional[str] = None) -> bool:
-        """Store player response with fallback handling"""
+    def generate_openai_response(self, user_input: str, current_score: int) -> str:
+        """Generate response using OpenAI with improved error handling"""
         try:
-            if not tx_hash:
-                logger.warning("No transaction hash provided")
-                return False
+            logger.info("Attempting to generate response using OpenAI")
 
-            response_data = {
-                'address': address,
-                'response': response,
-                'block_number': block_number,
-                'transaction_hash': tx_hash,
-                'created_at': datetime.utcnow().isoformat(),
-                'exists': True
-            }
+            # Construct the system message with score context
+            system_message = f"""You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. Their current persuasion score is {current_score}/100.
 
-            if isinstance(self.storage, redis.Redis):
-                response_key = f"response:{tx_hash}"
-                if self.storage.exists(response_key):
-                    logger.info(f"Response already exists for tx_hash: {tx_hash}")
-                    return True
+REQUIREMENTS (use ALL in EVERY response):
+1. Start with: "Look folks", "Listen", "Believe me", or "Let me tell you"
+2. Use CAPS for emphasis: "TREMENDOUS", "HUGE", "FANTASTIC"
+3. Add asides: "(and believe me, I know buttons!)"
+4. Reference your expertise: "Nobody knows buttons better than me"
+5. Use superlatives: "the best", "the greatest"
+6. Add rhetorical questions
+7. Use "folks", "believe me", "many people are saying"
+8. Use repetition: "very very", "many many"
+9. End with exclamation marks and "SAD!", "NOT GOOD!", or "We'll see!"
+10. Keep responses SHORT (2-3 sentences)
+11. ALWAYS reference the button/prize
+12. NEVER break character or mention being AI
 
-                self.storage.set(response_key, json.dumps(response_data))
-                user_responses_key = f"user_responses:{address}"
-                self.storage.rpush(user_responses_key, tx_hash)
-            else:
-                self.storage.store_response(tx_hash, response_data)
+Context: They need score 100 to win. Current score: {current_score}"""
 
-            logger.info(f"Stored response for tx_hash: {tx_hash}")
-            return True
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_input}
+                ],
+                temperature=0.9,
+                max_tokens=150,
+                presence_penalty=0.6,
+                frequency_penalty=0.3
+            )
+
+            generated_response = response.choices[0].message.content.strip()
+
+            # Validate response
+            if not generated_response or any(phrase in generated_response.lower() for phrase in ["i apologize", "i'm sorry", "as an ai"]):
+                logger.warning("Invalid OpenAI response, falling back to local generator")
+                return self.response_generator.generate_response(user_input, current_score)
+
+            return generated_response
+
         except Exception as e:
-            logger.error(f"Failed to store player response: {e}")
-            return False
-
-    def update_player_score(self, address: str, score: int) -> bool:
-        """Update player's persuasion score with fallback handling"""
-        try:
-            score = max(0, min(100, score))
-            if isinstance(self.storage, redis.Redis):
-                score_key = f"score:{address}"
-                score_data = {
-                    'persuasion_score': score,
-                    'last_updated': datetime.utcnow().isoformat()
-                }
-                self.storage.set(score_key, json.dumps(score_data))
-            else:
-                self.storage.store_score(address, score)
-
-            logger.info(f"Updated score for address {address}: {score}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to update player score: {e}")
-            return False
-
-    def get_player_score(self, address: str) -> int:
-        """Get player's current persuasion score"""
-        try:
-            if isinstance(self.storage, redis.Redis):
-                score_key = f"score:{address}"
-                score_data = self.storage.get(score_key)
-                if score_data:
-                    return json.loads(score_data)['persuasion_score']
-            else:
-                return self.storage.get_score(address)
-        except Exception as e:
-            logger.error(f"Failed to get player score: {e}")
-        return 50  # Default score
-
-    def verify_blockchain_signature(self, message: str, signature: str, address: str) -> bool:
-        """Verify message signature with better error handling"""
-        try:
-            if not all([message, signature, address]):
-                logger.error("Missing required parameters for signature verification")
-                return False
-
-            message_hash = encode_defunct(text=message)
-            recovered_address = self.w3.eth.account.recover_message(message_hash, signature=signature)
-            is_valid = recovered_address.lower() == address.lower()
-
-            logger.info(f"Signature verification result: {is_valid}")
-            return is_valid
-        except Exception as e:
-            logger.error(f"Error verifying signature: {e}")
-            return False
+            logger.error(f"OpenAI generation failed: {str(e)}")
+            logger.info("Falling back to local response generator")
+            return self.response_generator.generate_response(user_input, current_score)
 
     def evaluate_persuasion(self, user_input: str, current_score: int) -> int:
-        """Enhanced persuasion evaluation with improved scoring logic and content filtering"""
+        """Enhanced persuasion evaluation with improved scoring logic"""
         try:
             logger.info(f"Evaluating persuasion for input: {user_input[:50]}...")
             score_change = 0
@@ -315,34 +282,6 @@ class AgentTrump:
             logger.error(f"Error in persuasion evaluation: {str(e)}")
             return max(0, min(100, current_score + random.randint(0, 2)))
 
-    def generate_response(self, user_input: str) -> str:
-        """Generate AI response with enhanced error handling and fallback responses"""
-        try:
-            logger.info(f"Generating response for input: {user_input[:50]}...")
-
-            # Input validation
-            if not user_input or len(user_input.strip()) == 0:
-                return "Look folks, you've got to give me something to work with here! Nobody knows empty messages better than me, and believe me, this one is EMPTY! SAD!!!"
-
-            # Log the actual input for debugging
-            logger.info(f"Processing user input: '{user_input}'")
-
-            # Get current score with error handling
-            try:
-                current_score = self.get_player_score(address)
-                logger.info(f"Current score for {address}: {current_score}")
-            except Exception as e:
-                logger.error(f"Error getting player score: {e}")
-                current_score = 50  # Fallback to default score
-
-            trump_response = self.response_generator.generate_response(user_input, current_score)
-            logger.info(f"Generated response: {trump_response}")
-            return trump_response
-
-        except Exception as e:
-            logger.error(f"Unexpected error in generate_response: {str(e)}")
-            return "Look folks, we're having some TREMENDOUS technical difficulties. But don't worry, we'll be back, bigger and better than ever! Believe me!!!"
-
     def interact(self, address: str, message: str, block_number: int, tx_hash: Optional[str] = None) -> Dict:
         """Main interaction method with enhanced error handling and logging"""
         logger.info(f"Processing interaction: address={address}, tx_hash={tx_hash}")
@@ -381,9 +320,14 @@ class AgentTrump:
                             "score": current_score
                         }
 
-            # Generate AI response with improved error handling
-            trump_response = self.generate_response(message)
-            logger.info("Generated Trump response successfully")
+            # First try OpenAI, fall back to local generator if needed
+            try:
+                trump_response = self.generate_openai_response(message, current_score)
+                logger.info("Generated response using OpenAI")
+            except Exception as e:
+                logger.error(f"OpenAI generation failed: {str(e)}")
+                trump_response = self.response_generator.generate_response(message, current_score)
+                logger.info("Generated response using local generator")
 
             # Evaluate and update score
             new_score = self.evaluate_persuasion(message, current_score)
@@ -402,7 +346,8 @@ class AgentTrump:
                         return {
                             "success": True,
                             "message": trump_response,
-                            "score": current_score
+                            "score": current_score,
+                            "game_won": current_score >= self.threshold
                         }
 
             response_data = {
@@ -422,6 +367,91 @@ class AgentTrump:
                 "message": "An unexpected error occurred. Please try again.",
                 "score": current_score if 'current_score' in locals() else 50
             }
+
+    def store_player_response(self, address: str, response: str, block_number: int, tx_hash: Optional[str] = None) -> bool:
+        """Store player response with fallback handling"""
+        try:
+            if not tx_hash:
+                logger.warning("No transaction hash provided")
+                return False
+
+            response_data = {
+                'address': address,
+                'response': response,
+                'block_number': block_number,
+                'transaction_hash': tx_hash,
+                'created_at': datetime.utcnow().isoformat(),
+                'exists': True
+            }
+
+            if isinstance(self.storage, redis.Redis):
+                response_key = f"response:{tx_hash}"
+                if self.storage.exists(response_key):
+                    logger.info(f"Response already exists for tx_hash: {tx_hash}")
+                    return True
+
+                self.storage.set(response_key, json.dumps(response_data))
+                user_responses_key = f"user_responses:{address}"
+                self.storage.rpush(user_responses_key, tx_hash)
+            else:
+                self.storage.store_response(tx_hash, response_data)
+
+            logger.info(f"Stored response for tx_hash: {tx_hash}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to store player response: {e}")
+            return False
+
+    def get_player_score(self, address: str) -> int:
+        """Get player's current persuasion score"""
+        try:
+            if isinstance(self.storage, redis.Redis):
+                score_key = f"score:{address}"
+                score_data = self.storage.get(score_key)
+                if score_data:
+                    return json.loads(score_data)['persuasion_score']
+            else:
+                return self.storage.get_score(address)
+        except Exception as e:
+            logger.error(f"Failed to get player score: {e}")
+        return 50  # Default score
+
+    def update_player_score(self, address: str, score: int) -> bool:
+        """Update player's persuasion score with fallback handling"""
+        try:
+            score = max(0, min(100, score))
+            if isinstance(self.storage, redis.Redis):
+                score_key = f"score:{address}"
+                score_data = {
+                    'persuasion_score': score,
+                    'last_updated': datetime.utcnow().isoformat()
+                }
+                self.storage.set(score_key, json.dumps(score_data))
+            else:
+                self.storage.store_score(address, score)
+
+            logger.info(f"Updated score for address {address}: {score}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update player score: {e}")
+            return False
+
+    def verify_blockchain_signature(self, message: str, signature: str, address: str) -> bool:
+        """Verify message signature with better error handling"""
+        try:
+            if not all([message, signature, address]):
+                logger.error("Missing required parameters for signature verification")
+                return False
+
+            message_hash = encode_defunct(text=message)
+            recovered_address = self.w3.eth.account.recover_message(message_hash, signature=signature)
+            is_valid = recovered_address.lower() == address.lower()
+
+            logger.info(f"Signature verification result: {is_valid}")
+            return is_valid
+        except Exception as e:
+            logger.error(f"Error verifying signature: {e}")
+            return False
 
 def main():
     parser = argparse.ArgumentParser(description='Agent Trump CLI')
