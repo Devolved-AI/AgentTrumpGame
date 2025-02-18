@@ -30,28 +30,6 @@ export interface AIResponse {
   game_won?: boolean;
 }
 
-// Function to generate Trump-like response
-function generateTrumpResponse(message: string, score: number): string {
-  const input = message.toLowerCase();
-
-  // McDonald's specific response
-  if (input.includes('mcdonald') || input.includes('burger king')) {
-    return "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!";
-  }
-
-  // Score-based responses
-  if (score >= 90) {
-    return "Believe me folks, you're getting VERY close to convincing me! Keep going, maybe you'll be the one to make me press this TREMENDOUS button!!!";
-  }
-
-  if (score <= 20) {
-    return "Listen, that's a TERRIBLE argument! You'll never get me to press my BEAUTIFUL button with talk like that! SAD!";
-  }
-
-  // Default response
-  return "Many people are saying that's an interesting try at getting me to press my HUGE button (and believe me, I know buttons!), but you'll have to do better than that! THINK ABOUT IT!";
-}
-
 export async function analyzeTrumpResponse(
   userMessage: string,
   address: string,
@@ -65,8 +43,8 @@ export async function analyzeTrumpResponse(
   reactionGif?: string;
 }> {
   try {
-    // First store the response
-    const storeResponse = await apiRequest<AIResponse>('/api/responses', {
+    // Send request to get Trump's response
+    const response = await apiRequest<AIResponse>('/api/responses', {
       method: 'POST',
       data: {
         address,
@@ -77,25 +55,22 @@ export async function analyzeTrumpResponse(
       }
     });
 
-    if (!storeResponse.success) {
-      throw new Error(storeResponse.message || 'Failed to store response');
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to get response');
     }
 
-    // Generate Trump's response
-    const trumpResponse = generateTrumpResponse(userMessage, storeResponse.score);
-
     // Map score to sentiment
-    const sentiment = storeResponse.score >= 95 ? 'winning' : 
-                     storeResponse.score >= 70 ? 'positive' :
-                     storeResponse.score >= 40 ? 'neutral' : 'negative';
+    const sentiment = response.score >= 95 ? 'winning' : 
+                     response.score >= 70 ? 'positive' :
+                     response.score >= 40 ? 'neutral' : 'negative';
 
     // Select a random GIF based on sentiment
     const gifs = TRUMP_GIFS[sentiment];
     const reactionGif = gifs[Math.floor(Math.random() * gifs.length)];
 
     return {
-      response: trumpResponse,
-      persuasionScore: storeResponse.score,
+      response: response.message,
+      persuasionScore: response.score,
       sentiment,
       reactionGif
     };
@@ -106,7 +81,7 @@ export async function analyzeTrumpResponse(
     // Provide more informative error toast
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     toast({
-      title: "Error Processing Response",
+      title: "Error Getting Trump's Response",
       description: errorMessage,
       variant: "destructive"
     });

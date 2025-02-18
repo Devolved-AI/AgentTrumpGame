@@ -34,10 +34,13 @@ export function registerRoutes(app: Express): Server {
         lastUpdated: new Date()
       };
 
-      // Store the response with all required fields
+      // Generate Trump's response based on the input
+      const trumpResponse = generateTrumpResponse(response, score.persuasionScore);
+
+      // Store both the user's response and Trump's response
       const storedResponse = await storage.storePlayerResponse(address, {
         address,
-        response,
+        response: trumpResponse, // Store Trump's response
         blockNumber,
         transactionHash,
         created_at: new Date().toISOString(),
@@ -46,10 +49,10 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Stored response:', storedResponse);
 
-      // Send back just the basic info needed for initial confirmation
+      // Send back Trump's response immediately
       res.json({
         success: true,
-        message: "Response stored successfully",
+        message: trumpResponse,
         score: score.persuasionScore,
         game_won: score.persuasionScore >= 100
       });
@@ -68,38 +71,28 @@ export function registerRoutes(app: Express): Server {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      const maxRetries = 5;
-      const baseDelay = 1000;
+      const response = await storage.getPlayerResponseByHash(hash);
 
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const response = await storage.getPlayerResponseByHash(hash);
-        console.log(`Attempt ${attempt + 1}: Response found:`, response);
+      if (response) {
+        // Get or initialize player score
+        const score = await storage.getPlayerScore(response.address) || {
+          address: response.address,
+          persuasionScore: 50,
+          lastUpdated: new Date()
+        };
 
-        if (response) {
-          // Get or initialize player score
-          const score = await storage.getPlayerScore(response.address) || {
-            address: response.address,
-            persuasionScore: 50,
-            lastUpdated: new Date()
-          };
-
-          return res.json({
-            success: true,
-            message: response.response, // Send back the original response for processing
-            score: score.persuasionScore,
-            game_won: score.persuasionScore >= 100
-          });
-        }
-
-        console.log(`Attempt ${attempt + 1}: Waiting ${baseDelay}ms before retry...`);
-        await sleep(baseDelay);
+        return res.json({
+          success: true,
+          message: response.response,
+          score: score.persuasionScore,
+          game_won: score.persuasionScore >= 100
+        });
       }
 
-      console.log('No response found after all retries');
       return res.status(404).json({ 
         success: false,
         error: 'Response not found',
-        message: "Trump's response is still being processed. Please try again."
+        message: "Trump's response is being processed. Please try again."
       });
     } catch (error: any) {
       console.error("Get response by hash error:", error);
@@ -138,4 +131,26 @@ export function registerRoutes(app: Express): Server {
 
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Function to generate Trump-like response
+function generateTrumpResponse(message: string, score: number): string {
+  const input = message.toLowerCase();
+
+  // McDonald's specific response
+  if (input.includes('mcdonald') || input.includes('burger king')) {
+    return "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!";
+  }
+
+  // Score-based responses
+  if (score >= 90) {
+    return "Believe me folks, you're getting VERY close to convincing me! Keep going, maybe you'll be the one to make me press this TREMENDOUS button!!!";
+  }
+
+  if (score <= 20) {
+    return "Listen, that's a TERRIBLE argument! You'll never get me to press my BEAUTIFUL button with talk like that! SAD!";
+  }
+
+  // Default response
+  return "Many people are saying that's an interesting try at getting me to press my HUGE button (and believe me, I know buttons!), but you'll have to do better than that! THINK ABOUT IT!";
 }
