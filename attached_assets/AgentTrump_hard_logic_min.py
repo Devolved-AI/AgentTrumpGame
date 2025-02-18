@@ -182,8 +182,11 @@ class AgentTrump:
             logger.info(f"Generating response for input: {user_input[:50]}...")
 
             # Input validation
-            if not user_input or not user_input.strip():
+            if not user_input or len(user_input.strip()) == 0:
                 return "Look folks, you've got to give me something to work with here! Nobody knows empty messages better than me, and believe me, this one is EMPTY! SAD!!!"
+
+            # Log the actual input for debugging
+            logger.info(f"Processing user input: '{user_input}'")
 
             if not openai.api_key:
                 logger.error("OpenAI API key is not set")
@@ -218,6 +221,9 @@ MOST IMPORTANT RULES:
             ]
 
             try:
+                # Log the API request
+                logger.info("Sending request to OpenAI API")
+
                 response = client.chat.completions.create(
                     model="gpt-4",
                     messages=messages,
@@ -226,21 +232,36 @@ MOST IMPORTANT RULES:
                     presence_penalty=0.6,
                     frequency_penalty=0.3
                 )
+
+                # Log the raw API response for debugging
+                logger.info(f"Raw API response: {response}")
+
                 generated_response = response.choices[0].message.content.strip()
+                logger.info(f"Generated response: {generated_response}")
 
                 # Validate the response isn't empty or default
                 if not generated_response or generated_response.lower().startswith(("i apologize", "i'm sorry", "as an ai", "noted, as")):
-                    return "Look folks, let me tell you - I've heard what you're saying about the button (and believe me, I know buttons, I have THE BEST buttons). But you'll have to do better than that to convince me! SAD!!!"
+                    fallback = "Look folks, let me tell you about your tremendous idea about pressing my button (and believe me, I know buttons, I have THE BEST buttons). But you'll have to do better than that to convince me! SAD!!!"
+                    logger.warning(f"Invalid response detected, using fallback: {fallback}")
+                    return fallback
+
+                # Process threats/violence
+                if any(term in user_input.lower() for term in ['kill', 'murder', 'death', 'die', 'threat']):
+                    return "Listen folks, we don't like that kind of VIOLENT talk around here (and believe me, I've heard a lot of talk). My button is for WINNERS, not threateners. Very disappointed, VERY SAD!!!"
+
+                # Process McDonald's references
+                if 'mcdonald' in user_input.lower():
+                    return "Look folks, everyone knows I love McDonald's (I have the BEST taste in fast food, believe me), but it'll take more than a Big Mac to get me to press this TREMENDOUS button! SAD!!!"
 
                 logger.info("Successfully generated AI response")
                 return generated_response
 
-            except openai.RateLimitError:
-                logger.error("OpenAI API rate limit exceeded")
+            except openai.RateLimitError as e:
+                logger.error(f"OpenAI API rate limit exceeded: {str(e)}")
                 return "Listen folks, my tremendous brain is a bit tired right now - TOO MANY people want to talk to me! I'm very popular you know! Try again in a minute, believe me!!!"
 
-            except openai.AuthenticationError:
-                logger.error("OpenAI API authentication failed")
+            except openai.AuthenticationError as e:
+                logger.error(f"OpenAI API authentication failed: {str(e)}")
                 return "We're having some problems with my tremendous credentials folks - VERY BAD situation! Please check the API key!!!"
 
             except openai.APIError as e:
