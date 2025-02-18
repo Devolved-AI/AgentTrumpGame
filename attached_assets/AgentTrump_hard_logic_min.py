@@ -324,7 +324,7 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
 
     def interact(self, address: str, message: str, block_number: int, tx_hash: Optional[str] = None) -> Dict:
         """Main interaction method with enhanced error handling and logging"""
-        logger.info(f"Processing interaction: address={address}, tx_hash={tx_hash}")
+        logger.info(f"Processing interaction: address={address}, message={message[:50] if message else 'None'}, tx_hash={tx_hash}")
 
         try:
             # Get current score with error handling
@@ -334,6 +334,14 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
             except Exception as e:
                 logger.error(f"Error getting player score: {e}")
                 current_score = 50  # Fallback to default score
+
+            # Validate input
+            if not message or not message.strip():
+                return {
+                    "success": False,
+                    "message": "Please provide a message to continue our conversation!",
+                    "score": current_score
+                }
 
             # Store response with validation
             if not tx_hash:
@@ -347,7 +355,7 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
             # First try OpenAI, fall back to local generator if needed
             try:
                 trump_response = self.generate_openai_response(message, current_score, address)
-                logger.info("Generated response using OpenAI")
+                logger.info(f"Generated OpenAI response for message: {message[:50]}")
             except Exception as e:
                 logger.error(f"OpenAI generation failed: {str(e)}")
                 trump_response = self.response_generator.generate_response(message, current_score)
