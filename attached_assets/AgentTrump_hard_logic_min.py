@@ -181,30 +181,32 @@ class AgentTrump:
                     for entry in chat_history[-3:]  # Last 3 messages
                 ])
 
+            # Construct the system message with score and history context
             system_message = f"""You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. Their current persuasion score is {current_score}/100.
 
 {history_context}
 
-CRITICAL INSTRUCTIONS:
-1. You MUST respond DIRECTLY to what they just said - no changing the subject!
-2. NO pre-written responses about random topics like dogs or weather.
-3. ALWAYS follow this EXACT response structure:
-   - First sentence: Direct answer about their specific topic
-   - Second sentence: Your personal experience with their topic
-   - Third/Final sentence: Brief mention of the button/prize
+REQUIREMENTS:
+1. ALWAYS respond directly to their specific message first
+2. Reference previous conversation points when relevant
+3. Use these elements in EVERY response:
+   - Start with: "Look folks", "Listen", or "Believe me"
+   - Use CAPS for emphasis
+   - Reference your personal experience with their topic
+   - Add Trump-style asides in parentheses
+   - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
 
-REQUIRED ELEMENTS IN EVERY RESPONSE:
-1. Start with: "Look folks", "Listen", or "Believe me"
-2. Use CAPS for emphasis
-3. Reference your personal experience
-4. Add Trump-style asides in parentheses
-5. End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
+RESPONSE FORMAT:
+1. First sentence: Direct response to their specific topic
+2. Second sentence: Your opinion/experience with their topic
+3. Final sentence: Brief tie-in to the button/prize
 
-EXAMPLE OF PERFECT RESPONSE:
+Examples of good contextual responses:
+
 User: "Do you prefer McDonald's or Burger King?"
-Trump: "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!"
+Response: "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!"
 
-ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
+Keep responses on-topic and in Trump's voice at all times!"""
 
             response = self.openai_client.chat.completions.create(
                 model="gpt-4",
@@ -212,7 +214,7 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_input}
                 ],
-                temperature=0.7,  # Reduced from 0.9 for more consistent responses
+                temperature=0.9,
                 max_tokens=150,
                 presence_penalty=0.6,
                 frequency_penalty=0.3
@@ -221,7 +223,7 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
             generated_response = response.choices[0].message.content.strip()
 
             # Validate response
-            if not generated_response or any(phrase in generated_response.lower() for phrase in ["i apologize", "i'm sorry", "as an ai", "dogs", "unleash"]):
+            if not generated_response or any(phrase in generated_response.lower() for phrase in ["i apologize", "i'm sorry", "as an ai"]):
                 logger.warning("Invalid OpenAI response, falling back to local generator")
                 return self.response_generator.generate_response(user_input, current_score)
 
@@ -241,17 +243,6 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
             # Convert to lowercase for analysis
             normalized_input = user_input.lower()
 
-            # Check for insults and negative comments
-            insult_terms = [
-                'idiot', 'stupid', 'dumb', 'moron', 'loser', 'terrible',
-                'worst', 'hate', 'awful', 'fake', 'weak', 'trash'
-            ]
-            insult_count = sum(1 for term in insult_terms if term in normalized_input)
-
-            if insult_count > 0:
-                score_change -= 5 * insult_count  # Penalize each insult
-                logger.info(f"Detected {insult_count} insults, applying penalty")
-
             # Check for threatening content
             negative_terms = [
                 'kill', 'death', 'murder', 'threat', 'die', 'destroy',
@@ -263,6 +254,7 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
             if threat_count > 0:
                 score_change -= 20 * threat_count
                 logger.info(f"Detected {threat_count} threatening terms, applying penalty")
+                return max(0, current_score + score_change)
 
             # Basic length check
             words = user_input.split()
@@ -296,8 +288,8 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
             context_points = sum(4 for term in context_terms if term in normalized_input)
             score_change += context_points
 
-            # Add controlled randomness with reduced range
-            random_factor = random.randint(-1, 2)  # Reduced from (-2, 4) to (-1, 2)
+            # Add controlled randomness
+            random_factor = random.randint(-2, 4)
             score_change += random_factor
 
             # Ensure score changes are meaningful but not too extreme
@@ -324,7 +316,7 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
 
     def interact(self, address: str, message: str, block_number: int, tx_hash: Optional[str] = None) -> Dict:
         """Main interaction method with enhanced error handling and logging"""
-        logger.info(f"Processing interaction: address={address}, message={message[:50] if message else 'None'}, tx_hash={tx_hash}")
+        logger.info(f"Processing interaction: address={address}, tx_hash={tx_hash}")
 
         try:
             # Get current score with error handling
@@ -334,14 +326,6 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
             except Exception as e:
                 logger.error(f"Error getting player score: {e}")
                 current_score = 50  # Fallback to default score
-
-            # Validate input
-            if not message or not message.strip():
-                return {
-                    "success": False,
-                    "message": "Please provide a message to continue our conversation!",
-                    "score": current_score
-                }
 
             # Store response with validation
             if not tx_hash:
@@ -355,7 +339,7 @@ ALWAYS STAY ON TOPIC AND RESPOND TO THEIR EXACT QUESTION!"""
             # First try OpenAI, fall back to local generator if needed
             try:
                 trump_response = self.generate_openai_response(message, current_score, address)
-                logger.info(f"Generated OpenAI response for message: {message[:50]}")
+                logger.info("Generated response using OpenAI")
             except Exception as e:
                 logger.error(f"OpenAI generation failed: {str(e)}")
                 trump_response = self.response_generator.generate_response(message, current_score)
