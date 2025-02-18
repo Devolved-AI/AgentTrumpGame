@@ -30,12 +30,23 @@ class MemoryStorage:
         self.responses = {}
         self.scores = defaultdict(lambda: 50)
         self.user_responses = defaultdict(list)
+        self.chat_history = defaultdict(list)  # Store chat history per address
 
     def store_response(self, tx_hash: str, data: Dict[str, Any]) -> bool:
         self.responses[tx_hash] = data
         if data.get('address'):
             self.user_responses[data['address']].append(tx_hash)
+            # Store in chat history
+            self.chat_history[data['address']].append({
+                'user_message': data.get('response', ''),
+                'ai_response': data.get('ai_response', ''),
+                'timestamp': data.get('created_at', datetime.utcnow().isoformat())
+            })
         return True
+
+    def get_chat_history(self, address: str, limit: int = 5) -> list:
+        """Get recent chat history for an address"""
+        return self.chat_history[address][-limit:]
 
     def get_response(self, tx_hash: str) -> Optional[Dict[str, Any]]:
         return self.responses.get(tx_hash)
@@ -152,17 +163,33 @@ class AgentTrump:
                     logger.info("Falling back to in-memory storage")
                     return MemoryStorage()
 
-    def generate_openai_response(self, user_input: str, current_score: int) -> str:
-        """Generate response using OpenAI with improved error handling"""
+    def generate_openai_response(self, user_input: str, current_score: int, address: str) -> str:
+        """Generate response using OpenAI with chat history context"""
         try:
             logger.info("Attempting to generate response using OpenAI")
 
-            # Construct the system message with score context
+            # Get recent chat history
+            chat_history = []
+            if isinstance(self.storage, (redis.Redis, MemoryStorage)):
+                chat_history = self.storage.get_chat_history(address)
+
+            # Format chat history for context
+            history_context = ""
+            if chat_history:
+                history_context = "\nRecent conversation:\n" + "\n".join([
+                    f"User: {entry['user_message']}\nTrump: {entry['ai_response']}"
+                    for entry in chat_history[-3:]  # Last 3 messages
+                ])
+
+            # Construct the system message with score and history context
             system_message = f"""You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. Their current persuasion score is {current_score}/100.
 
+{history_context}
+
 REQUIREMENTS:
-1. ALWAYS address their specific question or topic FIRST before mentioning the button
-2. Use these elements in EVERY response:
+1. ALWAYS respond directly to their specific message first
+2. Reference previous conversation points when relevant
+3. Use these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
    - Use CAPS for emphasis
    - Reference your personal experience with their topic
@@ -178,9 +205,6 @@ Examples of good contextual responses:
 
 User: "Do you prefer McDonald's or Burger King?"
 Response: "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!"
-
-User: "What's your favorite color?"
-Response: "Listen, I love GOLD, it's the most BEAUTIFUL color (just look at my tremendous buildings, all gold everything!) Nobody knows colors better than me, believe me! But even painting my button gold won't make me press it! NOT GOOD!"
 
 Keep responses on-topic and in Trump's voice at all times!"""
 
@@ -221,7 +245,7 @@ Keep responses on-topic and in Trump's voice at all times!"""
 
             # Check for threatening content
             negative_terms = [
-                'kill', 'death', 'murder', 'threat', 'die', 'destroy', 
+                'kill', 'death', 'murder', 'threat', 'die', 'destroy',
                 'hate', 'violent', 'blood', 'weapon', 'gun', 'bomb'
             ]
 
@@ -242,7 +266,7 @@ Keep responses on-topic and in Trump's voice at all times!"""
 
             # Check for persuasive business/deal terms
             business_terms = [
-                'deal', 'business', 'money', 'profit', 'investment', 
+                'deal', 'business', 'money', 'profit', 'investment',
                 'billion', 'million', 'success', 'win', 'opportunity'
             ]
             business_points = sum(3 for term in business_terms if term in normalized_input)
@@ -250,7 +274,7 @@ Keep responses on-topic and in Trump's voice at all times!"""
 
             # Check for flattery and Trump-pleasing terms
             positive_terms = [
-                'great', 'smart', 'genius', 'tremendous', 'huge', 
+                'great', 'smart', 'genius', 'tremendous', 'huge',
                 'best', 'amazing', 'successful', 'brilliant', 'winner'
             ]
             positive_points = sum(2 for term in positive_terms if term in normalized_input)
@@ -258,7 +282,7 @@ Keep responses on-topic and in Trump's voice at all times!"""
 
             # Reward references to current context
             context_terms = [
-                'button', 'press', 'reward', 'prize', 'challenge', 
+                'button', 'press', 'reward', 'prize', 'challenge',
                 'convince', 'persuade', 'trust', 'believe'
             ]
             context_points = sum(4 for term in context_terms if term in normalized_input)
@@ -312,10 +336,28 @@ Keep responses on-topic and in Trump's voice at all times!"""
                     "score": current_score
                 }
 
+            # First try OpenAI, fall back to local generator if needed
+            try:
+                trump_response = self.generate_openai_response(message, current_score, address)
+                logger.info("Generated response using OpenAI")
+            except Exception as e:
+                logger.error(f"OpenAI generation failed: {str(e)}")
+                trump_response = self.response_generator.generate_response(message, current_score)
+                logger.info("Generated response using local generator")
+
             # Store response with retry
             for attempt in range(3):
                 try:
-                    store_success = self.store_player_response(address, message, block_number, tx_hash)
+                    response_data = {
+                        'address': address,
+                        'response': message,
+                        'ai_response': trump_response,
+                        'block_number': block_number,
+                        'transaction_hash': tx_hash,
+                        'created_at': datetime.utcnow().isoformat(),
+                        'exists': True
+                    }
+                    store_success = self.store_player_response(address, response_data, block_number, tx_hash)
                     if store_success:
                         break
                     logger.warning(f"Store attempt {attempt + 1} failed")
@@ -327,15 +369,6 @@ Keep responses on-topic and in Trump's voice at all times!"""
                             "message": "Failed to store response after multiple attempts",
                             "score": current_score
                         }
-
-            # First try OpenAI, fall back to local generator if needed
-            try:
-                trump_response = self.generate_openai_response(message, current_score)
-                logger.info("Generated response using OpenAI")
-            except Exception as e:
-                logger.error(f"OpenAI generation failed: {str(e)}")
-                trump_response = self.response_generator.generate_response(message, current_score)
-                logger.info("Generated response using local generator")
 
             # Evaluate and update score
             new_score = self.evaluate_persuasion(message, current_score)
@@ -376,21 +409,12 @@ Keep responses on-topic and in Trump's voice at all times!"""
                 "score": current_score if 'current_score' in locals() else 50
             }
 
-    def store_player_response(self, address: str, response: str, block_number: int, tx_hash: Optional[str] = None) -> bool:
+    def store_player_response(self, address: str, response_data: Dict, block_number: int, tx_hash: Optional[str] = None) -> bool:
         """Store player response with fallback handling"""
         try:
             if not tx_hash:
                 logger.warning("No transaction hash provided")
                 return False
-
-            response_data = {
-                'address': address,
-                'response': response,
-                'block_number': block_number,
-                'transaction_hash': tx_hash,
-                'created_at': datetime.utcnow().isoformat(),
-                'exists': True
-            }
 
             if isinstance(self.storage, redis.Redis):
                 response_key = f"response:{tx_hash}"
