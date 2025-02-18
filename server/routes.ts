@@ -64,8 +64,9 @@ async function getTrumpResponse(
   currentScore: number
 ): Promise<string> {
   try {
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const completion = await openai.chat.completions.create({
-      model: "gpt-4", // Using GPT-4 for better personality matching
+      model: "gpt-4o",
       messages: [
         { role: "system", content: TRUMP_SYSTEM_PROMPT },
         { 
@@ -82,7 +83,7 @@ async function getTrumpResponse(
     return completion.choices[0].message.content || "Look folks, something's not working right - NOT GOOD!";
   } catch (error) {
     console.error('OpenAI API error:', error);
-    throw new Error('Failed to generate Trump response');
+    return "Look folks, my tremendously smart AI brain is taking a quick break - but don't worry, I'll be back stronger than ever! SAD!";
   }
 }
 
@@ -94,7 +95,6 @@ export function registerRoutes(app: Express): Server {
         address, 
         response, 
         blockNumber, 
-        signature,
         transactionHash,
         scoreAdjustment 
       } = req.body;
@@ -116,10 +116,7 @@ export function registerRoutes(app: Express): Server {
       const scoreChange = Math.max(-20, Math.min(20, scoreAdjustment || 0));
       const newScore = Math.max(0, Math.min(100, currentScore + scoreChange));
 
-      // Update score
-      await updatePlayerScore(address, newScore);
-
-      // Store interaction in Redis
+      // Store interaction in storage first
       const interactionData = {
         address,
         user_message: response,
@@ -129,8 +126,13 @@ export function registerRoutes(app: Express): Server {
         score: newScore,
         timestamp: new Date().toISOString()
       };
+
       await storage.set(`interaction:${transactionHash}`, JSON.stringify(interactionData));
 
+      // Update score after storing interaction
+      await updatePlayerScore(address, newScore);
+
+      // Return response
       res.json({
         success: true,
         message: trumpResponse,
@@ -162,44 +164,38 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-
-  // API route to get response by transaction hash with enhanced retries
+  // API route to get response by transaction hash
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      const maxRetries = 3;
-      const baseDelay = 500; // 500ms base delay
+      // Try to get the stored interaction immediately
+      const interactionData = await storage.get(`interaction:${hash}`);
 
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          const interactionData = await storage.get(`interaction:${hash}`);
-          if (interactionData) {
-            const parsedInteraction = JSON.parse(interactionData);
-            return res.json({
-              message: parsedInteraction.ai_response,
-              score: parsedInteraction.score,
-              gameWon: parsedInteraction.score >= 95
-            });
-          }
-        } catch (error) {
-          console.error(`Attempt ${attempt + 1} failed:`, error);
-          if (attempt === maxRetries - 1) throw error;
-        }
-
-        const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`Attempt ${attempt + 1}: Waiting ${delay}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+      if (interactionData) {
+        const parsedInteraction = JSON.parse(interactionData);
+        return res.json({
+          success: true,
+          message: parsedInteraction.ai_response,
+          score: parsedInteraction.score,
+          gameWon: parsedInteraction.score >= 95
+        });
       }
 
-      console.log('No response found after all retries');
-      return res.status(404).json({ error: 'Response not found' });
+      // If not found, return a proper error
+      return res.status(404).json({ 
+        success: false,
+        error: 'Response not found',
+        message: "Look folks, I can't find that response right now - but keep trying, nobody persists better than me! SAD!"
+      });
     } catch (error: any) {
       console.error("Get response by hash error:", error);
       res.status(500).json({ 
+        success: false,
         error: 'Failed to get response',
-        details: error.message 
+        details: error.message,
+        message: "Look folks, something's not working right with my tremendous memory - NOT GOOD!"
       });
     }
   });
