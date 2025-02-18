@@ -19,11 +19,15 @@ export interface IStorage {
   addPlayerResponse(data: PlayerResponse): Promise<PlayerResponse>;
   getPlayerResponses(address: string): Promise<PlayerResponse[]>;
   getResponseByHash(hash: string): Promise<PlayerResponse | undefined>;
+  // Add Redis-like methods
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<void>;
 }
 
 class MemoryStorage implements IStorage {
   private scores: Map<string, PlayerScore> = new Map();
   private responses: PlayerResponse[] = [];
+  private keyValueStore: Map<string, string> = new Map();
 
   async getPlayerScore(address: string): Promise<PlayerScore | undefined> {
     return this.scores.get(address.toLowerCase()) || {
@@ -62,6 +66,15 @@ class MemoryStorage implements IStorage {
 
   async getResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
     return this.responses.find(r => r.transactionHash === hash);
+  }
+
+  // Redis-like methods
+  async get(key: string): Promise<string | null> {
+    return this.keyValueStore.get(key) || null;
+  }
+
+  async set(key: string, value: string): Promise<void> {
+    this.keyValueStore.set(key, value);
   }
 }
 
