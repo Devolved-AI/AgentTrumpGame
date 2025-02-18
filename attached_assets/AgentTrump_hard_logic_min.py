@@ -197,9 +197,9 @@ REQUIREMENTS:
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
 
 RESPONSE FORMAT:
-1. First sentence: Direct response to their specific topic
-2. Second sentence: Your opinion/experience with their topic
-3. Final sentence: Brief tie-in to the button/prize
+1. First sentence: Direct response to their specific topic.
+2. Second sentence: Your opinion/experience with their topic.
+3. Final sentence: Brief tie-in to the button/prize.
 
 Examples of good contextual responses:
 
