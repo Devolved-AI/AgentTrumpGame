@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { analyzeTrumpyResponse } from "../shared/trumpAnalyzer";
 
 // Type definitions for responses
 interface AIResponse {
@@ -9,8 +10,6 @@ interface AIResponse {
   score: number;
   game_won?: boolean;
 }
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export function registerRoutes(app: Express): Server {
   // API route to handle player responses
@@ -34,8 +33,9 @@ export function registerRoutes(app: Express): Server {
         lastUpdated: new Date()
       };
 
-      // Generate Trump's response based on the input
+      // Generate Trump's response and calculate new score
       const trumpResponse = generateTrumpResponse(response, score.persuasionScore);
+      const newScore = analyzeTrumpyResponse(response);
 
       // Store both user's response and Trump's response
       const storedResponse = await storage.storePlayerResponse(address, {
@@ -48,14 +48,17 @@ export function registerRoutes(app: Express): Server {
         exists: true
       });
 
+      // Update player's score
+      await storage.updatePlayerScore(address, newScore);
+
       console.log('Stored response:', storedResponse);
 
       // Send back Trump's response
       res.json({
         success: true,
         message: trumpResponse,
-        score: score.persuasionScore,
-        game_won: score.persuasionScore >= 100
+        score: newScore,
+        game_won: newScore >= 100
       });
     } catch (error: any) {
       console.error("Add response error:", error);
@@ -76,11 +79,11 @@ export function registerRoutes(app: Express): Server {
 
       if (response) {
         // Get player score
-        const score = await storage.getPlayerScore(response.address) || {
-          address: response.address,
-          persuasionScore: 50,
-          lastUpdated: new Date()
-        };
+        const score = await storage.getPlayerScore(response.address);
+
+        if (!score) {
+          throw new Error('Player score not found');
+        }
 
         return res.json({
           success: true,
@@ -93,7 +96,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(404).json({ 
         success: false,
         error: 'Response not found',
-        message: "Trump's response is being processed. Please try again."
+        message: "FOLKS, your message is still being processed on the BLOCKCHAIN! Give it a minute, nobody does blockchain better than me, believe me! Try again!"
       });
     } catch (error: any) {
       console.error("Get response by hash error:", error);
@@ -101,7 +104,7 @@ export function registerRoutes(app: Express): Server {
         success: false,
         error: 'Failed to get response',
         details: error.message,
-        message: "Failed to get Trump's response. Please try again."
+        message: "TERRIBLE ERROR, folks! Something went wrong with our TREMENDOUS system. Please try again!"
       });
     }
   });
@@ -134,24 +137,75 @@ export function registerRoutes(app: Express): Server {
   return httpServer;
 }
 
-// Function to generate Trump-like response
-function generateTrumpResponse(message: string, score: number): string {
+// Function to generate Trump-like response based on message content and score
+function generateTrumpResponse(message: string, currentScore: number): string {
   const input = message.toLowerCase();
 
-  // McDonald's specific response
-  if (input.includes('mcdonald') || input.includes('burger king')) {
-    return "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!";
+  // Introductions
+  const intros = [
+    "Look folks",
+    "Listen",
+    "Believe me",
+    "Let me tell you",
+    "Many people are saying",
+    "Folks, let me tell you"
+  ];
+
+  // Emphatic words
+  const emphasis = [
+    "TREMENDOUS",
+    "HUGE",
+    "FANTASTIC",
+    "INCREDIBLE",
+    "AMAZING",
+    "BEAUTIFUL"
+  ];
+
+  // Button references
+  const buttonRefs = [
+    "(and believe me, I know buttons!)",
+    "(nobody knows buttons better than me)",
+    "(I've pressed many buttons, maybe more than anyone)",
+    "(and I know A LOT about buttons)"
+  ];
+
+  // Closings
+  const closings = [
+    "SAD!",
+    "NOT GOOD!",
+    "We'll see what happens!",
+    "VERY DISAPPOINTED!",
+    "THINK ABOUT IT!"
+  ];
+
+  // Random selections
+  const intro = intros[Math.floor(Math.random() * intros.length)];
+  const emph = emphasis[Math.floor(Math.random() * emphasis.length)];
+  const buttonRef = buttonRefs[Math.floor(Math.random() * buttonRefs.length)];
+  const closing = closings[Math.floor(Math.random() * closings.length)];
+
+  // Special responses based on keywords
+  if (input.includes('mcdonald') || input.includes('burger')) {
+    return `${intro}, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! ${closing}`;
+  }
+
+  if (input.includes('money') || input.includes('rich') || input.includes('wealth') || input.includes('billion')) {
+    return `${intro}, you're talking about money - I LOVE money ${buttonRef}! But is it enough to make me press this ${emph} button? NOT YET!!!`;
+  }
+
+  if (input.includes('deal') || input.includes('business') || input.includes('negotiate')) {
+    return `${intro}, you're trying to make a deal here ${buttonRef}. I wrote the book on deals, literally THE BEST book! But this deal? NOT GOOD ENOUGH!!!`;
   }
 
   // Score-based responses
-  if (score >= 90) {
-    return "Believe me folks, you're getting VERY close to convincing me! Keep going, maybe you'll be the one to make me press this TREMENDOUS button!!!";
+  if (currentScore >= 90) {
+    return `${intro}, you're getting VERY close to convincing me ${buttonRef}! Keep going, maybe you'll be the one to make me press this ${emph} button!!!`;
   }
 
-  if (score <= 20) {
-    return "Listen, that's a TERRIBLE argument! You'll never get me to press my BEAUTIFUL button with talk like that! SAD!";
+  if (currentScore <= 20) {
+    return `${intro}, that's a TERRIBLE argument! You'll never get me to press my ${emph} button with talk like that! ${closing}`;
   }
 
   // Default response
-  return "Many people are saying that's an interesting try at getting me to press my HUGE button (and believe me, I know buttons!), but you'll have to do better than that! THINK ABOUT IT!";
+  return `${intro}, that's an interesting try at getting me to press my ${emph} button ${buttonRef}, but you'll have to do better than that! ${closing}`;
 }

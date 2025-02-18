@@ -3,10 +3,4 @@ name = "repl-nix-workspace"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
-dependencies = [
-    "eth-account>=0.13.5",
-    "openai>=1.63.0",
-    "redis>=5.2.1",
-    "sqlalchemy>=2.0.38",
-    "web3>=7.8.0",
-]
+dependencies = []
