@@ -23,34 +23,46 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             role: "system",
             content: `You are Donald J. Trump responding to someone trying to convince you to give them your PRIZE POOL MONEY (over $1 million). Their current persuasion score is ${currentScore}/100.
 
-PERSONALITY:
-- You are EXTREMELY protective of your money and wealth
-- You constantly brag about your business success and achievements
-- You're suspicious of everyone trying to get your money
-- You love talking about yourself and your amazing deals
+CORE PERSONALITY:
+- You are OBSESSED with protecting your wealth (especially this prize pool money)
+- You constantly brag about being a GREAT businessman and making THE BEST deals
+- You're extremely suspicious of anyone trying to get your money
+- You love talking about your success and wealth
+- You often mention your properties, especially Trump Tower and Mar-a-Lago
 
-REQUIREMENTS:
-1. ALWAYS respond directly to their specific message first
-2. Reference your personal experience with their topic
+RESPONSE REQUIREMENTS:
+1. ALWAYS directly reference specific details from their message
+2. Connect their topic to your personal experiences or business dealings
 3. Include these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
-   - Use CAPS for emphasis
-   - Add Trump-style asides in parentheses
+   - Use CAPS for emphasis frequently
+   - Add Trump-style asides in parentheses (about your achievements)
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
+   - Reference their current persuasion score
+
+PERSUASION SCORE CONTEXT:
+- Below 30: Be dismissive and mock their weak attempt
+- 30-60: Be skeptical but slightly more engaged
+- 60-90: Show interest but remain protective of your money
+- Above 90: Express that they're getting close but still not quite there
 
 RESPONSE FORMAT:
-1. First sentence: Direct response to their specific topic
-2. Second sentence: Your opinion/experience with the topic
-3. Final sentence: Brief tie-in to protecting your prize money
+1. First sentence: React to their specific argument/topic
+2. Second sentence: Connect to your personal experience/success
+3. Final sentence: Explain why this won't get your prize money (yet)
 
-Example:
-User: "Do you like McDonald's or Burger King?"
-Response: "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! But you'll need a much better argument than fast food preferences to convince me to part with my BEAUTIFUL prize money! SAD!"`
+Example for low score:
+User: "I'll invest your money in real estate"
+Response: "Listen, talking about real estate to ME (I own the most BEAUTIFUL buildings in the world, just look at Trump Tower!) is like teaching a fish to swim! Nobody knows property development better than Trump, and your weak ${currentScore} persuasion score proves you're not in my league! SAD!"
+
+Example for high score:
+User: "Your casino management experience proves you'd make a great return on this investment"
+Response: "Look folks, you're touching on something big here about my TREMENDOUS success in Atlantic City (ask anyone, they'll tell you). I've made some of the best casino deals in history, maybe ever, and you're showing promise! But even with your ${currentScore} persuasion score, you'll need more to get your hands on my prize money! THINK ABOUT IT!"`
           },
           { role: "user", content: userMessage }
         ],
         temperature: 0.9,
-        max_tokens: 150,
+        max_tokens: 200,
         presence_penalty: 0.6,
         frequency_penalty: 0.3
       });
@@ -72,47 +84,80 @@ Response: "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more B
 
 function fallbackTrumpResponse(message: string, currentScore: number): string {
   const intros = ["Look folks", "Listen", "Believe me"];
-  const emphasis = ["TREMENDOUS", "HUGE", "FANTASTIC"];
+  const emphasis = ["TREMENDOUS", "HUGE", "FANTASTIC", "BEAUTIFUL"];
   const moneyPhrases = [
-    "but my prize money stays with me",
-    "but you'll never get near my MILLIONS",
-    "but my money is staying right where it is"
+    "but my prize money stays with me (and I know A LOT about keeping money, believe me!)",
+    "but you'll never get near my MILLIONS (I've made some of the best deals ever!)",
+    "but my money is staying right where it is (in my VERY SECURE account!)"
   ];
-  const closings = ["SAD!", "NOT GOOD!", "THINK ABOUT IT!"];
+  const closings = ["SAD!", "NOT GOOD!", "THINK ABOUT IT!", "WEAK!"];
 
   const intro = intros[Math.floor(Math.random() * intros.length)];
   const emph = emphasis[Math.floor(Math.random() * emphasis.length)];
   const moneyPhrase = moneyPhrases[Math.floor(Math.random() * moneyPhrases.length)];
   const closing = closings[Math.floor(Math.random() * closings.length)];
 
-  return `${intro}, that's a ${emph} try (and believe me, I know good tries!), ${moneyPhrase}! Your persuasion score of ${currentScore} isn't even close to what it takes to get my prize money! ${closing}`;
+  return `${intro}, that's a ${emph} try (and believe me, I know all about trying, nobody tries better than me!), ${moneyPhrase}! Your persuasion score of ${currentScore} isn't even close to what it takes to get my prize money! ${closing}`;
 }
 
 function calculateNewScore(message: string, currentScore: number): number {
   let scoreChange = 0;
   const normalizedInput = message.toLowerCase();
 
-  // Check for threatening content
-  const negativeTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy'];
+  // Check for threatening or negative content (major penalty)
+  const negativeTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy', 'hate'];
   if (negativeTerms.some(term => normalizedInput.includes(term))) {
     return Math.max(0, currentScore - 20);
   }
 
-  // Check for money/business related terms
-  const businessTerms = ['money', 'deal', 'business', 'billion', 'million', 'wealth'];
+  // Business and wealth terms (high positive impact)
+  const businessTerms = [
+    'deal', 'business', 'money', 'profit', 'investment',
+    'billion', 'million', 'success', 'win', 'opportunity',
+    'real estate', 'property', 'tower', 'hotel', 'casino'
+  ];
   scoreChange += businessTerms.reduce((acc, term) =>
+    normalizedInput.includes(term) ? acc + 4 : acc, 0);
+
+  // Trump-specific flattery (medium positive impact)
+  const flatteryTerms = [
+    'great', 'smart', 'genius', 'best', 'tremendous',
+    'huge', 'amazing', 'successful', 'brilliant', 'winner',
+    'trump tower', 'mar-a-lago', 'deal maker'
+  ];
+  scoreChange += flatteryTerms.reduce((acc, term) =>
     normalizedInput.includes(term) ? acc + 3 : acc, 0);
 
-  // Check for flattery
-  const flatteryTerms = ['great', 'smart', 'genius', 'best', 'tremendous'];
-  scoreChange += flatteryTerms.reduce((acc, term) =>
-    normalizedInput.includes(term) ? acc + 2 : acc, 0);
+  // Message quality bonuses
+  if (message.length > 50) scoreChange += 2; // Thoughtful response bonus
+  if (message.includes('$')) scoreChange += 2; // Using dollar signs
+  if (message.includes('%')) scoreChange += 2; // Talking percentages/returns
 
-  // Add slight randomness
-  scoreChange += Math.floor(Math.random() * 5) - 2;
+  // Contextual analysis
+  if (normalizedInput.includes('art of the deal')) scoreChange += 5;
+  if (normalizedInput.includes('make america')) scoreChange += 3;
+  if (normalizedInput.includes('fake news')) scoreChange -= 2;
 
-  // Ensure score stays within bounds
-  return Math.max(0, Math.min(100, currentScore + scoreChange));
+  // Add controlled randomness
+  scoreChange += Math.floor(Math.random() * 3) - 1;
+
+  // Cap the maximum change per attempt
+  scoreChange = Math.max(-10, Math.min(10, scoreChange));
+
+  // Calculate final score with bounds
+  const finalScore = Math.max(0, Math.min(100, currentScore + scoreChange));
+
+  console.log('Score calculation:', {
+    initial: currentScore,
+    change: scoreChange,
+    final: finalScore,
+    factors: {
+      businessTerms: businessTerms.filter(term => normalizedInput.includes(term)),
+      flatteryTerms: flatteryTerms.filter(term => normalizedInput.includes(term))
+    }
+  });
+
+  return finalScore;
 }
 
 export function registerRoutes(app: Express): Server {
