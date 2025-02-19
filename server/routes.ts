@@ -80,10 +80,9 @@ function generateTrumpResponse(userMessage: string, currentScore: number): Trump
 
     console.log('Context detection:', { message, isPositive, isNegative, isQuestion, mentionsPolicy, mentionsFood });
 
-    // Select response category (prioritize food for your specific query)
+    // Select response category
     let selectedResponses: string[];
     if (mentionsFood) {
-        // Special case for food-related queries to ensure variety
         selectedResponses = isQuestion ? trumpResponses.question : trumpResponses.default;
     } else if (mentionsPolicy) selectedResponses = trumpResponses.policy;
     else if (isQuestion) selectedResponses = trumpResponses.question;
@@ -100,7 +99,7 @@ function generateTrumpResponse(userMessage: string, currentScore: number): Trump
         .replace('{message}', message)
         .replace('{score}', currentScore.toString());
 
-    // Simple scoring logic
+    // Scoring logic
     let scoreChange = Math.floor(Math.random() * 11) - 5; // -5 to +5
     if (mentionsFood) scoreChange += 3; // Bonus for food mentions
     const newScore = Math.max(0, Math.min(100, currentScore + scoreChange));
@@ -128,7 +127,7 @@ interface TrumpResponse {
 export function registerRoutes(app: Express): Server {
     app.post('/api/responses', async (req, res) => {
         try {
-            console.log('POST /api/responses received:', req.body);
+            console.log('POST /api/responses received:', JSON.stringify(req.body, null, 2));
 
             const { address, response: userMessage, blockNumber, transactionHash } = req.body;
 
@@ -151,7 +150,7 @@ export function registerRoutes(app: Express): Server {
             }
 
             const trumpResponse = generateTrumpResponse(userMessage, currentScore);
-            console.log('Generated response:', trumpResponse);
+            console.log('Generated response:', JSON.stringify(trumpResponse, null, 2));
 
             try {
                 const responseData = {
@@ -165,13 +164,15 @@ export function registerRoutes(app: Express): Server {
                     score: trumpResponse.new_score
                 };
 
-                console.log('Storing response data:', responseData);
+                console.log('Storing response data:', JSON.stringify(responseData, null, 2));
                 await storage.storePlayerResponse(address, responseData);
                 await storage.updatePlayerScore(address, trumpResponse.new_score);
                 console.log('Response stored successfully for hash:', transactionHash);
+                // Verify storage immediately
+                const storedResponse = await storage.getPlayerResponseByHash(transactionHash);
+                console.log('Immediate retrieval check:', JSON.stringify(storedResponse, null, 2));
             } catch (error) {
                 console.error('Storage error:', error);
-                // Return the generated response even if storage fails
                 return res.json({
                     success: true,
                     message: trumpResponse.response,
@@ -216,7 +217,7 @@ export function registerRoutes(app: Express): Server {
             }
 
             const response = await storage.getPlayerResponseByHash(hash);
-            console.log('Retrieved response from storage:', response);
+            console.log('Retrieved response from storage:', JSON.stringify(response, null, 2));
 
             if (!response) {
                 console.log('No response found for hash:', hash);
@@ -242,6 +243,24 @@ export function registerRoutes(app: Express): Server {
                 error: 'Failed to get response',
                 details: error.message
             });
+        }
+    });
+
+    // Debug endpoint to inspect all stored responses
+    app.get('/api/debug/responses', async (req, res) => {
+        try {
+            const allResponses: PlayerResponse[] = [];
+            for (const response of storage["responses"].values()) {
+                allResponses.push(response);
+            }
+            console.log('Debug: All stored responses:', JSON.stringify(allResponses, null, 2));
+            return res.json({
+                success: true,
+                responses: allResponses
+            });
+        } catch (error: any) {
+            console.error('Error in debug endpoint:', error);
+            return res.status(500).json({ error: error.message });
         }
     });
 

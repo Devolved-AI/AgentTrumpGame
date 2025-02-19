@@ -29,21 +29,20 @@ declare global {
   }
 }
 
-// Modified clearAllGameState function with better console output
+// Modified clearAllGameState function with complete reset
 function clearAllGameState() {
-  console.log('Clearing game state (preserving scores)...');
+  console.log('Clearing all game state...');
   try {
-    // Clear chat history but preserve scores
+    // Clear all localStorage items except scores
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
-      if (key.startsWith(CHAT_HISTORY_KEY)) {
+      if (!key.startsWith(PERSUASION_SCORE_KEY)) {
         localStorage.removeItem(key);
-        console.log('Cleared chat history:', key);
+        console.log('Cleared:', key);
       }
     });
 
-    // Don't reset persuasion scores anymore
-    console.log('Preserved persuasion scores');
+    console.log('Game state cleared completely');
   } catch (error) {
     console.error('Error clearing game state:', error);
   }
@@ -308,6 +307,8 @@ function handleSubmissionError(error: any) {
   // Only reset game state when explicitly requested, not on every mount
   const resetGame = () => {
     clearAllGameState();
+
+    // Reset all game-related state
     setGameStatus({
       timeRemaining: 0,
       currentAmount: "0.0009",
@@ -320,12 +321,22 @@ function handleSubmissionError(error: any) {
       escalationPeriodTimeRemaining: 0,
       currentPeriodIndex: 0
     });
+
     setPlayerHistory([]);
     setShowGameOver(false);
     setGameWon(false);
     setShowConfetti(false);
     setPrizePoolEth("0");
-    setPersuasionScore(50);
+    setShowTrumpDialog(false);
+    setTrumpMessage("");
+
+    // Force refresh game data if connected
+    if (gameContract && web3State.account) {
+      initializeGameData(gameContract, web3State.account)
+        .catch(console.error);
+    }
+
+    console.log('Game reset completed');
   };
 
   useEffect(() => {

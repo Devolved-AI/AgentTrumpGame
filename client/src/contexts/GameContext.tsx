@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useGameContract } from '@/lib/hooks/useGameContract';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { ethers } from 'ethers';
 
 interface GameState {
   multiplier: number;
@@ -44,7 +45,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (state) {
         // Get current persuasion score from API
-        const address = await contract.signer.getAddress();
+        const signer = contract.signer as ethers.Signer;
+        const address = await signer.getAddress();
         console.log('Fetching score for address:', address);
 
         const scoreResponse = await fetch(`/api/scores/${address}`);
@@ -88,10 +90,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       await tx.wait();
 
       // Get signer address
-      const address = await contract.signer.getAddress();
+      const signer = contract.signer as ethers.Signer;
+      const address = await signer.getAddress();
 
       // Generate signature for the message
-      const signature = await contract.signer.signMessage(response);
+      const signature = await signer.signMessage(response);
 
       // Submit to API with blockchain data
       const result = await fetch('/api/responses', {
