@@ -70,6 +70,8 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             current_score: currentScore
         };
 
+        console.log('Sending request to Trump Agent:', request);
+
         // Create a new promise to handle the response
         return new Promise((resolve, reject) => {
             let responseData = '';
@@ -77,23 +79,31 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
 
             // Set up event handlers for this request
             const messageHandler = (data: Buffer) => {
-                responseData += data.toString();
+                const newData = data.toString();
+                console.log('Received data from Trump Agent:', newData);
+                responseData += newData;
+
                 try {
                     const response = JSON.parse(responseData);
+                    console.log('Parsed response:', response);
                     cleanup();
                     resolve(response);
                 } catch (e) {
                     // If it's not valid JSON yet, keep collecting data
+                    console.log('Not valid JSON yet, continuing to collect data');
                 }
             };
 
             const errorHandler = (data: Buffer) => {
-                errorData += data.toString();
+                const error = data.toString();
+                console.error('Trump Agent Error:', error);
+                errorData += error;
             };
 
             const closeHandler = (code: number) => {
                 cleanup();
                 if (code !== 0) {
+                    console.error(`Trump Agent exited with code ${code}. Error: ${errorData}`);
                     reject(new Error(`Agent exited with code ${code}. Error: ${errorData}`));
                 }
             };

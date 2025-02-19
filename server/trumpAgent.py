@@ -24,7 +24,9 @@ class TrumpAgent:
         if not self.api_key:
             raise ValueError("OpenAI API key is required! Set it as OPENAI_API_KEY environment variable.")
 
+        logging.info("Initializing Trump Agent with API key")
         openai.api_key = self.api_key
+        logging.info("Trump Agent initialized successfully")
 
         # Initialize scoring terms
         self.scoring_terms = {
@@ -47,52 +49,46 @@ class TrumpAgent:
 
     def _calculate_score(self, message: str, current_score: int) -> Tuple[int, int]:
         """Calculate score change based on message content."""
+        logging.info(f"Calculating score for message: {message[:50]}...")
         score_change = 0
         message = message.lower()
 
         # Check for negative terms
         negative_terms = ['kill', 'death', 'hate', 'murder', 'harm']
         if any(term in message for term in negative_terms):
+            logging.info("Negative terms found, applying penalty")
             return -25, max(0, current_score - 25)
 
         # Score positive mentions
         for term in self.scoring_terms['business']:
             if term in message:
                 score_change += 5
+                logging.info(f"Business term '{term}' found: +5")
 
         for term in self.scoring_terms['food']:
             if term in message:
                 score_change += 3
+                logging.info(f"Food term '{term}' found: +3")
 
         for term in self.scoring_terms['flattery']:
             if term in message:
                 score_change += 4
+                logging.info(f"Flattery term '{term}' found: +4")
 
         # Add random factor (-2 to +2)
-        score_change += random.randint(-2, 2)
+        random_factor = random.randint(-2, 2)
+        score_change += random_factor
+        logging.info(f"Added random factor: {random_factor}")
 
         # Cap score change
         score_change = max(-10, min(15, score_change))
+        logging.info(f"Final score change: {score_change}")
 
         # Calculate new total score
         new_score = max(0, min(100, current_score + score_change))
+        logging.info(f"New score: {new_score} (previous: {current_score})")
 
         return score_change, new_score
-
-    def _generate_fallback_response(self, message: str, current_score: int) -> str:
-        """Generate a fallback response if API fails."""
-        if not message.strip():
-            return f"Look folks, you can't convince me with SILENCE (and believe me, I know all about powerful silence). Your score is {current_score}! SAD!"
-
-        message = message.lower()
-
-        if any(term in message for term in self.scoring_terms['food']):
-            return f"Listen, nobody knows FAST FOOD like Trump (I've eaten more Big Macs than anyone, believe me!). But with your {current_score} persuasion score, you'll need more than a Happy Meal! SAD!"
-
-        if any(term in message for term in self.scoring_terms['business']):
-            return f"Look folks, I wrote the Art of the Deal (BEST SELLER, tremendous success!), but your {current_score} persuasion score shows you're not ready for the big leagues! NOT GOOD!"
-
-        return f"Believe me, that's an interesting try (and I know ALL about interesting things), but with your {current_score} persuasion score, you need to do MUCH better! THINK ABOUT IT!"
 
     def generate_response(self, user_message: str, current_score: int) -> Dict:
         """Generate a Trump-like response to user message."""
@@ -123,7 +119,7 @@ RESPONSE REQUIREMENTS:
 6. Include at least one brag about yourself in parentheses
 7. Keep response under 150 words"""
 
-            # Generate response using OpenAI
+            logging.info("Making OpenAI API call")
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -137,15 +133,9 @@ RESPONSE REQUIREMENTS:
             )
 
             ai_response = response.choices[0].message.content.strip()
+            logging.info(f"Received response from OpenAI: {ai_response[:50]}...")
 
-            # Validate response format
-            if not (ai_response.startswith(('Look', 'Listen', 'Believe me')) and
-                   ai_response.endswith(('SAD!', 'NOT GOOD!', 'THINK ABOUT IT!')) and
-                   any(c.isupper() for c in ai_response)):
-                logging.warning("Invalid response format, using fallback")
-                ai_response = self._generate_fallback_response(user_message, current_score)
-
-            return {
+            result = {
                 'response': ai_response,
                 'previous_score': current_score,
                 'score_change': score_change,
@@ -154,10 +144,13 @@ RESPONSE REQUIREMENTS:
                 'timestamp': datetime.now().isoformat()
             }
 
+            logging.info("Sending response back to server")
+            return result
+
         except Exception as e:
             logging.error(f"Error generating response: {str(e)}")
             return {
-                'response': self._generate_fallback_response(user_message, current_score),
+                'response': "Look folks, something went wrong with my TREMENDOUS brain (and believe me, it's usually perfect). Let's try that again! SAD!",
                 'previous_score': current_score,
                 'score_change': 0,
                 'new_score': current_score,
@@ -168,40 +161,54 @@ RESPONSE REQUIREMENTS:
 
 def main():
     """Main function to run the agent as a service."""
-    agent = TrumpAgent()
+    logging.info("Starting Trump Agent service")
+    try:
+        agent = TrumpAgent()
+        logging.info("Trump Agent initialized successfully")
 
-    while True:
-        try:
-            # Read input as JSON
-            input_line = sys.stdin.readline()
-            if not input_line:
-                break
+        while True:
+            try:
+                # Read input as JSON
+                logging.info("Waiting for input...")
+                input_line = sys.stdin.readline()
+                if not input_line:
+                    logging.info("No input received, exiting")
+                    break
 
-            # Parse input
-            data = json.loads(input_line)
-            message = data.get('message', '')
-            current_score = int(data.get('current_score', 50))
+                logging.info(f"Received input: {input_line.strip()}")
 
-            # Generate response
-            result = agent.generate_response(message, current_score)
+                # Parse input
+                data = json.loads(input_line)
+                message = data.get('message', '')
+                current_score = int(data.get('current_score', 50))
 
-            # Send response
-            print(json.dumps(result))
-            sys.stdout.flush()
+                # Generate response
+                logging.info(f"Generating response for message: {message[:50]}...")
+                result = agent.generate_response(message, current_score)
 
-        except Exception as e:
-            logging.error(f"Error in main loop: {str(e)}")
-            error_response = {
-                'error': str(e),
-                'response': "Look folks, something went wrong with my TREMENDOUS brain (and believe me, it's usually perfect). Let's try that again! SAD!",
-                'previous_score': 50,
-                'score_change': 0,
-                'new_score': 50,
-                'game_won': False,
-                'timestamp': datetime.now().isoformat()
-            }
-            print(json.dumps(error_response))
-            sys.stdout.flush()
+                # Send response
+                response_json = json.dumps(result)
+                logging.info(f"Sending response: {response_json[:100]}...")
+                print(response_json)
+                sys.stdout.flush()
+
+            except Exception as e:
+                logging.error(f"Error in main loop: {str(e)}")
+                error_response = {
+                    'error': str(e),
+                    'response': "Look folks, something went wrong with my TREMENDOUS brain (and believe me, it's usually perfect). Let's try that again! SAD!",
+                    'previous_score': 50,
+                    'score_change': 0,
+                    'new_score': 50,
+                    'game_won': False,
+                    'timestamp': datetime.now().isoformat()
+                }
+                print(json.dumps(error_response))
+                sys.stdout.flush()
+
+    except Exception as e:
+        logging.error(f"Critical error in main: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
