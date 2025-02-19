@@ -27,7 +27,8 @@ async function generateTrumpResponseWithAI(userMessage: string, currentScore: nu
 
 REQUIREMENTS:
 1. ALWAYS respond directly to their specific message first
-2. Use these elements in EVERY response:
+2. Reference their exact words and topic in your response
+3. Use these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
    - Use CAPS for emphasis
    - Reference your personal experience with their topic
@@ -35,9 +36,13 @@ REQUIREMENTS:
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
 
 RESPONSE FORMAT:
-1. First sentence: Direct response to their specific topic
-2. Second sentence: Your opinion/experience with their topic
-3. Final sentence: Brief tie-in to the button/prize`
+1. First sentence: Direct response to their specific topic/argument
+2. Second sentence: Your personal experience/opinion on their exact point
+3. Final sentence: Brief tie-in to the button/prize and their current score
+
+Example:
+User: "I'll give you a lifetime supply of McDonald's Big Macs!"
+Response: "Look folks, trying to bribe me with Big Macs (my ABSOLUTE FAVORITE, I eat them more than anybody!) shows you know what I like, but let me tell you - I already have the BEST Big Mac supply in history! You'll need more than fast food to get me to press this beautiful button, your persuasion score is only ${currentScore}! SAD!"`
         },
         { role: "user", content: userMessage }
       ],
@@ -66,84 +71,103 @@ function fallbackTrumpResponse(message: string): string {
 }
 
 export function registerRoutes(app: Express): Server {
-  // API route to handle player responses
+  // API route to handle initial player responses
   app.post('/api/responses', async (req, res) => {
     try {
       const { address, response, blockNumber, transactionHash } = req.body;
 
-      if (!address || !response) {
+      if (!address || !response || !transactionHash) {
         return res.status(400).json({ 
           error: 'Missing required fields',
-          details: 'address and response are required'
+          details: 'address, response, and transactionHash are required'
         });
       }
 
-      console.log('Processing response from address:', address);
+      console.log('Storing initial response for hash:', transactionHash);
 
-      // Get current score
-      const currentScore = (await storage.getPlayerScore(address))?.persuasionScore || 50;
-
-      // Generate Trump's response using OpenAI
-      const trumpResponse = await generateTrumpResponseWithAI(response, currentScore);
-
-      // Calculate new score
-      const newScore = analyzeTrumpyResponse(response);
-
-      // Store response data asynchronously
+      // Store initial response data without AI response
       const responseData = {
         address,
         response,
-        ai_response: trumpResponse,
         blockNumber: blockNumber || 0,
-        transactionHash: transactionHash || '',
+        transactionHash,
         created_at: new Date().toISOString(),
-        exists: true,
-        score: newScore
+        exists: true
       };
 
-      // Don't await storage - do it in background
-      storage.storePlayerResponse(address, responseData).catch(console.error);
-      storage.updatePlayerScore(address, newScore).catch(console.error);
+      // Store the initial response
+      await storage.storePlayerResponse(address, responseData);
 
-      // Send immediate response
-      res.json({
+      // Return accepted status - actual response will be generated on confirmation
+      res.status(202).json({
         success: true,
-        message: trumpResponse,
-        score: newScore,
-        game_won: newScore >= 100
+        message: "Response submitted and will be processed after blockchain confirmation",
+        transactionHash
       });
+
     } catch (error: any) {
-      console.error("Add response error:", error);
+      console.error("Store response error:", error);
       res.status(500).json({ 
-        error: 'Failed to generate response',
+        error: 'Failed to store response',
         details: error.message 
       });
     }
   });
 
-  // API route to get response by transaction hash
+  // API route to get response by transaction hash - generates response on confirmation
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
       console.log('Looking for response with transaction hash:', hash);
 
-      const response = await storage.getPlayerResponseByHash(hash);
-      console.log('Retrieved response for hash:', hash, response);
+      const storedResponse = await storage.getPlayerResponseByHash(hash);
+      console.log('Retrieved response for hash:', hash, storedResponse);
 
-      if (response) {
-        return res.json({
-          success: true,
-          message: response.ai_response,
-          score: response.score || 50,
-          game_won: (response.score || 50) >= 100
+      if (!storedResponse) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Response not found',
+          message: "FOLKS, your message is still being processed on the BLOCKCHAIN! Give it a minute, nobody does blockchain better than me, believe me! Try again!"
         });
       }
 
-      return res.status(404).json({ 
-        success: false,
-        error: 'Response not found',
-        message: "FOLKS, your message is still being processed on the BLOCKCHAIN! Give it a minute, nobody does blockchain better than me, believe me! Try again!"
+      // If we already have an AI response, return it
+      if (storedResponse.ai_response) {
+        return res.json({
+          success: true,
+          message: storedResponse.ai_response,
+          score: storedResponse.score || 50,
+          game_won: (storedResponse.score || 50) >= 100
+        });
+      }
+
+      // Get current score for context
+      const currentScore = (await storage.getPlayerScore(storedResponse.address))?.persuasionScore || 50;
+
+      // Generate Trump's response using OpenAI now that we have confirmation
+      const trumpResponse = await generateTrumpResponseWithAI(storedResponse.response, currentScore);
+
+      // Calculate new score
+      const newScore = analyzeTrumpyResponse(storedResponse.response);
+
+      // Update stored response with AI response and score
+      const updatedResponse = {
+        ...storedResponse,
+        ai_response: trumpResponse,
+        score: newScore
+      };
+
+      // Store the updated response with AI response
+      await storage.storePlayerResponse(storedResponse.address, updatedResponse);
+      await storage.updatePlayerScore(storedResponse.address, newScore);
+
+      return res.json({
+        success: true,
+        message: trumpResponse,
+        score: newScore,
+        game_won: newScore >= 100
       });
+
     } catch (error: any) {
       console.error("Get response by hash error:", error);
       res.status(500).json({ 
