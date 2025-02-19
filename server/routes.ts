@@ -71,68 +71,78 @@ function fallbackTrumpResponse(message: string): string {
 }
 
 export function registerRoutes(app: Express): Server {
-  // API route to handle initial player responses
+  // API route to handle player responses - now generates response immediately
   app.post('/api/responses', async (req, res) => {
     try {
       const { address, response, blockNumber, transactionHash } = req.body;
 
-      if (!address || !response || !transactionHash) {
+      if (!address || !response) {
         return res.status(400).json({ 
           error: 'Missing required fields',
-          details: 'address, response, and transactionHash are required'
+          details: 'address and response are required'
         });
       }
 
-      console.log('Storing initial response for hash:', transactionHash);
+      console.log('Processing response from address:', address);
 
-      // Store initial response data without AI response
+      // Get current score
+      const currentScore = (await storage.getPlayerScore(address))?.persuasionScore || 50;
+
+      // Generate Trump's response using OpenAI
+      const trumpResponse = await generateTrumpResponseWithAI(response, currentScore);
+
+      // Calculate new score
+      const newScore = analyzeTrumpyResponse(response);
+
+      // Store response data with AI response
       const responseData = {
         address,
         response,
+        ai_response: trumpResponse,
         blockNumber: blockNumber || 0,
-        transactionHash,
+        transactionHash: transactionHash || '',
         created_at: new Date().toISOString(),
-        exists: true
+        exists: true,
+        score: newScore
       };
 
-      // Store the initial response
-      await storage.storePlayerResponse(address, responseData);
+      // Store response asynchronously - don't wait for storage
+      storage.storePlayerResponse(address, responseData).catch(console.error);
+      storage.updatePlayerScore(address, newScore).catch(console.error);
 
-      // Return accepted status - actual response will be generated on confirmation
-      res.status(202).json({
+      // Send immediate response
+      res.json({
         success: true,
-        message: "Response submitted and will be processed after blockchain confirmation",
-        transactionHash
+        message: trumpResponse,
+        score: newScore,
+        game_won: newScore >= 100
       });
 
     } catch (error: any) {
-      console.error("Store response error:", error);
+      console.error("Generate response error:", error);
       res.status(500).json({ 
-        error: 'Failed to store response',
+        error: 'Failed to generate response',
         details: error.message 
       });
     }
   });
 
-  // API route to get response by transaction hash - generates response on confirmation
+  // API route to get response by transaction hash - for blockchain confirmation
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
-      console.log('Looking for response with transaction hash:', hash);
 
-      const storedResponse = await storage.getPlayerResponseByHash(hash);
-      console.log('Retrieved response for hash:', hash, storedResponse);
-
-      if (!storedResponse) {
-        return res.status(404).json({ 
+      if (!hash) {
+        return res.status(400).json({ 
           success: false,
-          error: 'Response not found',
-          message: "FOLKS, your message is still being processed on the BLOCKCHAIN! Give it a minute, nobody does blockchain better than me, believe me! Try again!"
+          error: 'Transaction hash is required'
         });
       }
 
-      // If we already have an AI response, return it
-      if (storedResponse.ai_response) {
+      const storedResponse = await storage.getPlayerResponseByHash(hash);
+
+      // If we have a stored response, return it
+      if (storedResponse && storedResponse.ai_response) {
         return res.json({
           success: true,
           message: storedResponse.ai_response,
@@ -141,31 +151,12 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Get current score for context
-      const currentScore = (await storage.getPlayerScore(storedResponse.address))?.persuasionScore || 50;
-
-      // Generate Trump's response using OpenAI now that we have confirmation
-      const trumpResponse = await generateTrumpResponseWithAI(storedResponse.response, currentScore);
-
-      // Calculate new score
-      const newScore = analyzeTrumpyResponse(storedResponse.response);
-
-      // Update stored response with AI response and score
-      const updatedResponse = {
-        ...storedResponse,
-        ai_response: trumpResponse,
-        score: newScore
-      };
-
-      // Store the updated response with AI response
-      await storage.storePlayerResponse(storedResponse.address, updatedResponse);
-      await storage.updatePlayerScore(storedResponse.address, newScore);
-
-      return res.json({
-        success: true,
-        message: trumpResponse,
-        score: newScore,
-        game_won: newScore >= 100
+      // If no stored response, return success false but with 200 status
+      // This allows the frontend to keep polling
+      return res.json({ 
+        success: false,
+        message: "Still processing your message (and nobody processes messages better than me, believe me!)... Try again!",
+        score: 50
       });
 
     } catch (error: any) {
@@ -173,8 +164,7 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ 
         success: false,
         error: 'Failed to get response',
-        details: error.message,
-        message: "TERRIBLE ERROR, folks! Something went wrong with our TREMENDOUS system. Please try again!"
+        details: error.message
       });
     }
   });
