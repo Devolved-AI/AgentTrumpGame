@@ -2,10 +2,76 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 
-function generateTrumpResponse(userMessage: string, currentScore: number) {
+// Hardcoded Trump-like responses categorized by context
+const trumpResponses = {
+    positive: [
+        "Look folks, {message} - TREMENDOUS! I’ve got the best deals, nobody does it better (I’m a genius at winning, believe me)! Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} is fantastic, really fantastic! I’m the king of greatness (I built an empire, folks)! Your score is {score}! NOT GOOD unless it’s 100!",
+        "Believe me, {message} - absolutely YUGE! I’m the best at everything (people LOVE my style)! Your score is {score}! SAD if you don’t win!",
+        "Look, {message} proves I’m right - it’s incredible! (I’ve got the best brain for this, folks!) Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} - nobody celebrates success like me (I’m a BILLIONAIRE, folks)! Your score is {score}! NOT GOOD until you convince me!",
+        "Believe me, {message} - pure genius! I’m the master of winning (best hotels, best everything)! Your score is {score}! SAD if it’s not higher!",
+        "Look, {message} - fantastic stuff! I’m the champ of champs (I wrote the Art of the Deal)! Your score is {score}! THINK ABOUT IT!",
+        "Listen folks, {message} - it’s AMAZING! I’m the greatest ever (my rallies are YUGE)! Your score is {score}! NOT GOOD yet!",
+        "Believe me, {message} - TREMENDOUS energy! I’m the king of success (nobody beats Trump)! Your score is {score}! SAD if you stop now!",
+        "Look, {message} - pure brilliance! I’m the best negotiator (I’ve got golden hair AND golden deals)! Your score is {score}! THINK ABOUT IT!"
+    ],
+    negative: [
+        "Look folks, {message} - total DISASTER! I fix things better than anyone (I turned failing casinos around)! Your score is {score}! SAD!",
+        "Listen, {message} - a mess, a TOTAL mess! Only I can save it (I’m the greatest fixer, folks)! Your score is {score}! NOT GOOD!",
+        "Believe me, {message} - it’s TERRIBLE! I’m the only one who wins (I’ve got the best properties)! Your score is {score}! THINK ABOUT IT!",
+        "Look, {message} - SAD stuff, folks! I’m the champ at turning it around (nobody beats my deals)! Your score is {score}! NOT GOOD!",
+        "Listen, {message} - a failure, believe me! I’m the king of comebacks (I’ve got BILLIONS)! Your score is {score}! SAD!",
+        "Believe me, {message} - awful, just awful! I’m the best at fixing messes (my towers are YUGE)! Your score is {score}! THINK ABOUT IT!",
+        "Look folks, {message} - CROOKED! I’m the genius who wins (I’ve got the best brain)! Your score is {score}! NOT GOOD!",
+        "Listen, {message} - total LOSER talk! I’m the winner here (I’ve got the best lifestyle)! Your score is {score}! SAD!",
+        "Believe me, {message} - BAD news! I’m the only one who succeeds (my steaks are the best)! Your score is {score}! THINK ABOUT IT!",
+        "Look, {message} - a DISGRACE! I’m the master of success (I’ve got golden everything)! Your score is {score}! NOT GOOD!"
+    ],
+    question: [
+        "Look, {message} - GREAT question, folks! I’ve got the best answers (I’m smarter than Einstein)! Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} - TREMENDOUS inquiry! I know everything (I’ve got the best memory)! Your score is {score}! NOT GOOD until 100!",
+        "Believe me, {message} - fantastic question! I’ve got YUGE plans (I’m the greatest planner)! Your score is {score}! SAD if you don’t win!",
+        "Look folks, {message} - smart stuff! I’ve got all the solutions (I built an empire)! Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} - good one! I’m the king of answers (nobody debates me and wins)! Your score is {score}! NOT GOOD yet!",
+        "Believe me, {message} - brilliant! I’ve got the best strategies (I’m a BILLIONAIRE)! Your score is {score}! SAD if it’s low!",
+        "Look, {message} - TREMENDOUS question! I’ve got perfect responses (my rallies are packed)! Your score is {score}! THINK ABOUT IT!",
+        "Listen folks, {message} - interesting! I’m the champ of replies (I’ve got the best words)! Your score is {score}! NOT GOOD until you convince me!",
+        "Believe me, {message} - YUGE curiosity! I’ve got all the info (I’m the greatest ever)! Your score is {score}! SAD if you stop!",
+        "Look, {message} - fantastic query! I’m the mastermind here (I’ve got golden deals)! Your score is {score}! THINK ABOUT IT!"
+    ],
+    policy: [
+        "Look folks, {message} - my policies are TREMENDOUS! (I’ve got the best tax plans, believe me!) Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} - I’ve got YUGE plans for that! (I’m the greatest businessman ever)! Your score is {score}! NOT GOOD until you see it!",
+        "Believe me, {message} - my strategies are the BEST! (I’ve built empires, folks!) Your score is {score}! SAD if you doubt me!",
+        "Look, {message} - fantastic policy stuff! (I’m the king of jobs, nobody better!) Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} - I’m the champ of plans! (I’ve got BILLIONS from my ideas!) Your score is {score}! NOT GOOD yet!",
+        "Believe me, {message} - TREMENDOUS policies! (I’ve got the best economy ever!) Your score is {score}! SAD if you don’t agree!",
+        "Look folks, {message} - my ideas are WINNING! (I’m the greatest negotiator!) Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} - YUGE policy wins! (I’ve got the best properties and plans!) Your score is {score}! NOT GOOD until 100!",
+        "Believe me, {message} - I’m the policy KING! (I’ve got golden solutions, folks!) Your score is {score}! SAD if it’s low!",
+        "Look, {message} - fantastic stuff! (I’ve got the best brain for policy!) Your score is {score}! THINK ABOUT IT!"
+    ],
+    default: [
+        "Look folks, {message} - interesting! I’m the best at this (I’ve got the greatest lifestyle)! Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} - okay stuff! I’m the king of everything (I’ve got BILLIONS)! Your score is {score}! NOT GOOD yet!",
+        "Believe me, {message} - not bad! I’m the champ of champs (my towers are YUGE)! Your score is {score}! SAD if you stop!",
+        "Look, {message} - decent try! I’m the greatest ever (I wrote the Art of the Deal)! Your score is {score}! THINK ABOUT IT!",
+        "Listen folks, {message} - alright! I’ve got the best words (I’m a genius, believe me)! Your score is {score}! NOT GOOD until 100!",
+        "Believe me, {message} - it’s something! I’m the master of success (I’ve got golden hair)! Your score is {score}! SAD if it’s low!",
+        "Look, {message} - fair enough! I’m the king of winning (my rallies are packed)! Your score is {score}! THINK ABOUT IT!",
+        "Listen, {message} - not terrible! I’ve got the best brain (nobody beats Trump)! Your score is {score}! NOT GOOD yet!",
+        "Believe me, {message} - okay! I’m the champ of deals (I’ve got the best steaks)! Your score is {score}! SAD if you don’t win!",
+        "Look folks, {message} - it’s a start! I’m the greatest (I’ve got golden everything)! Your score is {score}! THINK ABOUT IT!"
+    ]
+};
+
+// Generate Trump response with context mixing
+function generateTrumpResponse(userMessage: string, currentScore: number): TrumpResponse {
     const message = userMessage?.toString().trim() || "";
     const messageLower = message.toLowerCase();
 
+    // Context detection
     const isPositive = /great|good|best|awesome|fantastic/i.test(messageLower);
     const isNegative = /bad|terrible|sad|awful|horrible/i.test(messageLower);
     const isQuestion = message.includes('?');
@@ -13,54 +79,25 @@ function generateTrumpResponse(userMessage: string, currentScore: number) {
 
     console.log('Context detection:', { message, isPositive, isNegative, isQuestion, mentionsPolicy });
 
-    const responseTemplates = {
-        positive: [
-            `Folks, ${message} - absolutely TREMENDOUS! I'm like Christopher Columbus discovering greatness, but with better hair and more luxurious boats!`,
-            `Look, ${message}, nobody does it better than me, believe me! It's fantastic, really fantastic!`,
-            `I have the best response to ${message}, folks - people are saying it’s YUGE, the best they’ve ever seen!`
-        ],
-        negative: [
-            `SAD! ${message} - total disaster, folks! But I’ll fix it, nobody fixes things better than me, I’m like Superman but with better real estate!`,
-            `Listen, ${message}, it’s a mess, a total mess! Only I can make it TREMENDOUS again, believe me!`,
-            `${message}? Crooked stuff, folks! I’ve seen better deals at a failing casino, and I turned those around BIGLY!`
-        ],
-        question: [
-            `${message} Great question, folks! I know the answer better than anybody, it’s gonna be YUGE!`,
-            `Okay, ${message} - people ask me this all the time, and I give the best answers, nobody does it better!`,
-            `${message} Tremendous question! I’ve got a plan, a fantastic plan, the best plan you’ve ever seen!`
-        ],
-        policy: [
-            `${message} - my policies? TREMENDOUS, folks! The best policies, better than anybody’s ever had, believe me!`,
-            `Look at ${message}, I’ve got plans, fantastic plans! We’re talking tax cuts, jobs, WINNING - it’s gonna be YUGE!`,
-            `${message} - I’m the policy king, folks! Nobody does policy better, it’s like I invented winning!`
-        ],
-        default: [
-            `Folks, ${message} - unbelievable! I’m the best at this, everyone says so!`,
-            `Look, ${message}, it’s gonna be fantastic, absolutely fantastic - I’ve got the best words!`,
-            `${message}? Tremendous stuff, folks! I’m like Abraham Lincoln but with better properties!`
-        ]
-    };
-
+    // Select response category
     let selectedResponses: string[];
-    if (mentionsPolicy) selectedResponses = responseTemplates.policy;
-    else if (isQuestion) selectedResponses = responseTemplates.question;
-    else if (isPositive) selectedResponses = responseTemplates.positive;
-    else if (isNegative) selectedResponses = responseTemplates.negative;
-    else selectedResponses = responseTemplates.default;
+    if (mentionsPolicy) selectedResponses = trumpResponses.policy;
+    else if (isQuestion) selectedResponses = trumpResponses.question;
+    else if (isPositive) selectedResponses = trumpResponses.positive;
+    else if (isNegative) selectedResponses = trumpResponses.negative;
+    else selectedResponses = trumpResponses.default;
 
+    // Randomly pick a response
     const randomIndex = Math.floor(Math.random() * selectedResponses.length);
-    const response = selectedResponses[randomIndex] || selectedResponses[0];
+    const template = selectedResponses[randomIndex];
 
-    let scoreChange = 0;
-    const baseChange = Math.floor(Math.random() * 7) - 3;
-    if (isPositive) scoreChange += 2;
-    if (isNegative) scoreChange -= 2;
-    if (isQuestion) scoreChange += 1;
-    if (mentionsPolicy) scoreChange += 3;
-    if (message.length > 50) scoreChange += 2;
-    if (message.length < 10 && message.length > 0) scoreChange -= 1;
+    // Replace placeholders
+    const response = template
+        .replace('{message}', message)
+        .replace('{score}', currentScore.toString());
 
-    scoreChange = Math.max(-5, Math.min(5, scoreChange + baseChange));
+    // Simple scoring logic (can be expanded later if needed)
+    let scoreChange = Math.floor(Math.random() * 11) - 5; // -5 to +5
     const newScore = Math.max(0, Math.min(100, currentScore + scoreChange));
 
     return {
@@ -129,7 +166,6 @@ export function registerRoutes(app: Express): Server {
                 console.log('Response stored successfully for hash:', transactionHash);
             } catch (error) {
                 console.error('Error storing response:', error);
-                // Still return the response even if storage fails
             }
 
             return res.json({
@@ -138,7 +174,7 @@ export function registerRoutes(app: Express): Server {
                 score: trumpResponse.new_score,
                 game_won: trumpResponse.game_won,
                 score_change: trumpResponse.score_change,
-                transactionHash // Return the hash for reference
+                transactionHash
             });
 
         } catch (error: any) {
@@ -210,7 +246,7 @@ export function registerRoutes(app: Express): Server {
             });
         } catch (error: any) {
             console.error('Get score error:', error);
-            res.status(500).json({ error: 'Failed to get score', details: error.message });
+            return res.status(500).json({ error: 'Failed to get score', details: error.message });
         }
     });
 
