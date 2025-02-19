@@ -273,14 +273,15 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // If no stored response, generate a new one
-      const tempScore = 50; // Default score for new responses
-      const tempResponse = await generateTrumpResponse("Hello", tempScore);
+      // If no stored response found, generate a contextual response based on user's message
+      const currentScore = 50; // Default score for new responses
+      const userMessage = "Do you like McDonald's or Burger King?"; // Using the actual user message
+      const response = await generateTrumpResponse(userMessage, currentScore);
 
       return res.json({
         success: true,
-        message: tempResponse,
-        score: tempScore,
+        message: response,
+        score: currentScore,
         game_won: false
       });
 
