@@ -30,6 +30,7 @@ class MemoryStorage implements IStorage {
   private addressResponses: Map<string, string[]> = new Map();
 
   async getPlayerScore(address: string): Promise<PlayerScore | undefined> {
+    console.log('Getting score for address:', address);
     return this.scores.get(address.toLowerCase()) || {
       address: address.toLowerCase(),
       persuasionScore: 50,
@@ -38,6 +39,7 @@ class MemoryStorage implements IStorage {
   }
 
   async updatePlayerScore(address: string, score: number): Promise<PlayerScore> {
+    console.log('Updating score for address:', address, 'to:', score);
     const newScore = {
       address: address.toLowerCase(),
       persuasionScore: score,
@@ -48,17 +50,19 @@ class MemoryStorage implements IStorage {
   }
 
   async storePlayerResponse(address: string, data: Omit<PlayerResponse, "timestamp">): Promise<PlayerResponse> {
-    // Create the response object
+    // Create the response object with all required fields
     const response: PlayerResponse = {
       ...data,
       address: address.toLowerCase(),
       timestamp: new Date(),
-      exists: true
+      exists: true,
+      transactionHash: data.transactionHash || null
     };
 
-    // Store by transaction hash
+    // Store by transaction hash if available
     if (response.transactionHash) {
       console.log('Storing response with hash:', response.transactionHash);
+      console.log('Response data:', JSON.stringify(response, null, 2));
       this.responses.set(response.transactionHash, response);
 
       // Store transaction hash in address's response list
@@ -68,7 +72,6 @@ class MemoryStorage implements IStorage {
       this.addressResponses.set(addressLower, txHashes);
     }
 
-    console.log('Stored response:', response);
     return response;
   }
 
@@ -80,12 +83,17 @@ class MemoryStorage implements IStorage {
       .filter((r): r is PlayerResponse => r !== undefined)
       .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
 
+    console.log('Retrieved responses for address:', addressLower, responses.length);
     return responses;
   }
 
   async getPlayerResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
+    console.log('Looking up response for hash:', hash);
     const response = this.responses.get(hash);
-    console.log('Retrieved response for hash:', hash, response);
+    console.log('Found response:', response ? 'yes' : 'no');
+    if (response) {
+      console.log('Response data:', JSON.stringify(response, null, 2));
+    }
     return response;
   }
 }

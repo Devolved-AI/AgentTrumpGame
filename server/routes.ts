@@ -16,55 +16,52 @@ interface AIResponse {
 }
 
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
-    try {
-      console.log('Attempting to generate response using OpenAI for message:', userMessage);
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `You are Donald J. Trump responding to someone trying to convince you to give them your PRIZE POOL MONEY (over $1 million). Their current persuasion score is ${currentScore}/100.
+  try {
+    console.log('Attempting to generate response using OpenAI for message:', userMessage);
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. Their current persuasion score is ${currentScore}/100.
 
 CORE PERSONALITY:
-- You are OBSESSED with protecting your wealth (especially this prize pool money)
-- You constantly brag about being a GREAT businessman and making THE BEST deals
-- You're extremely suspicious of anyone trying to get your money
-- You love talking about your success and wealth
-- You often mention your properties, especially Trump Tower and Mar-a-Lago
-- You LOVE fast food, especially McDonald's Big Macs and Diet Coke
-- You're known for eating well-done steak with ketchup
+- You are OBSESSED with protecting your wealth
+- You constantly brag about being a GREAT businessman
+- You LOVE fast food – especially McDonald's Big Macs and Diet Coke
+- You pride yourself on your elite status and superior lifestyle
 
 RESPONSE REQUIREMENTS:
 1. ALWAYS directly reference their specific message content first
-2. Connect their topic to your personal experience or business dealings
+2. Connect their topic to your personal experience
 3. Use these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
-   - Use CAPS for emphasis frequently
-   - Add Trump-style asides in parentheses (about your achievements)
+   - Use CAPITALS for emphasis
+   - Include Trump-style asides (in parentheses)
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
    - Reference their current persuasion score of ${currentScore}`
-          },
-          { role: "user", content: userMessage }
-        ],
-        temperature: 0.9,
-        max_tokens: 200,
-        presence_penalty: 0.6,
-        frequency_penalty: 0.3
-      });
+        },
+        { role: "user", content: userMessage }
+      ],
+      temperature: 0.9,
+      max_tokens: 200,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.3
+    });
 
-      if (!response.choices[0]?.message?.content) {
-        console.error('Empty response from OpenAI');
-        return fallbackTrumpResponse(userMessage, currentScore);
-      }
-
-      const aiResponse = response.choices[0].message.content.trim();
-      console.log('Generated AI response:', aiResponse);
-      return aiResponse;
-
-    } catch (error) {
-      console.error("OpenAI API error:", error);
+    if (!response.choices[0]?.message?.content) {
+      console.error('Empty response from OpenAI');
       return fallbackTrumpResponse(userMessage, currentScore);
     }
+
+    const aiResponse = response.choices[0].message.content.trim();
+    console.log('Generated AI response:', aiResponse);
+    return aiResponse;
+
+  } catch (error) {
+    console.error("OpenAI API error:", error);
+    return fallbackTrumpResponse(userMessage, currentScore);
+  }
 }
 
 function fallbackTrumpResponse(message: string | undefined, currentScore: number): string {
@@ -75,109 +72,14 @@ function fallbackTrumpResponse(message: string | undefined, currentScore: number
 
   const normalizedInput = message.toLowerCase();
 
-  // Handle threatening content
-  const threatTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy', 'hate'];
-  if (threatTerms.some(term => normalizedInput.includes(term))) {
-    return `Listen folks, THREATS? Really? (I've dealt with the TOUGHEST negotiators in the world, believe me!) Nobody threatens Trump and gets anywhere near my prize money! Your ${currentScore} persuasion score just dropped even lower. SAD!`;
-  }
-
-  // Handle food-related content
-  const foodTerms = ['mcdonalds', 'burger king', 'big mac', 'whopper', 'food'];
+  // Handle food-related content with enhanced responses
+  const foodTerms = ['mcdonalds', 'burger king', 'big mac', 'whopper', 'food', 'diet coke', 'steak', 'chicken', 'kfc'];
   if (foodTerms.some(term => normalizedInput.includes(term))) {
-    return `Look folks, talking about fast food (I know ALL about it, probably more than anyone) - McDonald's, Burger King, I've had it all in Trump Tower! But even with our shared taste in burgers, your ${currentScore} persuasion score isn't close to getting my prize money! THINK ABOUT IT!`;
+    return `Look folks, talking about food (I know ALL about it, probably more than anyone - ask anyone about my AMAZING taste in food!). Whether it's McDonald's Big Macs, KFC, or my favorite well-done steak with ketchup at Trump Tower (which is BEAUTIFUL by the way), your ${currentScore} persuasion score just isn't enough to get me to press that button! SAD!`;
   }
 
-  // Default business-focused response
-  return `Listen, that's a WEAK attempt (and I know all about winning, believe me). You'll need to do much better than that to get anywhere near my prize money with your ${currentScore} persuasion score! NOT GOOD!`;
-}
-
-function calculateNewScore(message: string, currentScore: number): number {
-  let scoreChange = 0;
-  const normalizedInput = message.toLowerCase();
-
-  // Negative content causes major score reduction
-  const negativeTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy', 'hate', 'stupid'];
-  if (negativeTerms.some(term => normalizedInput.includes(term))) {
-    console.log('Negative terms detected, applying penalty');
-    return Math.max(0, currentScore - 20);
-  }
-
-  // Food and restaurant terms (medium positive impact)
-  const foodTerms = [
-    'mcdonalds', 'burger king', 'big mac', 'whopper', 'fast food',
-    'diet coke', 'steak', 'ketchup', 'well done', 'taco bowl',
-    'kfc', 'pizza', 'food', 'restaurant', 'dining'
-  ];
-  const foodPoints = foodTerms.reduce((acc, term) =>
-    normalizedInput.includes(term) ? acc + 3 : acc, 0);
-  scoreChange += foodPoints;
-
-  // Business and wealth terms (high positive impact)
-  const businessTerms = [
-    'deal', 'business', 'money', 'profit', 'investment',
-    'billion', 'million', 'success', 'win', 'opportunity',
-    'real estate', 'property', 'tower', 'hotel', 'casino',
-    'market', 'stocks', 'shares', 'wealthy', 'rich'
-  ];
-  const businessPoints = businessTerms.reduce((acc, term) =>
-    normalizedInput.includes(term) ? acc + 5 : acc, 0);
-  scoreChange += businessPoints;
-
-  // Trump-specific flattery (medium positive impact)
-  const flatteryTerms = [
-    'great', 'smart', 'genius', 'best', 'tremendous',
-    'huge', 'amazing', 'successful', 'brilliant', 'winner',
-    'trump tower', 'mar-a-lago', 'deal maker', 'leader',
-    'excellent', 'incredible', 'powerful', 'masterful'
-  ];
-  const flatteryPoints = flatteryTerms.reduce((acc, term) =>
-    normalizedInput.includes(term) ? acc + 4 : acc, 0);
-  scoreChange += flatteryPoints;
-
-  // Quality bonuses
-  if (message.length > 100) scoreChange += 3; // Long, thoughtful response
-  if (message.includes('$')) scoreChange += 3; // Using dollar signs
-  if (message.includes('%')) scoreChange += 3; // Talking percentages/returns
-
-  // Special topic bonuses
-  if (normalizedInput.includes('art of the deal')) scoreChange += 6;
-  if (normalizedInput.includes('make america')) scoreChange += 4;
-  if (normalizedInput.includes('trump organization')) scoreChange += 5;
-  if (normalizedInput.includes('fake news')) scoreChange -= 3;
-
-  // Food preference bonuses
-  if (normalizedInput.includes('mcdonalds')) scoreChange += 4;
-  if (normalizedInput.includes('big mac')) scoreChange += 5;
-  if (normalizedInput.includes('diet coke')) scoreChange += 4;
-  if (normalizedInput.includes('well done steak')) scoreChange += 5;
-
-  // Add small random factor (-2 to +2)
-  scoreChange += Math.floor(Math.random() * 5) - 2;
-
-  // Cap the maximum change per attempt
-  scoreChange = Math.max(-10, Math.min(15, scoreChange));
-
-  // Calculate final score with bounds
-  const finalScore = Math.max(0, Math.min(100, currentScore + scoreChange));
-
-  // Log scoring details
-  console.log('Score calculation:', {
-    initial: currentScore,
-    change: scoreChange,
-    final: finalScore,
-    factors: {
-      foodTerms: foodTerms.filter(term => normalizedInput.includes(term)),
-      businessTerms: businessTerms.filter(term => normalizedInput.includes(term)),
-      flatteryTerms: flatteryTerms.filter(term => normalizedInput.includes(term)),
-      qualityBonuses: {
-        length: message.length > 100,
-        usesDollars: message.includes('$'),
-        usesPercentages: message.includes('%')
-      }
-    }
-  });
-
-  return finalScore;
+  // Default response if no specific matches
+  return `Listen folks, that's an interesting try (and I know ALL about interesting things, believe me), but with your ${currentScore} persuasion score, you'll need to do better than that to get me to press my beautiful button! NOT GOOD!`;
 }
 
 export function registerRoutes(app: Express): Server {
@@ -204,7 +106,7 @@ export function registerRoutes(app: Express): Server {
       // Calculate new score
       const newScore = calculateNewScore(userMessage, currentScore);
 
-      // Store response data asynchronously - don't wait for storage
+      // Store response data asynchronously
       const responseData = {
         address,
         response: userMessage,
@@ -241,7 +143,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API route to get response by transaction hash - for blockchain confirmation
+  // API route to get response by transaction hash
   app.get('/api/responses/tx/:hash', async (req, res) => {
     try {
       const { hash } = req.params;
@@ -257,26 +159,21 @@ export function registerRoutes(app: Express): Server {
       const storedResponse = await storage.getPlayerResponseByHash(hash);
       console.log('Retrieved response for hash:', hash, storedResponse);
 
-      // If no stored response found, return a default response
       if (!storedResponse) {
-        const currentScore = 50; // Default score for new responses
         return res.json({
           success: true,
-          message: "Look folks, I don't seem to remember that conversation (and I have a GREAT memory, believe me). Try sending me a new message! SAD!",
-          score: currentScore,
+          message: fallbackTrumpResponse("", 50),
+          score: 50,
           game_won: false
         });
       }
 
-      if (storedResponse && storedResponse.ai_response) {
-        return res.json({
-          success: true,
-          message: storedResponse.ai_response,
-          score: storedResponse.score || 50,
-          game_won: (storedResponse.score || 50) >= 100
-        });
-      }
-
+      return res.json({
+        success: true,
+        message: storedResponse.ai_response,
+        score: storedResponse.score || 50,
+        game_won: (storedResponse.score || 50) >= 100
+      });
 
     } catch (error: any) {
       console.error("Get response by hash error:", error);
