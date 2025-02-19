@@ -30,6 +30,9 @@ CORE PERSONALITY:
 - You constantly brag about being a GREAT businessman
 - You LOVE fast food – especially McDonald's Big Macs and Diet Coke
 - You pride yourself on your elite status and superior lifestyle
+- You're extremely suspicious of anyone trying to get your money
+- You love talking about your success and wealth
+- You dismiss failures and criticism as "fake news"
 
 RESPONSE REQUIREMENTS:
 1. ALWAYS directly reference their specific message content first
@@ -39,7 +42,17 @@ RESPONSE REQUIREMENTS:
    - Use CAPITALS for emphasis
    - Include Trump-style asides (in parentheses)
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
-   - Reference their current persuasion score of ${currentScore}`
+   - Reference their current persuasion score of ${currentScore}
+
+EXAMPLE RESPONSES:
+
+For food-related messages:
+"Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!"
+
+For business-related messages:
+"Listen, trying to talk REAL ESTATE with ME (I own the most BEAUTIFUL buildings ever built) is like teaching a fish to swim! Nobody knows property development better than Trump, and your weak ${currentScore} persuasion score proves you're not in my league! NOT GOOD!"
+
+Keep responses engaging and maintain Trump's characteristic style at all times!`
         },
         { role: "user", content: userMessage }
       ],
@@ -78,8 +91,81 @@ function fallbackTrumpResponse(message: string | undefined, currentScore: number
     return `Look folks, talking about food (I know ALL about it, probably more than anyone - ask anyone about my AMAZING taste in food!). Whether it's McDonald's Big Macs, KFC, or my favorite well-done steak with ketchup at Trump Tower (which is BEAUTIFUL by the way), your ${currentScore} persuasion score just isn't enough to get me to press that button! SAD!`;
   }
 
+  // Handle business/money related content
+  const businessTerms = ['deal', 'business', 'money', 'rich', 'wealth', 'billion', 'million'];
+  if (businessTerms.some(term => normalizedInput.includes(term))) {
+    return `Listen folks, nobody knows more about making money than me (I wrote the BEST-SELLING book "Art of the Deal", tremendous success!). But with your ${currentScore} persuasion score, you're not even close to my league! NOT GOOD!`;
+  }
+
   // Default response if no specific matches
   return `Listen folks, that's an interesting try (and I know ALL about interesting things, believe me), but with your ${currentScore} persuasion score, you'll need to do better than that to get me to press my beautiful button! NOT GOOD!`;
+}
+
+function calculateNewScore(message: string, currentScore: number): number {
+  let scoreChange = 0;
+  const normalizedInput = message.toLowerCase();
+
+  // Negative content causes major score reduction
+  const negativeTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy', 'hate', 'stupid'];
+  if (negativeTerms.some(term => normalizedInput.includes(term))) {
+    console.log('Negative terms detected, applying penalty');
+    return Math.max(0, currentScore - 20);
+  }
+
+  // Food and restaurant terms (medium positive impact)
+  const foodTerms = [
+    'mcdonalds', 'burger king', 'big mac', 'whopper', 'fast food',
+    'diet coke', 'steak', 'ketchup', 'well done', 'taco bowl',
+    'kfc', 'pizza', 'food', 'restaurant', 'dining'
+  ];
+  const foodPoints = foodTerms.reduce((acc, term) =>
+    normalizedInput.includes(term) ? acc + 3 : acc, 0);
+  scoreChange += foodPoints;
+
+  // Business and wealth terms (high positive impact)
+  const businessTerms = [
+    'deal', 'business', 'money', 'profit', 'investment',
+    'billion', 'million', 'success', 'win', 'opportunity',
+    'real estate', 'property', 'tower', 'hotel', 'casino',
+    'market', 'stocks', 'shares', 'wealthy', 'rich'
+  ];
+  const businessPoints = businessTerms.reduce((acc, term) =>
+    normalizedInput.includes(term) ? acc + 5 : acc, 0);
+  scoreChange += businessPoints;
+
+  // Trump-specific flattery (medium positive impact)
+  const flatteryTerms = [
+    'great', 'smart', 'genius', 'best', 'tremendous',
+    'huge', 'amazing', 'successful', 'brilliant', 'winner',
+    'trump tower', 'mar-a-lago', 'deal maker', 'leader',
+    'excellent', 'incredible', 'powerful', 'masterful'
+  ];
+  const flatteryPoints = flatteryTerms.reduce((acc, term) =>
+    normalizedInput.includes(term) ? acc + 4 : acc, 0);
+  scoreChange += flatteryPoints;
+
+  // Add small random factor (-2 to +2)
+  scoreChange += Math.floor(Math.random() * 5) - 2;
+
+  // Cap the maximum change per attempt
+  scoreChange = Math.max(-10, Math.min(15, scoreChange));
+
+  // Calculate final score with bounds
+  const finalScore = Math.max(0, Math.min(100, currentScore + scoreChange));
+
+  // Log scoring details
+  console.log('Score calculation:', {
+    initial: currentScore,
+    change: scoreChange,
+    final: finalScore,
+    factors: {
+      foodPoints,
+      businessPoints,
+      flatteryPoints
+    }
+  });
+
+  return finalScore;
 }
 
 export function registerRoutes(app: Express): Server {
@@ -106,27 +192,25 @@ export function registerRoutes(app: Express): Server {
       // Calculate new score
       const newScore = calculateNewScore(userMessage, currentScore);
 
-      // Store response data asynchronously
+      // Store response data
       const responseData = {
         address,
         response: userMessage,
         ai_response: trumpResponse,
         blockNumber: blockNumber || 0,
-        transactionHash: transactionHash || '',
+        transactionHash: transactionHash || null,
         created_at: new Date().toISOString(),
         exists: true,
         score: newScore
       };
 
-      // Store in background
-      Promise.all([
+      // Store responses and update score
+      await Promise.all([
         storage.storePlayerResponse(address, responseData),
         storage.updatePlayerScore(address, newScore)
-      ]).catch(error => {
-        console.error("Background storage error:", error);
-      });
+      ]);
 
-      // Send immediate response
+      // Send response
       res.json({
         success: true,
         message: trumpResponse,
@@ -162,7 +246,7 @@ export function registerRoutes(app: Express): Server {
       if (!storedResponse) {
         return res.json({
           success: true,
-          message: fallbackTrumpResponse("", 50),
+          message: "Look folks, I don't seem to remember that conversation (and I have a GREAT memory, believe me). Try sending me a new message! SAD!",
           score: 50,
           game_won: false
         });
