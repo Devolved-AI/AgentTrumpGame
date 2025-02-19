@@ -33,8 +33,8 @@ export interface AIResponse {
 export async function analyzeTrumpResponse(
   userMessage: string,
   address: string,
-  blockNumber: number,
-  transactionHash: string,
+  blockNumber: number = 0,
+  transactionHash: string = '',
   signature?: string
 ): Promise<{
   response: string;
@@ -55,8 +55,8 @@ export async function analyzeTrumpResponse(
       }
     });
 
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to get response');
+    if (!response?.success) {
+      throw new Error(response?.message || 'Failed to get response');
     }
 
     // Map score to sentiment

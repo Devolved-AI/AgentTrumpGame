@@ -2,6 +2,10 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeTrumpyResponse } from "../shared/trumpAnalyzer";
+import OpenAI from "openai";
+
+// Initialize OpenAI
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Type definitions for responses
 interface AIResponse {
@@ -11,46 +15,97 @@ interface AIResponse {
   game_won?: boolean;
 }
 
+async function generateTrumpResponseWithAI(userMessage: string, currentScore: number): Promise<string> {
+  try {
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. Their current persuasion score is ${currentScore}/100.
+
+REQUIREMENTS:
+1. ALWAYS respond directly to their specific message first
+2. Use these elements in EVERY response:
+   - Start with: "Look folks", "Listen", or "Believe me"
+   - Use CAPS for emphasis
+   - Reference your personal experience with their topic
+   - Add Trump-style asides in parentheses
+   - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
+
+RESPONSE FORMAT:
+1. First sentence: Direct response to their specific topic
+2. Second sentence: Your opinion/experience with their topic
+3. Final sentence: Brief tie-in to the button/prize`
+        },
+        { role: "user", content: userMessage }
+      ],
+      temperature: 0.9,
+      max_tokens: 150
+    });
+
+    return response.choices[0].message.content || fallbackTrumpResponse(userMessage);
+  } catch (error) {
+    console.error("OpenAI API error:", error);
+    return fallbackTrumpResponse(userMessage);
+  }
+}
+
+// Fallback response generator
+function fallbackTrumpResponse(message: string): string {
+  const intros = ["Look folks", "Listen", "Believe me"];
+  const emphasis = ["TREMENDOUS", "HUGE", "FANTASTIC"];
+  const closings = ["SAD!", "NOT GOOD!", "THINK ABOUT IT!"];
+
+  const intro = intros[Math.floor(Math.random() * intros.length)];
+  const emph = emphasis[Math.floor(Math.random() * emphasis.length)];
+  const closing = closings[Math.floor(Math.random() * closings.length)];
+
+  return `${intro}, that's a ${emph} try at getting me to press my button (and believe me, I know buttons!), but you'll have to do better than that! ${closing}`;
+}
+
 export function registerRoutes(app: Express): Server {
   // API route to handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
       const { address, response, blockNumber, transactionHash } = req.body;
 
-      if (!address || !response || !blockNumber || !transactionHash) {
+      if (!address || !response) {
         return res.status(400).json({ 
           error: 'Missing required fields',
-          details: 'address, response, blockNumber, and transactionHash are required'
+          details: 'address and response are required'
         });
       }
 
-      console.log('Processing response with transaction hash:', transactionHash);
+      console.log('Processing response from address:', address);
 
-      // Generate Trump's response and calculate new score
-      const trumpResponse = generateTrumpResponse(response);
+      // Get current score
+      const currentScore = (await storage.getPlayerScore(address))?.persuasionScore || 50;
+
+      // Generate Trump's response using OpenAI
+      const trumpResponse = await generateTrumpResponseWithAI(response, currentScore);
+
+      // Calculate new score
       const newScore = analyzeTrumpyResponse(response);
 
-      // Store response data
+      // Store response data asynchronously
       const responseData = {
         address,
-        response: response, // User's message
-        ai_response: trumpResponse, // Trump's response
-        blockNumber,
-        transactionHash,
+        response,
+        ai_response: trumpResponse,
+        blockNumber: blockNumber || 0,
+        transactionHash: transactionHash || '',
         created_at: new Date().toISOString(),
         exists: true,
         score: newScore
       };
 
-      // Store both user's response and Trump's response
-      await storage.storePlayerResponse(address, responseData);
+      // Don't await storage - do it in background
+      storage.storePlayerResponse(address, responseData).catch(console.error);
+      storage.updatePlayerScore(address, newScore).catch(console.error);
 
-      // Update player's score
-      await storage.updatePlayerScore(address, newScore);
-
-      console.log('Stored response for hash:', transactionHash);
-
-      // Send back Trump's response
+      // Send immediate response
       res.json({
         success: true,
         message: trumpResponse,
@@ -60,7 +115,7 @@ export function registerRoutes(app: Express): Server {
     } catch (error: any) {
       console.error("Add response error:", error);
       res.status(500).json({ 
-        error: 'Failed to add response',
+        error: 'Failed to generate response',
         details: error.message 
       });
     }
@@ -126,68 +181,4 @@ export function registerRoutes(app: Express): Server {
 
   const httpServer = createServer(app);
   return httpServer;
-}
-
-// Function to generate Trump-like response based on message content
-function generateTrumpResponse(message: string): string {
-  const input = message.toLowerCase();
-
-  // Introductions
-  const intros = [
-    "Look folks",
-    "Listen",
-    "Believe me",
-    "Let me tell you",
-    "Many people are saying",
-    "Folks, let me tell you"
-  ];
-
-  // Emphatic words
-  const emphasis = [
-    "TREMENDOUS",
-    "HUGE",
-    "FANTASTIC",
-    "INCREDIBLE",
-    "AMAZING",
-    "BEAUTIFUL"
-  ];
-
-  // Button references
-  const buttonRefs = [
-    "(and believe me, I know buttons!)",
-    "(nobody knows buttons better than me)",
-    "(I've pressed many buttons, maybe more than anyone)",
-    "(and I know A LOT about buttons)"
-  ];
-
-  // Closings
-  const closings = [
-    "SAD!",
-    "NOT GOOD!",
-    "We'll see what happens!",
-    "VERY DISAPPOINTED!",
-    "THINK ABOUT IT!"
-  ];
-
-  // Random selections
-  const intro = intros[Math.floor(Math.random() * intros.length)];
-  const emph = emphasis[Math.floor(Math.random() * emphasis.length)];
-  const buttonRef = buttonRefs[Math.floor(Math.random() * buttonRefs.length)];
-  const closing = closings[Math.floor(Math.random() * closings.length)];
-
-  // Special responses based on keywords
-  if (input.includes('mcdonald') || input.includes('burger')) {
-    return `${intro}, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! ${closing}`;
-  }
-
-  if (input.includes('money') || input.includes('rich') || input.includes('wealth') || input.includes('billion')) {
-    return `${intro}, you're talking about money - I LOVE money ${buttonRef}! But is it enough to make me press this ${emph} button? NOT YET!!!`;
-  }
-
-  if (input.includes('deal') || input.includes('business') || input.includes('negotiate')) {
-    return `${intro}, you're trying to make a deal here ${buttonRef}. I wrote the book on deals, literally THE BEST book! But this deal? NOT GOOD ENOUGH!!!`;
-  }
-
-  // Default response
-  return `${intro}, that's an interesting try at getting me to press my ${emph} button ${buttonRef}, but you'll have to do better than that! ${closing}`;
 }
