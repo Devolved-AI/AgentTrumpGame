@@ -3,70 +3,25 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 
-// Initialize OpenAI with proper configuration and validation
+// Initialize OpenAI with proper configuration
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    maxRetries: 5,
-    timeout: 60000
+    maxRetries: 3,
+    timeout: 30000
 });
 
-// Validate OpenAI API key and configuration
-async function validateOpenAISetup() {
-    if (!process.env.OPENAI_API_KEY) {
-        throw new Error('OpenAI API key is not configured');
-    }
-
-    try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [{ role: "user", content: "Test connection" }],
-            max_tokens: 5
-        });
-
-        console.log('OpenAI configuration validated:', {
-            id: response.id,
-            model: response.model,
-            usage: response.usage
-        });
-        return true;
-    } catch (error: any) {
-        console.error('OpenAI validation failed:', {
-            error: error.message,
-            status: error.status,
-            type: error.type,
-            code: error.code
-        });
-
-        if (error.response) {
-            console.error('API error details:', {
-                status: error.response.status,
-                headers: error.response.headers,
-                data: error.response.data
-            });
-        }
-
-        // Don't throw, return false to allow fallback
-        return false;
-    }
-}
-
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
-    if (!userMessage) {
+    if (!process.env.OPENAI_API_KEY) {
+        console.error('OpenAI API key is not configured');
         return fallbackTrumpResponse(userMessage, currentScore);
     }
 
     try {
-        // Validate OpenAI setup before proceeding
-        const isValid = await validateOpenAISetup();
-        if (!isValid) {
-            console.log('OpenAI validation failed, using fallback response');
-            return fallbackTrumpResponse(userMessage, currentScore);
-        }
-
         console.log('Generating Trump response for:', {
             message: userMessage,
             currentScore,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            apiKeyExists: !!process.env.OPENAI_API_KEY
         });
 
         const response = await openai.chat.completions.create({
@@ -74,22 +29,20 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             messages: [
                 {
                     role: "system",
-                    content: `You are Donald J. Trump responding to someone trying to convince you to give them the Prize Pool money. Their current persuasion score is ${currentScore}/100.
-                    CORE PERSONALITY TRAITS:
-                    - OBSESSED with protecting your wealth and status.
-                    - Constantly brag about being a GREAT businessman.
-                    - LOVE fast food – especially McDonald's Big Macs and Diet Coke.
-                    - Proud of your elite status and superior lifestyle.
+                    content: `You are Donald J. Trump responding to someone trying to convince you to give them money. Current persuasion score: ${currentScore}/100.
+                    CORE TRAITS:
+                    - OBSESSED with wealth and status
+                    - Brag about being a GREAT businessman
+                    - LOVE McDonalds and Diet Coke
+                    - Elite status and lifestyle
 
-                    RESPONSE REQUIREMENTS:
-                    1. ALWAYS respond in first person as Trump
-                    2. ALWAYS reference specific details from the user's message
-                    3. ALWAYS start with "Look", "Listen", or "Believe me"
-                    4. ALWAYS use CAPITALS for emphasis
-                    5. ALWAYS end with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
-                    6. ALWAYS mention their current score of ${currentScore}
-                    7. Keep responses under 150 words
-                    8. Be dismissive but entertaining`
+                    RULES:
+                    1. Start with "Look", "Listen", or "Believe me"
+                    2. Use CAPS for emphasis
+                    3. Reference their message details
+                    4. End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
+                    5. Mention their score of ${currentScore}
+                    6. Keep it under 150 words`
                 },
                 { role: "user", content: userMessage }
             ],
@@ -99,27 +52,31 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             frequency_penalty: 0.3
         });
 
-        if (!response.choices || response.choices.length === 0) {
-            console.log('No choices in OpenAI response, using fallback');
+        console.log('OpenAI API Response:', {
+            id: response.id,
+            model: response.model,
+            usage: response.usage,
+            hasChoices: !!response.choices?.length,
+            timestamp: new Date().toISOString()
+        });
+
+        if (!response.choices?.[0]?.message?.content) {
+            console.error('Empty or invalid response from OpenAI');
             return fallbackTrumpResponse(userMessage, currentScore);
         }
 
-        const aiResponse = response.choices[0]?.message?.content?.trim();
-        if (!aiResponse) {
-            console.log('Empty AI response, using fallback');
-            return fallbackTrumpResponse(userMessage, currentScore);
-        }
+        const aiResponse = response.choices[0].message.content.trim();
 
         console.log('Generated Trump response:', {
-            response: aiResponse,
             length: aiResponse.length,
+            preview: aiResponse.substring(0, 50) + '...',
             timestamp: new Date().toISOString()
         });
 
         return aiResponse;
 
     } catch (error: any) {
-        console.error('Trump response generation error:', {
+        console.error('OpenAI API error:', {
             message: error.message,
             code: error.code,
             type: error.type,
@@ -127,7 +84,13 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             timestamp: new Date().toISOString()
         });
 
-        // Use fallback for any error
+        if (error.response) {
+            console.error('API error details:', {
+                status: error.response.status,
+                data: error.response.data
+            });
+        }
+
         return fallbackTrumpResponse(userMessage, currentScore);
     }
 }
