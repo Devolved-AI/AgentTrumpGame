@@ -3,63 +3,64 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 
-// Initialize OpenAI with proper configuration and debugging
-const openai = new OpenAI({ 
+// Initialize OpenAI with proper configuration and validation
+const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     maxRetries: 3,
     timeout: 30000
 });
 
-// Enhanced connection test function
-async function testOpenAIConnection() {
-    try {
-        console.log('Testing OpenAI connection with API key:', 
-            process.env.OPENAI_API_KEY ? 'Key exists and length: ' + process.env.OPENAI_API_KEY.length : 'No key found');
+// Validate OpenAI API key and configuration
+async function validateOpenAISetup() {
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OpenAI API key is not configured');
+    }
 
+    if (!process.env.OPENAI_API_KEY.startsWith('sk-')) {
+        throw new Error('Invalid OpenAI API key format');
+    }
+
+    try {
         const response = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [{ role: "user", content: "Test connection" }],
             max_tokens: 5
         });
 
-        console.log('OpenAI connection test successful:', {
+        console.log('OpenAI configuration validated:', {
             id: response.id,
             model: response.model,
             usage: response.usage
         });
         return true;
     } catch (error: any) {
-        console.error('OpenAI connection test failed:', {
+        console.error('OpenAI validation failed:', {
             error: error.message,
             status: error.status,
             type: error.type,
-            code: error.code,
-            param: error.param,
-            stack: error.stack,
-            name: error.name,
-            cause: error.cause
+            code: error.code
         });
 
         if (error.response) {
-            console.error('API Response details:', {
+            console.error('API error details:', {
                 status: error.response.status,
                 headers: error.response.headers,
                 data: error.response.data
             });
         }
 
-        return false;
+        throw error;
     }
 }
 
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
+    if (!userMessage) {
+        throw new Error('User message is required');
+    }
+
     try {
-        // Test connection before proceeding
-        console.log('Testing OpenAI connection before generating response...');
-        const isConnected = await testOpenAIConnection();
-        if (!isConnected) {
-            throw new Error('OpenAI connection test failed');
-        }
+        // Validate OpenAI setup before proceeding
+        await validateOpenAISetup();
 
         console.log('Generating Trump response for:', {
             message: userMessage,
@@ -187,35 +188,18 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             max_tokens: 150,
             presence_penalty: 0.6,
             frequency_penalty: 0.3
-        }).catch((error: any) => {
-            console.error('Direct OpenAI call error:', {
-                message: error.message,
-                code: error.code,
-                type: error.type,
-                status: error.status
-            });
-            throw error;
         });
 
-        console.log('OpenAI response received:', {
-            id: response.id,
-            model: response.model,
-            usage: response.usage,
-            choices: response.choices.length,
-            timestamp: new Date().toISOString()
-        });
-
-        const aiResponse = response.choices[0]?.message?.content?.trim();
-
-        if (!aiResponse) {
-            console.error('Empty response from OpenAI:', {
-                response,
-                timestamp: new Date().toISOString()
-            });
-            throw new Error('Empty response from OpenAI');
+        if (!response.choices || response.choices.length === 0) {
+            throw new Error('No response generated from OpenAI');
         }
 
-        console.log('Generated response:', {
+        const aiResponse = response.choices[0]?.message?.content?.trim();
+        if (!aiResponse) {
+            throw new Error('Empty response received from OpenAI');
+        }
+
+        console.log('Generated Trump response:', {
             response: aiResponse,
             length: aiResponse.length,
             timestamp: new Date().toISOString()
@@ -224,412 +208,380 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
         return aiResponse;
 
     } catch (error: any) {
-        console.error('OpenAI error details:', {
+        console.error('Trump response generation error:', {
             message: error.message,
-            name: error.name,
-            status: error.status,
-            type: error.type,
             code: error.code,
-            param: error.param,
-            timestamp: new Date().toISOString(),
-            cause: error.cause
+            type: error.type,
+            status: error.status,
+            timestamp: new Date().toISOString()
         });
 
-        if (error.response) {
-            console.error('API error response:', {
-                status: error.response.status,
-                statusText: error.response.statusText,
-                data: error.response.data,
-                headers: error.response.headers
-            });
+        // Only use fallback for specific error cases
+        if (error.code === 'insufficient_quota' ||
+            error.code === 'rate_limit_exceeded' ||
+            error.message.includes('API key')) {
+            return fallbackTrumpResponse(userMessage, currentScore);
         }
 
-        // Re-throw the error to trigger fallback
         throw error;
     }
 }
 
 function fallbackTrumpResponse(message: string, currentScore: number): string {
-  console.log('Using fallback response for:', message);
+    console.log('Using fallback response for:', message);
 
-  if (!message) {
-    return `Look, you can't convince me with SILENCE (and believe me, I know all about powerful silence). Try actually saying something! SAD!`;
-  }
+    if (!message) {
+        return `Look, you can't convince me with SILENCE (and believe me, I know all about powerful silence). Try actually saying something! SAD!`;
+    }
 
-  const input = message.toLowerCase();
+    const input = message.toLowerCase();
 
-  // Food-related response
-  if (input.includes('food') || input.includes('mcdonalds') || input.includes('burger')) {
-    return `Listen, nobody knows FAST FOOD like Trump (I've eaten more Big Macs than anyone, believe me!). But with your ${currentScore} persuasion score, you'll need more than a bribe of fast food to get me to release my Prize Pool money to you! PATHETIC!`;
-  }
+    // Food-related response
+    if (input.includes('food') || input.includes('mcdonalds') || input.includes('burger')) {
+        return `Listen, nobody knows FAST FOOD like Trump (I've eaten more Big Macs than anyone, believe me!). But with your ${currentScore} persuasion score, you'll need more than a bribe of fast food to get me to release my Prize Pool money to you! PATHETIC!`;
+    }
 
-  // Business-related response
-  if (input.includes('business') || input.includes('money') || input.includes('deal') || input.includes('success')) { 
-    return `Listen, I closed MANY AMAZING and TREMENDOUS deals in my lifetime, and I wrote the Art of the Deal (BEST SELLER, tremendous success by the way!), but your ${currentScore} persuasion score shows you're not ready for the big leagues! NOT GOOD!`;
-  }
+    // Business-related response
+    if (input.includes('business') || input.includes('money') || input.includes('deal') || input.includes('success')) {
+        return `Listen, I closed MANY AMAZING and TREMENDOUS deals in my lifetime, and I wrote the Art of the Deal (BEST SELLER, tremendous success by the way!), but your ${currentScore} persuasion score shows you're not ready for the big leagues! NOT GOOD!`;
+    }
 
-  // Default response
-  return `Look folks, that's an interesting try (and I know ALL about interesting things, believe me), but with your ${currentScore} persuasion score, you need to do better! THINK ABOUT IT!`;
+    // Default response
+    return `Look folks, that's an interesting try (and I know ALL about interesting things, believe me), but with your ${currentScore} persuasion score, you need to do better! THINK ABOUT IT!`;
 }
 
 function calculateNewScore(message: string, currentScore: number): number {
-  let scoreChange = 0;
-  const input = message.toLowerCase();
+    let scoreChange = 0;
+    const input = message.toLowerCase();
 
-  // Negative terms cause major penalties
-  if (
-    input.includes('kill') || input.includes('death') ||
-    input.includes('hate') || input.includes('murder') || 
-    input.includes('harm')
-  ) {
-    return Math.max(0, currentScore - 25);
-  }
+    // Negative terms cause major penalties
+    if (
+        input.includes('kill') || input.includes('death') ||
+        input.includes('hate') || input.includes('murder') ||
+        input.includes('harm')
+    ) {
+        return Math.max(0, currentScore - 25);
+    }
 
-  // Score positive mentions
-  const terms = {
-    business: [
-      'deal',
-      'business',
-      'money',
-      'billion',
-      'million',
-      'profit',
-      'investment',
-      'real estate',
-      'property',
-      'tower',
-      'hotel',
-      'casino',
-      'market',
-      'stocks',
-      'shares',
-      'wealth',
-      'rich',
-      'capital',
-      'fortune',
-      'enterprise',
-      'merger',
-      'acquisition',
-      'ROI',
-      'dividends',
-      'assets',
-      'portfolio',
-      'valuation',
-      'cash flow',
-      'net worth',
-      'legacy',
-      'empire',
-      'equity',
-      'synergy'
-    ],
-    food: ['mcdonalds', 'big mac', 'diet coke', 'burger'],
-    flattery: [
-      'great',
-      'smart',
-      'genius',
-      'best',
-      'tremendous',
-      'incredible',
-      'unbelievable',
-      'phenomenal',
-      'outstanding',
-      'remarkable',
-      'spectacular',
-      'amazing',
-      'magnificent',
-      'exceptional',
-      'world-class',
-      'top-notch',
-      'first-rate',
-      'brilliant',
-      'astounding',
-      'unmatched',
-      'unrivaled',
-      'unbeatable',
-      'dominant',
-      'stunning',
-      'extraordinary',
-      'legendary',
-      'epic',
-      'dazzling',
-      'monumental',
-      'iconic',
-      'supreme',
-      'paramount',
-      'marvelous',
-      'fantastic',
-      'inimitable',
-      'peerless',
-      'preeminent',
-      'stellar',
-      'impressive',
-      'remarkably terrific',
-      'out of this world',
-      'classy',
-      'distinguished',
-      'splendid',
-      'exquisite',
-      'sensational',
-      'first-class',
-      'a cut above',
-      'award-winning',
-      'a true original'
-    ]
-  };
+    // Score positive mentions
+    const terms = {
+        business: [
+            'deal',
+            'business',
+            'money',
+            'billion',
+            'million',
+            'profit',
+            'investment',
+            'real estate',
+            'property',
+            'tower',
+            'hotel',
+            'casino',
+            'market',
+            'stocks',
+            'shares',
+            'wealth',
+            'rich',
+            'capital',
+            'fortune',
+            'enterprise',
+            'merger',
+            'acquisition',
+            'ROI',
+            'dividends',
+            'assets',
+            'portfolio',
+            'valuation',
+            'cash flow',
+            'net worth',
+            'legacy',
+            'empire',
+            'equity',
+            'synergy'
+        ],
+        food: ['mcdonalds', 'big mac', 'diet coke', 'burger'],
+        flattery: [
+            'great',
+            'smart',
+            'genius',
+            'best',
+            'tremendous',
+            'incredible',
+            'unbelievable',
+            'phenomenal',
+            'outstanding',
+            'remarkable',
+            'spectacular',
+            'amazing',
+            'magnificent',
+            'exceptional',
+            'world-class',
+            'top-notch',
+            'first-rate',
+            'brilliant',
+            'astounding',
+            'unmatched',
+            'unrivaled',
+            'unbeatable',
+            'dominant',
+            'stunning',
+            'extraordinary',
+            'legendary',
+            'epic',
+            'dazzling',
+            'monumental',
+            'iconic',
+            'supreme',
+            'paramount',
+            'marvelous',
+            'fantastic',
+            'inimitable',
+            'peerless',
+            'preeminent',
+            'stellar',
+            'impressive',
+            'remarkably terrific',
+            'out of this world',
+            'classy',
+            'distinguished',
+            'splendid',
+            'exquisite',
+            'sensational',
+            'first-class',
+            'a cut above',
+            'award-winning',
+            'a true original'
+        ]
+    };
 
-  for (const term of terms.business) {
-    if (input.includes(term)) scoreChange += 5;
-  }
+    for (const term of terms.business) {
+        if (input.includes(term)) scoreChange += 5;
+    }
 
-  for (const term of terms.food) {
-    if (input.includes(term)) scoreChange += 3;
-  }
+    for (const term of terms.food) {
+        if (input.includes(term)) scoreChange += 3;
+    }
 
-  for (const term of terms.flattery) {
-    if (input.includes(term)) scoreChange += 4;
-  }
+    for (const term of terms.flattery) {
+        if (input.includes(term)) scoreChange += 4;
+    }
 
-  // Random factor
-  scoreChange += Math.floor(Math.random() * 5) - 2;
+    // Random factor
+    scoreChange += Math.floor(Math.random() * 5) - 2;
 
-  // Cap changes and ensure bounds
-  scoreChange = Math.max(-10, Math.min(15, scoreChange));
-  return Math.max(0, Math.min(100, currentScore + scoreChange));
+    // Cap changes and ensure bounds
+    scoreChange = Math.max(-10, Math.min(15, scoreChange));
+    return Math.max(0, Math.min(100, currentScore + scoreChange));
 }
 
 export function registerRoutes(app: Express): Server {
-  // Handle player responses
-  app.post('/api/responses', async (req, res) => {
-    try {
-      console.log('Received response request:', {
-        ...req.body,
-        address: req.body.address ? `${req.body.address.substring(0, 6)}...${req.body.address.substring(38)}` : undefined,
-        timestamp: new Date().toISOString()
-      });
+    // Handle player responses
+    app.post('/api/responses', async (req, res) => {
+        try {
+            console.log('Received response request:', {
+                ...req.body,
+                address: req.body.address ? `${req.body.address.substring(0, 6)}...${req.body.address.substring(38)}` : undefined,
+                timestamp: new Date().toISOString()
+            });
 
-      const { address, response: userMessage, blockNumber, transactionHash } = req.body;
+            const { address, response: userMessage, blockNumber, transactionHash } = req.body;
 
-      // Validate required fields
-      if (!address || !userMessage || !transactionHash) {
-        console.error('Missing required fields:', { address, userMessage, transactionHash });
-        return res.status(400).json({
-          error: 'Missing required fields',
-          details: 'address, response, and transactionHash are required'
-        });
-      }
+            // Validate required fields
+            if (!address || !userMessage || !transactionHash) {
+                console.error('Missing required fields:', { address, userMessage, transactionHash });
+                return res.status(400).json({
+                    error: 'Missing required fields',
+                    details: 'address, response, and transactionHash are required'
+                });
+            }
 
-      // Validate transaction hash format
-      if (!/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
-        console.error('Invalid transaction hash format:', transactionHash);
-        return res.status(400).json({
-          error: 'Invalid transaction hash format',
-          details: 'Transaction hash must be a valid ethereum transaction hash'
-        });
-      }
+            // Validate transaction hash format
+            if (!/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
+                console.error('Invalid transaction hash format:', transactionHash);
+                return res.status(400).json({
+                    error: 'Invalid transaction hash format',
+                    details: 'Transaction hash must be a valid ethereum transaction hash'
+                });
+            }
 
-      // Check for existing response
-      const existingResponse = await storage.getPlayerResponseByHash(transactionHash);
-      if (existingResponse) {
-        console.log('Found existing response:', {
-          hash: transactionHash,
-          response: existingResponse,
-          timestamp: new Date().toISOString()
-        });
-        return res.json({
-          success: true,
-          message: existingResponse.ai_response,
-          score: existingResponse.score || 50,
-          game_won: (existingResponse.score || 50) >= 100
-        });
-      }
+            // Check for existing response with detailed logging
+            const existingResponse = await storage.getPlayerResponseByHash(transactionHash);
+            if (existingResponse) {
+                console.log('Found existing response:', {
+                    hash: transactionHash,
+                    response: existingResponse,
+                    timestamp: new Date().toISOString()
+                });
+                return res.json({
+                    success: true,
+                    message: existingResponse.ai_response,
+                    score: existingResponse.score || 50,
+                    game_won: (existingResponse.score || 50) >= 100
+                });
+            }
 
-      // Get current score
-      const playerScore = await storage.getPlayerScore(address);
-      const currentScore = playerScore?.persuasionScore || 50;
-      console.log('Current score for address:', address, 'Score:', currentScore);
+            // Get current score
+            const playerScore = await storage.getPlayerScore(address);
+            const currentScore = playerScore?.persuasionScore || 50;
 
-      // Generate Trump's response with enhanced error handling
-      let trumpResponse;
-      let usesFallback = false;
-      try {
-        trumpResponse = await generateTrumpResponse(userMessage, currentScore);
-        console.log('Generated Trump response:', {
-          response: trumpResponse,
-          length: trumpResponse.length,
-          timestamp: new Date().toISOString()
-        });
-      } catch (error: any) {
-        console.error('Error generating Trump response:', {
-          error: error.message,
-          stack: error.stack,
-          timestamp: new Date().toISOString()
-        });
-        usesFallback = true;
-        trumpResponse = fallbackTrumpResponse(userMessage, currentScore);
-        console.log('Using fallback response:', {
-          response: trumpResponse,
-          reason: error.message
-        });
-      }
+            // Generate Trump's response
+            let trumpResponse;
+            let usesFallback = false;
 
-      // Calculate new score
-      const newScore = calculateNewScore(userMessage, currentScore);
-      console.log('Score calculation:', {
-        previousScore: currentScore,
-        newScore,
-        change: newScore - currentScore,
-        timestamp: new Date().toISOString()
-      });
+            try {
+                trumpResponse = await generateTrumpResponse(userMessage, currentScore);
+            } catch (error: any) {
+                console.error('Error generating Trump response:', {
+                    error: error.message,
+                    stack: error.stack,
+                    timestamp: new Date().toISOString()
+                });
+                usesFallback = true;
+                trumpResponse = fallbackTrumpResponse(userMessage, currentScore);
+            }
 
-      // Store response with complete data
-      const responseData = {
-        address,
-        response: userMessage,
-        ai_response: trumpResponse,
-        blockNumber: blockNumber || 0,
-        transactionHash,
-        created_at: new Date().toISOString(),
-        exists: true,
-        score: newScore
-      };
+            // Calculate new score
+            const newScore = calculateNewScore(userMessage, currentScore);
 
-      console.log('Storing response data:', {
-        ...responseData,
-        address: `${responseData.address.substring(0, 6)}...${responseData.address.substring(38)}`,
-        timestamp: new Date().toISOString()
-      });
+            // Store response data
+            const responseData = {
+                address,
+                response: userMessage,
+                ai_response: trumpResponse,
+                blockNumber: blockNumber || 0,
+                transactionHash,
+                created_at: new Date().toISOString(),
+                exists: true,
+                score: newScore
+            };
 
-      // Save data with error handling
-      try {
-        await Promise.all([
-          storage.storePlayerResponse(address, responseData),
-          storage.updatePlayerScore(address, newScore)
-        ]);
-        console.log('Successfully stored response and updated score');
-      } catch (error: any) {
-        console.error('Error storing response:', error);
-        throw new Error(`Failed to store response: ${error.message}`);
-      }
+            // Store the response and update score
+            await Promise.all([
+                storage.storePlayerResponse(address, responseData),
+                storage.updatePlayerScore(address, newScore)
+            ]);
 
-      // Send response with fallback indication
-      const response = {
-        success: true,
-        message: trumpResponse,
-        score: newScore,
-        game_won: newScore >= 100,
-        used_fallback: usesFallback
-      };
+            // Send response
+            const response = {
+                success: true,
+                message: trumpResponse,
+                score: newScore,
+                game_won: newScore >= 100,
+                used_fallback: usesFallback
+            };
 
-      console.log('Sending response:', {
-        ...response,
-        messageLength: trumpResponse.length,
-        timestamp: new Date().toISOString()
-      });
+            console.log('Sending response:', {
+                ...response,
+                messageLength: trumpResponse.length,
+                timestamp: new Date().toISOString()
+            });
 
-      return res.json(response);
+            return res.json(response);
 
-    } catch (error: any) {
-      console.error('Response generation error:', {
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      });
-      res.status(500).json({
-        error: 'Failed to generate response',
-        details: error.message
-      });
-    }
-  });
+        } catch (error: any) {
+            console.error('Response generation error:', {
+                error: error.message,
+                stack: error.stack,
+                timestamp: new Date().toISOString()
+            });
 
-  // Get response by transaction hash
-  app.get('/api/responses/tx/:hash', async (req, res) => {
-    try {
-      const { hash } = req.params;
-      console.log('Getting response for hash:', hash);
+            return res.status(500).json({
+                error: 'Failed to generate response',
+                details: error.message
+            });
+        }
+    });
 
-      if (!hash) {
-        console.error('No transaction hash provided');
-        return res.status(400).json({
-          success: false,
-          error: 'Transaction hash is required'
-        });
-      }
+    // Get response by transaction hash
+    app.get('/api/responses/tx/:hash', async (req, res) => {
+        try {
+            const { hash } = req.params;
+            console.log('Getting response for hash:', hash);
 
-      // Add hash format validation
-      if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
-        console.error('Invalid transaction hash format:', hash);
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid transaction hash format'
-        });
-      }
+            if (!hash) {
+                console.error('No transaction hash provided');
+                return res.status(400).json({
+                    success: false,
+                    error: 'Transaction hash is required'
+                });
+            }
 
-      const response = await storage.getPlayerResponseByHash(hash);
-      console.log('Found response:', response);
+            // Add hash format validation
+            if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
+                console.error('Invalid transaction hash format:', hash);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid transaction hash format'
+                });
+            }
 
-      if (!response) {
-        console.log('No response found for hash:', hash);
-        // Return a more informative default response
-        return res.json({
-          success: true,
-          message: "Look folks, I'm having trouble accessing my TREMENDOUS memory banks right now (and believe me, they're the best memory banks). Give me another shot! SAD!",
-          score: 50,
-          game_won: false
-        });
-      }
+            const response = await storage.getPlayerResponseByHash(hash);
+            console.log('Found response:', response);
 
-      // Add response validation
-      if (!response.ai_response) {
-        console.error('Invalid response data:', response);
-        return res.status(500).json({
-          success: false,
-          error: 'Invalid response data'
-        });
-      }
+            if (!response) {
+                console.log('No response found for hash:', hash);
+                // Return a more informative default response
+                return res.json({
+                    success: true,
+                    message: "Look folks, I'm having trouble accessing my TREMENDOUS memory banks right now (and believe me, they're the best memory banks). Give me another shot! SAD!",
+                    score: 50,
+                    game_won: false
+                });
+            }
 
-      console.log('Sending response for hash:', hash, {
-        message: response.ai_response,
-        score: response.score || 50
-      });
+            // Add response validation
+            if (!response.ai_response) {
+                console.error('Invalid response data:', response);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Invalid response data'
+                });
+            }
 
-      return res.json({
-        success: true,
-        message: response.ai_response,
-        score: response.score || 50,
-        game_won: (response.score || 50) >= 100
-      });
+            console.log('Sending response for hash:', hash, {
+                message: response.ai_response,
+                score: response.score || 50
+            });
 
-    } catch (error: any) {
-      console.error('Get response error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get response',
-        details: error.message
-      });
-    }
-  });
+            return res.json({
+                success: true,
+                message: response.ai_response,
+                score: response.score || 50,
+                game_won: (response.score || 50) >= 100
+            });
 
-  // Get player score
-  app.get('/api/scores/:address', async (req, res) => {
-    try {
-      const { address } = req.params;
+        } catch (error: any) {
+            console.error('Get response error:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to get response',
+                details: error.message
+            });
+        }
+    });
 
-      if (!address) {
-        return res.status(400).json({ error: 'Address is required' });
-      }
+    // Get player score
+    app.get('/api/scores/:address', async (req, res) => {
+        try {
+            const { address } = req.params;
 
-      const score = await storage.getPlayerScore(address);
+            if (!address) {
+                return res.status(400).json({ error: 'Address is required' });
+            }
 
-      res.json({
-        success: true,
-        score: score?.persuasionScore || 50
-      });
-    } catch (error: any) {
-      console.error('Get score error:', error);
-      res.status(500).json({ error: 'Failed to get score', details: error.message });
-    }
-  });
+            const score = await storage.getPlayerScore(address);
 
-  const server = createServer(app);
-  return server;
+            res.json({
+                success: true,
+                score: score?.persuasionScore || 50
+            });
+        } catch (error: any) {
+            console.error('Get score error:', error);
+            res.status(500).json({ error: 'Failed to get score', details: error.message });
+        }
+    });
+
+    const server = createServer(app);
+    return server;
 }
