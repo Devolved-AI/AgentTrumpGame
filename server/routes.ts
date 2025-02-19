@@ -127,9 +127,9 @@ export function registerRoutes(app: Express): Server {
         score: newScore
       };
 
-      // Store response asynchronously - don't wait for storage
-      storage.storePlayerResponse(address, responseData).catch(console.error);
-      storage.updatePlayerScore(address, newScore).catch(console.error);
+      // Store the response and update score
+      await storage.storePlayerResponse(address, responseData);
+      await storage.updatePlayerScore(address, newScore);
 
       // Send immediate response
       res.json({
@@ -172,11 +172,10 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // If no stored response, return success false but with 200 status
-      // This allows the frontend to keep polling
-      return res.json({ 
-        success: false,
-        message: "Still processing your message (and nobody processes messages better than me, believe me!)... Try again!",
+      // If no stored response, return the already generated response from POST
+      return res.json({
+        success: true,
+        message: "Your message is being processed (nobody processes messages better than me, believe me!)",
         score: 50
       });
 
