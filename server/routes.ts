@@ -16,7 +16,12 @@ async function initializeTrumpAgent() {
     const pythonScript = resolve(__dirname, 'trumpAgent.py');
     console.log('Starting Trump Agent with script:', pythonScript);
 
-    trumpAgent = spawn('python3', [pythonScript]);
+    trumpAgent = spawn('python3', [pythonScript], {
+        env: {
+            ...process.env,
+            PYTHONUNBUFFERED: '1'  // Ensure Python output is not buffered
+        }
+    });
 
     trumpAgent.stdout.on('data', (data: Buffer) => {
         console.log('Trump Agent Output:', data.toString());
@@ -65,29 +70,56 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             current_score: currentScore
         };
 
-        trumpAgent.stdin.write(JSON.stringify(request) + '\n');
-
+        // Create a new promise to handle the response
         return new Promise((resolve, reject) => {
-            let data = '';
+            let responseData = '';
+            let errorData = '';
 
-            trumpAgent.stdout.on('data', (chunk: Buffer) => {
-                data += chunk;
-            });
-
-            trumpAgent.stdout.on('end', () => {
+            // Set up event handlers for this request
+            const messageHandler = (data: Buffer) => {
+                responseData += data.toString();
                 try {
-                    const response = JSON.parse(data) as TrumpResponse;
+                    const response = JSON.parse(responseData);
+                    cleanup();
                     resolve(response);
-                } catch (error) {
-                    reject(error);
+                } catch (e) {
+                    // If it's not valid JSON yet, keep collecting data
                 }
-            });
+            };
 
-            // Set timeout for response
+            const errorHandler = (data: Buffer) => {
+                errorData += data.toString();
+            };
+
+            const closeHandler = (code: number) => {
+                cleanup();
+                if (code !== 0) {
+                    reject(new Error(`Agent exited with code ${code}. Error: ${errorData}`));
+                }
+            };
+
+            // Clean up function to remove listeners
+            const cleanup = () => {
+                trumpAgent.stdout.removeListener('data', messageHandler);
+                trumpAgent.stderr.removeListener('data', errorHandler);
+                trumpAgent.removeListener('close', closeHandler);
+            };
+
+            // Attach event listeners
+            trumpAgent.stdout.on('data', messageHandler);
+            trumpAgent.stderr.on('data', errorHandler);
+            trumpAgent.on('close', closeHandler);
+
+            // Write request to the Python process
+            trumpAgent.stdin.write(JSON.stringify(request) + '\n');
+
+            // Set timeout
             setTimeout(() => {
+                cleanup();
                 reject(new Error('Response generation timed out'));
             }, 30000);
         });
+
     } catch (error) {
         console.error('Error generating Trump response:', error);
         return {

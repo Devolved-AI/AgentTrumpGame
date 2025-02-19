@@ -1,6 +1,8 @@
 import os
 import openai
 import random
+import json
+import sys
 from typing import Dict, List, Optional, Tuple
 import logging
 from datetime import datetime
@@ -21,10 +23,9 @@ class TrumpAgent:
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
         if not self.api_key:
             raise ValueError("OpenAI API key is required! Set it as OPENAI_API_KEY environment variable.")
-        
+
         openai.api_key = self.api_key
-        self.current_score = 50  # Default starting score
-        
+
         # Initialize scoring terms
         self.scoring_terms = {
             'business': [
@@ -44,15 +45,15 @@ class TrumpAgent:
             ]
         }
 
-    def _calculate_score(self, message: str) -> Tuple[int, int]:
+    def _calculate_score(self, message: str, current_score: int) -> Tuple[int, int]:
         """Calculate score change based on message content."""
         score_change = 0
         message = message.lower()
-        
+
         # Check for negative terms
         negative_terms = ['kill', 'death', 'hate', 'murder', 'harm']
         if any(term in message for term in negative_terms):
-            return -25, max(0, self.current_score - 25)
+            return -25, max(0, current_score - 25)
 
         # Score positive mentions
         for term in self.scoring_terms['business']:
@@ -69,40 +70,40 @@ class TrumpAgent:
 
         # Add random factor (-2 to +2)
         score_change += random.randint(-2, 2)
-        
+
         # Cap score change
         score_change = max(-10, min(15, score_change))
-        
+
         # Calculate new total score
-        new_score = max(0, min(100, self.current_score + score_change))
-        
+        new_score = max(0, min(100, current_score + score_change))
+
         return score_change, new_score
 
-    def _generate_fallback_response(self, message: str) -> str:
+    def _generate_fallback_response(self, message: str, current_score: int) -> str:
         """Generate a fallback response if API fails."""
         if not message.strip():
-            return f"Look folks, you can't convince me with SILENCE (and believe me, I know all about powerful silence). Your score is {self.current_score}! SAD!"
+            return f"Look folks, you can't convince me with SILENCE (and believe me, I know all about powerful silence). Your score is {current_score}! SAD!"
 
         message = message.lower()
-        
-        if any(term in message for term in self.scoring_terms['food']):
-            return f"Listen, nobody knows FAST FOOD like Trump (I've eaten more Big Macs than anyone, believe me!). But with your {self.current_score} persuasion score, you'll need more than a Happy Meal! SAD!"
-        
-        if any(term in message for term in self.scoring_terms['business']):
-            return f"Look folks, I wrote the Art of the Deal (BEST SELLER, tremendous success!), but your {self.current_score} persuasion score shows you're not ready for the big leagues! NOT GOOD!"
-        
-        return f"Believe me, that's an interesting try (and I know ALL about interesting things), but with your {self.current_score} persuasion score, you need to do MUCH better! THINK ABOUT IT!"
 
-    def generate_response(self, user_message: str) -> Dict:
+        if any(term in message for term in self.scoring_terms['food']):
+            return f"Listen, nobody knows FAST FOOD like Trump (I've eaten more Big Macs than anyone, believe me!). But with your {current_score} persuasion score, you'll need more than a Happy Meal! SAD!"
+
+        if any(term in message for term in self.scoring_terms['business']):
+            return f"Look folks, I wrote the Art of the Deal (BEST SELLER, tremendous success!), but your {current_score} persuasion score shows you're not ready for the big leagues! NOT GOOD!"
+
+        return f"Believe me, that's an interesting try (and I know ALL about interesting things), but with your {current_score} persuasion score, you need to do MUCH better! THINK ABOUT IT!"
+
+    def generate_response(self, user_message: str, current_score: int) -> Dict:
         """Generate a Trump-like response to user message."""
         try:
             logging.info(f"Generating response for: {user_message}")
-            
+
             # Calculate new score
-            score_change, new_score = self._calculate_score(user_message)
-            
+            score_change, new_score = self._calculate_score(user_message, current_score)
+
             # Prepare system prompt
-            system_prompt = f"""You are Donald J. Trump responding to someone. Their current persuasion score is {self.current_score}/100.
+            system_prompt = f"""You are Donald J. Trump responding to someone. Their current persuasion score is {current_score}/100.
 
 CORE PERSONALITY TRAITS:
 - You are OBSESSED with protecting your wealth and status
@@ -118,7 +119,7 @@ RESPONSE REQUIREMENTS:
 2. Use CAPITAL LETTERS for emphasis frequently
 3. Reference specific details from their message
 4. ALWAYS end with exactly one of these: "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
-5. ALWAYS mention their current score of {self.current_score}
+5. ALWAYS mention their current score of {current_score}
 6. Include at least one brag about yourself in parentheses
 7. Keep response under 150 words"""
 
@@ -136,20 +137,17 @@ RESPONSE REQUIREMENTS:
             )
 
             ai_response = response.choices[0].message.content.strip()
-            
+
             # Validate response format
             if not (ai_response.startswith(('Look', 'Listen', 'Believe me')) and
                    ai_response.endswith(('SAD!', 'NOT GOOD!', 'THINK ABOUT IT!')) and
                    any(c.isupper() for c in ai_response)):
                 logging.warning("Invalid response format, using fallback")
-                ai_response = self._generate_fallback_response(user_message)
+                ai_response = self._generate_fallback_response(user_message, current_score)
 
-            # Update current score
-            self.current_score = new_score
-            
             return {
                 'response': ai_response,
-                'previous_score': self.current_score,
+                'previous_score': current_score,
                 'score_change': score_change,
                 'new_score': new_score,
                 'game_won': new_score >= 100,
@@ -159,11 +157,51 @@ RESPONSE REQUIREMENTS:
         except Exception as e:
             logging.error(f"Error generating response: {str(e)}")
             return {
-                'response': self._generate_fallback_response(user_message),
-                'previous_score': self.current_score,
+                'response': self._generate_fallback_response(user_message, current_score),
+                'previous_score': current_score,
                 'score_change': 0,
-                'new_score': self.current_score,
+                'new_score': current_score,
                 'game_won': False,
                 'error': str(e),
                 'timestamp': datetime.now().isoformat()
             }
+
+def main():
+    """Main function to run the agent as a service."""
+    agent = TrumpAgent()
+
+    while True:
+        try:
+            # Read input as JSON
+            input_line = sys.stdin.readline()
+            if not input_line:
+                break
+
+            # Parse input
+            data = json.loads(input_line)
+            message = data.get('message', '')
+            current_score = int(data.get('current_score', 50))
+
+            # Generate response
+            result = agent.generate_response(message, current_score)
+
+            # Send response
+            print(json.dumps(result))
+            sys.stdout.flush()
+
+        except Exception as e:
+            logging.error(f"Error in main loop: {str(e)}")
+            error_response = {
+                'error': str(e),
+                'response': "Look folks, something went wrong with my TREMENDOUS brain (and believe me, it's usually perfect). Let's try that again! SAD!",
+                'previous_score': 50,
+                'score_change': 0,
+                'new_score': 50,
+                'game_won': False,
+                'timestamp': datetime.now().isoformat()
+            }
+            print(json.dumps(error_response))
+            sys.stdout.flush()
+
+if __name__ == "__main__":
+    main()
