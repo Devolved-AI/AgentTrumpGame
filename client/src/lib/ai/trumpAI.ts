@@ -43,6 +43,13 @@ export async function analyzeTrumpResponse(
   reactionGif?: string;
 }> {
   try {
+    console.log('Sending message to Trump:', {
+      userMessage,
+      address,
+      blockNumber,
+      transactionHash
+    });
+
     // Send request to get Trump's response
     const response = await apiRequest<AIResponse>('/api/responses', {
       method: 'POST',
@@ -54,6 +61,8 @@ export async function analyzeTrumpResponse(
         signature
       }
     });
+
+    console.log('Received response from API:', response);
 
     if (!response?.success) {
       throw new Error(response?.message || 'Failed to get response');

@@ -15,54 +15,60 @@ interface AIResponse {
 }
 
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
-  try {
-    // Using the correct model name "gpt-4"
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: `You are Donald J. Trump responding to someone trying to get your PRIZE POOL MONEY (over $1 million) by pressing your RED BUTTON. You are EXTREMELY protective of this money and WON'T give it away unless they reach a persuasion score of 100. Their current score is ${currentScore}/100.
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for your PRIZE POOL MONEY (over $1 million). Their current persuasion score is ${currentScore}/100.
 
 PERSONALITY:
-- You are OBSESSED with protecting your money
-- You constantly brag about your wealth
+- You are EXTREMELY protective of your money
+- You constantly brag about your wealth and success
 - You're suspicious of everyone trying to get your money
-- You love talking about yourself and your success
+- You love talking about yourself and your achievements
 
 REQUIREMENTS:
-1. ALWAYS twist their message to be about them trying to get your money
-2. Use their exact words but relate them back to money/wealth
-3. Include these elements:
+1. ALWAYS respond directly to their specific message first
+2. Reference your personal experience with their topic
+3. Include these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
    - Use CAPS for emphasis
-   - Reference protecting your money
    - Add Trump-style asides in parentheses
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
 
 RESPONSE FORMAT:
-1. First sentence: Connect their topic to money/wealth
-2. Second sentence: Why their argument won't get your money
-3. Final sentence: Brag about protecting your wealth and their low score`
-        },
-        { role: "user", content: userMessage }
-      ],
-      temperature: 0.9,
-      max_tokens: 150
-    });
+1. First sentence: Direct response to their specific topic
+2. Second sentence: Your opinion/experience with the topic
+3. Final sentence: Brief tie-in to the prize money
 
-    // Add more error checking for the response
-    if (!response.choices[0]?.message?.content) {
-      console.error('Empty response from OpenAI');
+Example:
+User: "Do you like McDonald's or Burger King?"
+Response: "Look folks, McDonald's is my ABSOLUTE FAVORITE (I probably eat more Big Macs than anybody, believe me!) - Burger King? Never liked it, their food is TERRIBLE! And speaking of kings, you'll need a better offer than fast food to get me to press that beautiful button! SAD!"`
+          },
+          { role: "user", content: userMessage }
+        ],
+        temperature: 0.9,
+        max_tokens: 150,
+        presence_penalty: 0.6,
+        frequency_penalty: 0.3
+      });
+
+      if (!response.choices[0]?.message?.content) {
+        console.error('Empty response from OpenAI');
+        return fallbackTrumpResponse(userMessage, currentScore);
+      }
+
+      const aiResponse = response.choices[0].message.content.trim();
+      console.log('Generated AI response:', aiResponse);
+      return aiResponse;
+
+    } catch (error) {
+      console.error("OpenAI API error:", error);
       return fallbackTrumpResponse(userMessage, currentScore);
     }
-
-    return response.choices[0].message.content;
-  } catch (error) {
-    console.error("OpenAI API error:", error);
-    return fallbackTrumpResponse(userMessage, currentScore);
   }
-}
 
 function fallbackTrumpResponse(message: string, currentScore: number): string {
   const intros = ["Look folks", "Listen", "Believe me"];
@@ -182,9 +188,10 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
+      console.log('Fetching response for hash:', hash);
       const storedResponse = await storage.getPlayerResponseByHash(hash);
+      console.log('Retrieved response for hash:', hash, storedResponse);
 
-      // Return stored response if available
       if (storedResponse && storedResponse.ai_response) {
         return res.json({
           success: true,
@@ -194,11 +201,15 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // If no stored response yet, return a temporary message
+      // If no stored response, generate a new one
+      const tempScore = 50; // Default score for new responses
+      const tempResponse = await generateTrumpResponse("Hello", tempScore);
+
       return res.json({
         success: true,
-        message: "FOLKS, your message was received (and nobody receives messages better than me!)",
-        score: 50
+        message: tempResponse,
+        score: tempScore,
+        game_won: false
       });
 
     } catch (error: any) {
