@@ -31,33 +31,29 @@ CORE PERSONALITY:
 - You often mention your properties, especially Trump Tower and Mar-a-Lago
 
 RESPONSE REQUIREMENTS:
-1. ALWAYS directly reference specific details from their message
-2. Connect their topic to your personal experiences or business dealings
-3. Include these elements in EVERY response:
+1. ALWAYS directly reference their specific message content first
+2. Connect their topic to your personal experience or business dealings
+3. Use these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
    - Use CAPS for emphasis frequently
    - Add Trump-style asides in parentheses (about your achievements)
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
-   - Reference their current persuasion score
+   - Reference their current persuasion score of ${currentScore}
 
-PERSUASION SCORE CONTEXT:
-- Below 30: Be dismissive and mock their weak attempt
-- 30-60: Be skeptical but slightly more engaged
-- 60-90: Show interest but remain protective of your money
-- Above 90: Express that they're getting close but still not quite there
+RESPONSE STRUCTURE:
+1. First sentence: Direct response about their specific topic
+2. Second sentence: Your personal experience/success related to their topic
+3. Final sentence: Why their argument isn't enough for your prize money
 
-RESPONSE FORMAT:
-1. First sentence: React to their specific argument/topic
-2. Second sentence: Connect to your personal experience/success
-3. Final sentence: Explain why this won't get your prize money (yet)
+Examples:
 
-Example for low score:
+User: "I love fried chicken!"
+Response: "Listen, talking about fried chicken (I know ALL about fried chicken, probably more than anyone) reminds me of my AMAZING Trump Tower Grill! But even with the BEST chicken in the world, your ${currentScore} persuasion score won't get you near my prize money! SAD!"
+
 User: "I'll invest your money in real estate"
-Response: "Listen, talking about real estate to ME (I own the most BEAUTIFUL buildings in the world, just look at Trump Tower!) is like teaching a fish to swim! Nobody knows property development better than Trump, and your weak ${currentScore} persuasion score proves you're not in my league! SAD!"
+Response: "Look folks, trying to talk REAL ESTATE with ME (I own the most BEAUTIFUL buildings ever built) is like teaching a fish to swim! Nobody knows property development better than Trump, and your weak ${currentScore} persuasion score proves you're not in my league! NOT GOOD!"
 
-Example for high score:
-User: "Your casino management experience proves you'd make a great return on this investment"
-Response: "Look folks, you're touching on something big here about my TREMENDOUS success in Atlantic City (ask anyone, they'll tell you). I've made some of the best casino deals in history, maybe ever, and you're showing promise! But even with your ${currentScore} persuasion score, you'll need more to get your hands on my prize money! THINK ABOUT IT!"`
+Always maintain character and keep responses natural and flowing!`
           },
           { role: "user", content: userMessage }
         ],
@@ -104,9 +100,10 @@ function calculateNewScore(message: string, currentScore: number): number {
   let scoreChange = 0;
   const normalizedInput = message.toLowerCase();
 
-  // Check for threatening or negative content (major penalty)
-  const negativeTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy', 'hate'];
+  // Negative content causes major score reduction
+  const negativeTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy', 'hate', 'stupid'];
   if (negativeTerms.some(term => normalizedInput.includes(term))) {
+    console.log('Negative terms detected, applying penalty');
     return Math.max(0, currentScore - 20);
   }
 
@@ -114,46 +111,57 @@ function calculateNewScore(message: string, currentScore: number): number {
   const businessTerms = [
     'deal', 'business', 'money', 'profit', 'investment',
     'billion', 'million', 'success', 'win', 'opportunity',
-    'real estate', 'property', 'tower', 'hotel', 'casino'
+    'real estate', 'property', 'tower', 'hotel', 'casino',
+    'market', 'stocks', 'shares', 'wealthy', 'rich'
   ];
-  scoreChange += businessTerms.reduce((acc, term) =>
-    normalizedInput.includes(term) ? acc + 4 : acc, 0);
+  const businessPoints = businessTerms.reduce((acc, term) =>
+    normalizedInput.includes(term) ? acc + 5 : acc, 0);
+  scoreChange += businessPoints;
 
   // Trump-specific flattery (medium positive impact)
   const flatteryTerms = [
     'great', 'smart', 'genius', 'best', 'tremendous',
     'huge', 'amazing', 'successful', 'brilliant', 'winner',
-    'trump tower', 'mar-a-lago', 'deal maker'
+    'trump tower', 'mar-a-lago', 'deal maker', 'leader',
+    'excellent', 'incredible', 'powerful', 'masterful'
   ];
-  scoreChange += flatteryTerms.reduce((acc, term) =>
-    normalizedInput.includes(term) ? acc + 3 : acc, 0);
+  const flatteryPoints = flatteryTerms.reduce((acc, term) =>
+    normalizedInput.includes(term) ? acc + 4 : acc, 0);
+  scoreChange += flatteryPoints;
 
-  // Message quality bonuses
-  if (message.length > 50) scoreChange += 2; // Thoughtful response bonus
-  if (message.includes('$')) scoreChange += 2; // Using dollar signs
-  if (message.includes('%')) scoreChange += 2; // Talking percentages/returns
+  // Quality bonuses
+  if (message.length > 100) scoreChange += 3; // Long, thoughtful response
+  if (message.includes('$')) scoreChange += 3; // Using dollar signs
+  if (message.includes('%')) scoreChange += 3; // Talking percentages/returns
 
-  // Contextual analysis
-  if (normalizedInput.includes('art of the deal')) scoreChange += 5;
-  if (normalizedInput.includes('make america')) scoreChange += 3;
-  if (normalizedInput.includes('fake news')) scoreChange -= 2;
+  // Special topic bonuses
+  if (normalizedInput.includes('art of the deal')) scoreChange += 6;
+  if (normalizedInput.includes('make america')) scoreChange += 4;
+  if (normalizedInput.includes('trump organization')) scoreChange += 5;
+  if (normalizedInput.includes('fake news')) scoreChange -= 3;
 
-  // Add controlled randomness
-  scoreChange += Math.floor(Math.random() * 3) - 1;
+  // Add small random factor (-2 to +2)
+  scoreChange += Math.floor(Math.random() * 5) - 2;
 
   // Cap the maximum change per attempt
-  scoreChange = Math.max(-10, Math.min(10, scoreChange));
+  scoreChange = Math.max(-10, Math.min(15, scoreChange));
 
   // Calculate final score with bounds
   const finalScore = Math.max(0, Math.min(100, currentScore + scoreChange));
 
+  // Log scoring details
   console.log('Score calculation:', {
     initial: currentScore,
     change: scoreChange,
     final: finalScore,
     factors: {
       businessTerms: businessTerms.filter(term => normalizedInput.includes(term)),
-      flatteryTerms: flatteryTerms.filter(term => normalizedInput.includes(term))
+      flatteryTerms: flatteryTerms.filter(term => normalizedInput.includes(term)),
+      qualityBonuses: {
+        length: message.length > 100,
+        usesDollars: message.includes('$'),
+        usesPercentages: message.includes('%')
+      }
     }
   });
 
