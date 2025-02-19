@@ -312,10 +312,14 @@ export function registerRoutes(app: Express): Server {
   // Handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
-      console.log('Received response request:', req.body);
+      console.log('Received response request:', {
+        ...req.body,
+        address: req.body.address ? `${req.body.address.substring(0, 6)}...${req.body.address.substring(38)}` : undefined
+      });
 
       const { address, response: userMessage, blockNumber, transactionHash } = req.body;
 
+      // Validate required fields
       if (!address || !userMessage || !transactionHash) {
         console.error('Missing required fields:', { address, userMessage, transactionHash });
         return res.status(400).json({
@@ -324,7 +328,7 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Add additional validation for transaction hash format
+      // Validate transaction hash format
       if (!/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
         console.error('Invalid transaction hash format:', transactionHash);
         return res.status(400).json({
@@ -333,10 +337,13 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // Check for existing response with more detailed logging
+      // Check for existing response
       const existingResponse = await storage.getPlayerResponseByHash(transactionHash);
       if (existingResponse) {
-        console.log('Found existing response for transaction:', transactionHash, existingResponse);
+        console.log('Found existing response:', {
+          hash: transactionHash,
+          response: existingResponse
+        });
         return res.json({
           success: true,
           message: existingResponse.ai_response,
@@ -348,17 +355,25 @@ export function registerRoutes(app: Express): Server {
       // Get current score
       const playerScore = await storage.getPlayerScore(address);
       const currentScore = playerScore?.persuasionScore || 50;
-      console.log('Current score:', currentScore);
+      console.log('Current score for address:', address, 'Score:', currentScore);
 
-      // Generate Trump's response
-      const trumpResponse = await generateTrumpResponse(userMessage, currentScore);
-      console.log('Trump response:', trumpResponse);
+      // Generate Trump's response with enhanced error handling
+      let trumpResponse;
+      try {
+        trumpResponse = await generateTrumpResponse(userMessage, currentScore);
+        console.log('Generated Trump response:', trumpResponse);
+      } catch (error: any) {
+        console.error('Error generating Trump response:', error);
+        // Use fallback response if OpenAI fails
+        trumpResponse = fallbackTrumpResponse(userMessage, currentScore);
+        console.log('Using fallback response:', trumpResponse);
+      }
 
       // Calculate new score
       const newScore = calculateNewScore(userMessage, currentScore);
-      console.log('New score:', newScore);
+      console.log('New score calculated:', newScore);
 
-      // Store response
+      // Store response with complete data
       const responseData = {
         address,
         response: userMessage,
@@ -370,13 +385,22 @@ export function registerRoutes(app: Express): Server {
         score: newScore
       };
 
-      console.log('Storing response data:', responseData);
+      console.log('Storing response data:', {
+        ...responseData,
+        address: `${responseData.address.substring(0, 6)}...${responseData.address.substring(38)}`
+      });
 
-      // Save data
-      await Promise.all([
-        storage.storePlayerResponse(address, responseData),
-        storage.updatePlayerScore(address, newScore)
-      ]);
+      // Save data with error handling
+      try {
+        await Promise.all([
+          storage.storePlayerResponse(address, responseData),
+          storage.updatePlayerScore(address, newScore)
+        ]);
+        console.log('Successfully stored response and updated score');
+      } catch (error: any) {
+        console.error('Error storing response:', error);
+        throw new Error(`Failed to store response: ${error.message}`);
+      }
 
       // Send response
       const response = {
@@ -405,9 +429,19 @@ export function registerRoutes(app: Express): Server {
       console.log('Getting response for hash:', hash);
 
       if (!hash) {
+        console.error('No transaction hash provided');
         return res.status(400).json({
           success: false,
           error: 'Transaction hash is required'
+        });
+      }
+
+      // Add hash format validation
+      if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
+        console.error('Invalid transaction hash format:', hash);
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid transaction hash format'
         });
       }
 
@@ -415,13 +449,29 @@ export function registerRoutes(app: Express): Server {
       console.log('Found response:', response);
 
       if (!response) {
+        console.log('No response found for hash:', hash);
+        // Return a more informative default response
         return res.json({
           success: true,
-          message: "Look folks, I don't seem to remember that conversation (and I have a GREAT memory, believe me). Try sending me a new message! SAD!",
+          message: "Look folks, I'm having trouble accessing my TREMENDOUS memory banks right now (and believe me, they're the best memory banks). Give me another shot! SAD!",
           score: 50,
           game_won: false
         });
       }
+
+      // Add response validation
+      if (!response.ai_response) {
+        console.error('Invalid response data:', response);
+        return res.status(500).json({
+          success: false,
+          error: 'Invalid response data'
+        });
+      }
+
+      console.log('Sending response for hash:', hash, {
+        message: response.ai_response,
+        score: response.score || 50
+      });
 
       return res.json({
         success: true,
