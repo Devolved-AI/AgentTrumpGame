@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 
-// Initialize OpenAI
+// Initialize OpenAI with proper configuration
+// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Type definitions for responses
@@ -16,8 +17,9 @@ interface AIResponse {
 
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
     try {
+      console.log('Attempting to generate response using OpenAI for message:', userMessage);
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -40,22 +42,7 @@ RESPONSE REQUIREMENTS:
    - Use CAPS for emphasis frequently
    - Add Trump-style asides in parentheses (about your achievements)
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
-   - Reference their current persuasion score of ${currentScore}
-
-RESPONSE STRUCTURE:
-1. First sentence: Direct response about their specific topic
-2. Second sentence: Your personal experience/success related to their topic
-3. Final sentence: Why their argument isn't enough for your prize money
-
-Examples:
-
-User: "I love McDonald's!"
-Response: "Look folks, McDonald's is TREMENDOUS (I eat Big Macs all the time in my PRIVATE JET), and I probably know more about fast food than anyone in history! But even with our shared taste in burgers, your ${currentScore} persuasion score won't get you near my prize money! SAD!"
-
-User: "I'll invest your money in real estate"
-Response: "Listen, trying to talk REAL ESTATE with ME (I own the most BEAUTIFUL buildings ever built) is like teaching a fish to swim! Nobody knows property development better than Trump, and your weak ${currentScore} persuasion score proves you're not in my league! NOT GOOD!"
-
-Always maintain character and keep responses natural and flowing!`
+   - Reference their current persuasion score of ${currentScore}`
           },
           { role: "user", content: userMessage }
         ],
