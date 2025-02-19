@@ -77,24 +77,34 @@ class MemoryStorage implements IStorage {
 
   async getPlayerResponses(address: string): Promise<PlayerResponse[]> {
     const addressLower = address.toLowerCase();
+    console.log('Getting responses for address:', addressLower);
     const txHashes = this.addressResponses.get(addressLower) || [];
+
     const responses = txHashes
-      .map(hash => this.responses.get(hash))
+      .map(hash => {
+        const response = this.responses.get(hash);
+        if (response) {
+          console.log('Found response for hash:', hash);
+          return response;
+        }
+        return undefined;
+      })
       .filter((r): r is PlayerResponse => r !== undefined)
       .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
 
-    console.log('Retrieved responses for address:', addressLower, responses.length);
+    console.log('Retrieved responses:', responses.length);
     return responses;
   }
 
   async getPlayerResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
     console.log('Looking up response for hash:', hash);
     const response = this.responses.get(hash);
-    console.log('Found response:', response ? 'yes' : 'no');
     if (response) {
-      console.log('Response data:', JSON.stringify(response, null, 2));
+      console.log('Found stored response:', JSON.stringify(response, null, 2));
+      return response;
     }
-    return response;
+    console.log('No response found for hash:', hash);
+    return undefined;
   }
 }
 
