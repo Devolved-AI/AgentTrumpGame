@@ -50,24 +50,31 @@ class MemoryStorage implements IStorage {
   }
 
   async storePlayerResponse(address: string, data: Omit<PlayerResponse, "timestamp">): Promise<PlayerResponse> {
+    const addressLower = address.toLowerCase();
+    console.log('Storing response for address:', addressLower);
+
+    if (!data.transactionHash) {
+      throw new Error('Transaction hash is required for storing response');
+    }
+
     // Create the response object with all required fields
     const response: PlayerResponse = {
       ...data,
-      address: address.toLowerCase(),
+      address: addressLower,
       timestamp: new Date(),
       exists: true,
-      transactionHash: data.transactionHash || null
+      transactionHash: data.transactionHash
     };
 
-    // Store by transaction hash if available
-    if (response.transactionHash) {
-      console.log('Storing response with hash:', response.transactionHash);
-      console.log('Response data:', JSON.stringify(response, null, 2));
-      this.responses.set(response.transactionHash, response);
+    console.log('Storing response with hash:', response.transactionHash);
+    console.log('Response data:', JSON.stringify(response, null, 2));
 
-      // Store transaction hash in address's response list
-      const addressLower = address.toLowerCase();
-      const txHashes = this.addressResponses.get(addressLower) || [];
+    // Store by transaction hash
+    this.responses.set(response.transactionHash, response);
+
+    // Store transaction hash in address's response list
+    const txHashes = this.addressResponses.get(addressLower) || [];
+    if (!txHashes.includes(response.transactionHash)) {
       txHashes.push(response.transactionHash);
       this.addressResponses.set(addressLower, txHashes);
     }
@@ -78,7 +85,9 @@ class MemoryStorage implements IStorage {
   async getPlayerResponses(address: string): Promise<PlayerResponse[]> {
     const addressLower = address.toLowerCase();
     console.log('Getting responses for address:', addressLower);
+
     const txHashes = this.addressResponses.get(addressLower) || [];
+    console.log('Found transaction hashes:', txHashes);
 
     const responses = txHashes
       .map(hash => {

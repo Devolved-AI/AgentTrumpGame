@@ -7,14 +7,6 @@ import OpenAI from "openai";
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Type definitions for responses
-interface AIResponse {
-  success: boolean;
-  message: string;
-  score: number;
-  game_won?: boolean;
-}
-
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
   try {
     console.log('Generating Trump response for:', userMessage);
@@ -40,10 +32,9 @@ RESPONSE REQUIREMENTS:
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
    - Mention their current score of ${currentScore}
 
-KEEP RESPONSES:
-- Engaging and uniquely Trump-like
-- Focused on the specific topic they mentioned
-- Maintaining Trump's characteristic speaking style`;
+EXAMPLE RESPONSES:
+For food-related messages:
+"Look folks, nobody knows FAST FOOD like Trump (I've eaten more Big Macs than anyone, believe me!) - talking about food with me is like teaching a fish to swim! But with your ${currentScore} persuasion score, you'll need more than a Happy Meal to get me to press that button! SAD!"`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -52,7 +43,7 @@ KEEP RESPONSES:
         { role: "user", content: userMessage }
       ],
       temperature: 0.9,
-      max_tokens: 200,
+      max_tokens: 150,
       presence_penalty: 0.6,
       frequency_penalty: 0.3
     });
@@ -140,11 +131,23 @@ export function registerRoutes(app: Express): Server {
 
       const { address, response: userMessage, blockNumber, transactionHash } = req.body;
 
-      if (!address || !userMessage) {
-        console.error('Missing required fields');
+      if (!address || !userMessage || !transactionHash) {
+        console.error('Missing required fields:', { address, userMessage, transactionHash });
         return res.status(400).json({
           error: 'Missing required fields',
-          details: 'address and response are required'
+          details: 'address, response, and transactionHash are required'
+        });
+      }
+
+      // Check if we already have a response for this transaction
+      const existingResponse = await storage.getPlayerResponseByHash(transactionHash);
+      if (existingResponse) {
+        console.log('Found existing response for transaction:', transactionHash);
+        return res.json({
+          success: true,
+          message: existingResponse.ai_response,
+          score: existingResponse.score || 50,
+          game_won: (existingResponse.score || 50) >= 100
         });
       }
 
@@ -167,11 +170,13 @@ export function registerRoutes(app: Express): Server {
         response: userMessage,
         ai_response: trumpResponse,
         blockNumber: blockNumber || 0,
-        transactionHash: transactionHash || null,
+        transactionHash,
         created_at: new Date().toISOString(),
         exists: true,
         score: newScore
       };
+
+      console.log('Storing response data:', responseData);
 
       // Save data
       await Promise.all([
@@ -188,7 +193,7 @@ export function registerRoutes(app: Express): Server {
       };
 
       console.log('Sending response:', response);
-      res.json(response);
+      return res.json(response);
 
     } catch (error: any) {
       console.error('Response generation error:', error);
