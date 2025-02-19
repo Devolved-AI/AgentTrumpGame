@@ -62,7 +62,7 @@ Response: "Believe me, I've heard BETTER attempts to get my money from total los
       max_tokens: 150
     });
 
-    return response.choices[0].message.content;
+    return response.choices[0].message.content || fallbackTrumpResponse(userMessage, currentScore);
   } catch (error) {
     console.error("OpenAI API error:", error);
     return fallbackTrumpResponse(userMessage, currentScore);
@@ -118,9 +118,9 @@ export function registerRoutes(app: Express): Server {
   // API route to handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
-      const { address, response, blockNumber, transactionHash } = req.body;
+      const { address, response: userMessage, blockNumber, transactionHash } = req.body;
 
-      if (!address || !response) {
+      if (!address || !userMessage) {
         return res.status(400).json({ 
           error: 'Missing required fields',
           details: 'address and response are required'
@@ -133,15 +133,15 @@ export function registerRoutes(app: Express): Server {
       const currentScore = (await storage.getPlayerScore(address))?.persuasionScore || 50;
 
       // Generate Trump's response using OpenAI
-      const trumpResponse = await generateTrumpResponse(response, currentScore);
+      const trumpResponse = await generateTrumpResponse(userMessage, currentScore);
 
       // Calculate new score
-      const newScore = calculateNewScore(response, currentScore);
+      const newScore = calculateNewScore(userMessage, currentScore);
 
-      // Store response data
+      // Store response data asynchronously - don't wait for storage
       const responseData = {
         address,
-        response,
+        response: userMessage,
         ai_response: trumpResponse,
         blockNumber: blockNumber || 0,
         transactionHash: transactionHash || '',
@@ -150,9 +150,13 @@ export function registerRoutes(app: Express): Server {
         score: newScore
       };
 
-      // Store the response and update score
-      await storage.storePlayerResponse(address, responseData);
-      await storage.updatePlayerScore(address, newScore);
+      // Store in background
+      Promise.all([
+        storage.storePlayerResponse(address, responseData),
+        storage.updatePlayerScore(address, newScore)
+      ]).catch(error => {
+        console.error("Background storage error:", error);
+      });
 
       // Send immediate response
       res.json({
@@ -195,11 +199,11 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // If response not found, return the same response we sent in POST
+      // If no stored response yet, return a temporary message
       return res.json({
         success: true,
-        message: storedResponse?.ai_response || "FOLKS, your message was received (and nobody receives messages better than me!)",
-        score: storedResponse?.score || 50
+        message: "FOLKS, your message was received (and nobody receives messages better than me!)",
+        score: 50
       });
 
     } catch (error: any) {
