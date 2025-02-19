@@ -14,7 +14,7 @@ const openai = new OpenAI({
 async function testOpenAIConnection() {
     try {
         console.log('Testing OpenAI connection with API key:', 
-            process.env.OPENAI_API_KEY ? 'Key exists' : 'No key found');
+            process.env.OPENAI_API_KEY ? 'Key exists and length: ' + process.env.OPENAI_API_KEY.length : 'No key found');
 
         const response = await openai.chat.completions.create({
             model: "gpt-4",
@@ -35,7 +35,9 @@ async function testOpenAIConnection() {
             type: error.type,
             code: error.code,
             param: error.param,
-            stack: error.stack
+            stack: error.stack,
+            name: error.name,
+            cause: error.cause
         });
 
         if (error.response) {
@@ -185,12 +187,21 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             max_tokens: 150,
             presence_penalty: 0.6,
             frequency_penalty: 0.3
+        }).catch((error: any) => {
+            console.error('Direct OpenAI call error:', {
+                message: error.message,
+                code: error.code,
+                type: error.type,
+                status: error.status
+            });
+            throw error;
         });
 
         console.log('OpenAI response received:', {
             id: response.id,
             model: response.model,
             usage: response.usage,
+            choices: response.choices.length,
             timestamp: new Date().toISOString()
         });
 
@@ -220,7 +231,8 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             type: error.type,
             code: error.code,
             param: error.param,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            cause: error.cause
         });
 
         if (error.response) {
