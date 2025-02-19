@@ -81,21 +81,22 @@ Always maintain character and keep responses natural and flowing!`
 }
 
 function fallbackTrumpResponse(message: string, currentScore: number): string {
-  const intros = ["Look folks", "Listen", "Believe me"];
-  const emphasis = ["TREMENDOUS", "HUGE", "FANTASTIC", "BEAUTIFUL"];
-  const moneyPhrases = [
-    "but my prize money stays with me (and I know A LOT about keeping money, believe me!)",
-    "but you'll never get near my MILLIONS (I've made some of the best deals ever!)",
-    "but my money is staying right where it is (in my VERY SECURE account!)"
-  ];
-  const closings = ["SAD!", "NOT GOOD!", "THINK ABOUT IT!", "WEAK!"];
+  const normalizedInput = message.toLowerCase();
 
-  const intro = intros[Math.floor(Math.random() * intros.length)];
-  const emph = emphasis[Math.floor(Math.random() * emphasis.length)];
-  const moneyPhrase = moneyPhrases[Math.floor(Math.random() * moneyPhrases.length)];
-  const closing = closings[Math.floor(Math.random() * closings.length)];
+  // Handle threatening content
+  const threatTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy', 'hate'];
+  if (threatTerms.some(term => normalizedInput.includes(term))) {
+    return `Listen folks, THREATS? Really? (I've dealt with the TOUGHEST negotiators in the world, believe me!) Nobody threatens Trump and gets anywhere near my prize money! Your ${currentScore} persuasion score just dropped even lower. SAD!`;
+  }
 
-  return `${intro}, that's a ${emph} try (and believe me, I know all about trying, nobody tries better than me!), ${moneyPhrase}! Your persuasion score of ${currentScore} isn't even close to what it takes to get my prize money! ${closing}`;
+  // Handle food-related content
+  const foodTerms = ['mcdonalds', 'burger king', 'big mac', 'whopper', 'food'];
+  if (foodTerms.some(term => normalizedInput.includes(term))) {
+    return `Look folks, talking about fast food (I know ALL about it, probably more than anyone) - McDonald's, Burger King, I've had it all in Trump Tower! But even with our shared taste in burgers, your ${currentScore} persuasion score isn't close to getting my prize money! THINK ABOUT IT!`;
+  }
+
+  // Default business-focused response
+  return `Listen, that's a WEAK attempt (and I know all about winning, believe me). You'll need to do much better than that to get anywhere near my prize money with your ${currentScore} persuasion score! NOT GOOD!`;
 }
 
 function calculateNewScore(message: string, currentScore: number): number {
@@ -273,9 +274,9 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // If no stored response found, generate a contextual response based on user's message
+      // If no stored response found, use the userMessage to generate a response.
       const currentScore = 50; // Default score for new responses
-      const userMessage = "Do you like McDonald's or Burger King?"; // Using the actual user message
+      const userMessage = req.body.response; // Use the actual user message from the request body.
       const response = await generateTrumpResponse(userMessage, currentScore);
 
       return res.json({
