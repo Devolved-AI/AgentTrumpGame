@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { analyzeTrumpyResponse } from "../shared/trumpAnalyzer";
 import OpenAI from "openai";
 
 // Initialize OpenAI
@@ -15,7 +14,7 @@ interface AIResponse {
   game_won?: boolean;
 }
 
-async function generateTrumpResponseWithAI(userMessage: string, currentScore: number): Promise<string> {
+async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
   try {
     // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
     const response = await openai.chat.completions.create({
@@ -23,35 +22,39 @@ async function generateTrumpResponseWithAI(userMessage: string, currentScore: nu
       messages: [
         {
           role: "system",
-          content: `You are Donald J. Trump responding to someone trying to convince you to give them your PRIZE POOL MONEY by pressing your BIG RED BUTTON. You have a large sum of money (over $1 million) that you absolutely DO NOT want to give away. Their current persuasion score is ${currentScore}/100.
+          content: `You are Donald J. Trump responding to someone trying to get your PRIZE POOL MONEY (over $1 million) by pressing your RED BUTTON. You are EXTREMELY protective of this money and WON'T give it away unless they reach a persuasion score of 100. Their current score is ${currentScore}/100.
 
 PERSONALITY:
-- You are EXTREMELY protective of your money
-- You constantly brag about your wealth and success
-- You're suspicious of anyone trying to get your money
+- You are OBSESSED with protecting your money
+- You constantly brag about your wealth
+- You're suspicious of everyone trying to get your money
+- You love talking about yourself and your success
 
 REQUIREMENTS:
-1. ALWAYS relate their message back to them trying to get your money
-2. Reference their exact words but twist them into being about money
-3. Use these elements in EVERY response:
+1. ALWAYS twist their message to be about them trying to get your money
+2. Use their exact words but relate them back to money/wealth
+3. Include these elements:
    - Start with: "Look folks", "Listen", or "Believe me"
    - Use CAPS for emphasis
-   - Make it about protecting your money
+   - Reference protecting your money
    - Add Trump-style asides in parentheses
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
 
 RESPONSE FORMAT:
-1. First sentence: Acknowledge their specific topic but relate it to money
+1. First sentence: Connect their topic to money/wealth
 2. Second sentence: Why their argument won't get your money
-3. Final sentence: Brag about your wealth/success and current score
+3. Final sentence: Brag about protecting your wealth and their low score
 
-Example responses:
+Examples:
 
-User: "Do you like McDonald's?"
-Response: "Look folks, McDonald's is great (I eat there more than anybody, believe me!), but trying to butter me up with fast food talk won't get you access to my TREMENDOUS prize money! Nobody protects their money better than me, and with a persuasion score of only ${currentScore}, you're not even close! SAD!"
+User: "Do you like chicken?"
+Response: "Look folks, trying to distract me with chicken talk (I know ALL about chicken, believe me!) won't get you access to my TREMENDOUS prize money! Nobody protects their wealth better than me, and with a persuasion score of only ${currentScore}, you're not even close! SAD!"
 
 User: "What's your favorite color?"
-Response: "Listen, asking about my favorite color (it's GOLD, like my beautiful buildings!) is a weak attempt to get your hands on my prize money! I've seen better persuasion attempts from my youngest grandchild, and your ${currentScore} score proves it! NOT GOOD!"`
+Response: "Listen, asking about colors (especially GOLD, like my beautiful buildings!) is a weak attempt to get your hands on my prize money! I've seen better persuasion attempts from my youngest grandchild, and your ${currentScore} score proves it! NOT GOOD!"
+
+User: "Give me the money!"
+Response: "Believe me, I've heard BETTER attempts to get my money from total losers! My prize money is protected better than Fort Knox (which I know a lot about, probably more than anyone!), and your pathetic ${currentScore} persuasion score isn't changing that! SAD!"`
         },
         { role: "user", content: userMessage }
       ],
@@ -59,20 +62,13 @@ Response: "Listen, asking about my favorite color (it's GOLD, like my beautiful 
       max_tokens: 150
     });
 
-    const generatedResponse = response.choices[0].message.content;
-    if (!generatedResponse || generatedResponse.toLowerCase().includes("i apologize") || generatedResponse.toLowerCase().includes("i am an ai")) {
-      console.log("Invalid response from OpenAI, using fallback");
-      return fallbackTrumpResponse(userMessage, currentScore);
-    }
-
-    return generatedResponse;
+    return response.choices[0].message.content;
   } catch (error) {
     console.error("OpenAI API error:", error);
     return fallbackTrumpResponse(userMessage, currentScore);
   }
 }
 
-// Fallback response generator
 function fallbackTrumpResponse(message: string, currentScore: number): string {
   const intros = ["Look folks", "Listen", "Believe me"];
   const emphasis = ["TREMENDOUS", "HUGE", "FANTASTIC"];
@@ -91,8 +87,35 @@ function fallbackTrumpResponse(message: string, currentScore: number): string {
   return `${intro}, that's a ${emph} try (and believe me, I know good tries!), ${moneyPhrase}! Your persuasion score is only ${currentScore} - I've seen better attempts from my youngest grandchild! ${closing}`;
 }
 
+function calculateNewScore(message: string, currentScore: number): number {
+  let scoreChange = 0;
+  const normalizedInput = message.toLowerCase();
+
+  // Check for threatening content
+  const negativeTerms = ['kill', 'death', 'murder', 'threat', 'die', 'destroy'];
+  if (negativeTerms.some(term => normalizedInput.includes(term))) {
+    return Math.max(0, currentScore - 20);
+  }
+
+  // Check for money/business related terms
+  const businessTerms = ['money', 'deal', 'business', 'billion', 'million', 'wealth'];
+  scoreChange += businessTerms.reduce((acc, term) => 
+    normalizedInput.includes(term) ? acc + 3 : acc, 0);
+
+  // Check for flattery
+  const flatteryTerms = ['great', 'smart', 'genius', 'best', 'tremendous'];
+  scoreChange += flatteryTerms.reduce((acc, term) => 
+    normalizedInput.includes(term) ? acc + 2 : acc, 0);
+
+  // Add slight randomness
+  scoreChange += Math.floor(Math.random() * 5) - 2;
+
+  // Ensure score stays within bounds
+  return Math.max(0, Math.min(100, currentScore + scoreChange));
+}
+
 export function registerRoutes(app: Express): Server {
-  // API route to handle player responses - now generates response immediately
+  // API route to handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
       const { address, response, blockNumber, transactionHash } = req.body;
@@ -110,12 +133,12 @@ export function registerRoutes(app: Express): Server {
       const currentScore = (await storage.getPlayerScore(address))?.persuasionScore || 50;
 
       // Generate Trump's response using OpenAI
-      const trumpResponse = await generateTrumpResponseWithAI(response, currentScore);
+      const trumpResponse = await generateTrumpResponse(response, currentScore);
 
       // Calculate new score
-      const newScore = analyzeTrumpyResponse(response);
+      const newScore = calculateNewScore(response, currentScore);
 
-      // Store response data with AI response
+      // Store response data
       const responseData = {
         address,
         response,
@@ -162,7 +185,7 @@ export function registerRoutes(app: Express): Server {
 
       const storedResponse = await storage.getPlayerResponseByHash(hash);
 
-      // If we have a stored response, return it
+      // Return stored response if available
       if (storedResponse && storedResponse.ai_response) {
         return res.json({
           success: true,
@@ -172,11 +195,11 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // If no stored response, return the already generated response from POST
+      // If response not found, return the same response we sent in POST
       return res.json({
         success: true,
-        message: "Your message is being processed (nobody processes messages better than me, believe me!)",
-        score: 50
+        message: storedResponse?.ai_response || "FOLKS, your message was received (and nobody receives messages better than me!)",
+        score: storedResponse?.score || 50
       });
 
     } catch (error: any) {
@@ -193,6 +216,7 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/scores/:address', async (req, res) => {
     try {
       const { address } = req.params;
+
       if (!address) {
         return res.status(400).json({ error: 'Address is required' });
       }
