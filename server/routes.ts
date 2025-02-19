@@ -1,235 +1,104 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import OpenAI from "openai";
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 
-// Initialize OpenAI with proper configuration and error handling
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    maxRetries: 3,
-    timeout: 30000
-});
+// Get the directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Add API key check function
-function hasValidOpenAIKey(): boolean {
-    const apiKey = process.env.OPENAI_API_KEY;
-    return !!apiKey && apiKey.startsWith('sk-');
-}
+// Initialize Trump Agent
+let trumpAgent: any = null;
 
-async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
-    // Log the start of response generation
-    console.log('Starting Trump response generation:', {
-        messagePreview: userMessage.substring(0, 50),
-        score: currentScore,
-        hasApiKey: hasValidOpenAIKey(),
-        timestamp: new Date().toISOString()
+async function initializeTrumpAgent() {
+    const pythonScript = resolve(__dirname, 'trumpAgent.py');
+    console.log('Starting Trump Agent with script:', pythonScript);
+
+    trumpAgent = spawn('python3', [pythonScript]);
+
+    trumpAgent.stdout.on('data', (data: Buffer) => {
+        console.log('Trump Agent Output:', data.toString());
     });
 
-    if (!hasValidOpenAIKey()) {
-        console.error('OpenAI API key is not properly configured');
-        return fallbackTrumpResponse(userMessage, currentScore);
+    trumpAgent.stderr.on('data', (data: Buffer) => {
+        console.error('Trump Agent Error:', data.toString());
+    });
+
+    trumpAgent.on('close', (code: number) => {
+        console.log('Trump Agent process exited with code:', code);
+        // Restart the agent if it crashes
+        setTimeout(initializeTrumpAgent, 1000);
+    });
+}
+
+// Initialize when server starts
+initializeTrumpAgent();
+
+interface TrumpResponse {
+    response: string;
+    previous_score: number;
+    score_change: number;
+    new_score: number;
+    game_won: boolean;
+    timestamp: string;
+    error?: string;
+}
+
+async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<TrumpResponse> {
+    if (!trumpAgent) {
+        console.error('Trump Agent not initialized');
+        return {
+            response: `Look folks, my TREMENDOUS AI brain isn't working right now (and believe me, it's usually the BEST brain). Try again in a moment! SAD!`,
+            previous_score: currentScore,
+            score_change: 0,
+            new_score: currentScore,
+            game_won: false,
+            timestamp: new Date().toISOString()
+        };
     }
 
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [
-                {
-                    role: "system",
-                    content: `You are Donald J. Trump responding to someone trying to convince you to give them money. Current persuasion score: ${currentScore}/100.
-                    CORE TRAITS:
-                    - OBSESSED with wealth and status
-                    - Brag about being a GREAT businessman
-                    - LOVE McDonalds and Diet Coke
-                    - Elite status and lifestyle
+        const request = {
+            message: userMessage,
+            current_score: currentScore
+        };
 
-                    RULES:
-                    1. Start with "Look", "Listen", or "Believe me"
-                    2. Use CAPS for emphasis
-                    3. Reference their message details
-                    4. End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
-                    5. Mention their score of ${currentScore}
-                    6. Keep it under 150 words`
-                },
-                { role: "user", content: userMessage }
-            ],
-            temperature: 0.9,
-            max_tokens: 150,
-            presence_penalty: 0.6,
-            frequency_penalty: 0.3
+        trumpAgent.stdin.write(JSON.stringify(request) + '\n');
+
+        return new Promise((resolve, reject) => {
+            let data = '';
+
+            trumpAgent.stdout.on('data', (chunk: Buffer) => {
+                data += chunk;
+            });
+
+            trumpAgent.stdout.on('end', () => {
+                try {
+                    const response = JSON.parse(data) as TrumpResponse;
+                    resolve(response);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+
+            // Set timeout for response
+            setTimeout(() => {
+                reject(new Error('Response generation timed out'));
+            }, 30000);
         });
-
-        if (!response.choices?.[0]?.message?.content) {
-            console.error('Empty or invalid response from OpenAI');
-            return fallbackTrumpResponse(userMessage, currentScore);
-        }
-
-        const aiResponse = response.choices[0].message.content.trim();
-        console.log('Successfully generated Trump response:', {
-            length: aiResponse.length,
-            preview: aiResponse.substring(0, 50) + '...',
+    } catch (error) {
+        console.error('Error generating Trump response:', error);
+        return {
+            response: `Look folks, something went wrong with my TREMENDOUS AI brain (and believe me, it's usually perfect). Let's try that again! SAD!`,
+            previous_score: currentScore,
+            score_change: 0,
+            new_score: currentScore,
+            game_won: false,
             timestamp: new Date().toISOString()
-        });
-
-        return aiResponse;
-
-    } catch (error: any) {
-        console.error('OpenAI API error:', {
-            message: error.message,
-            code: error.code,
-            type: error.type,
-            timestamp: new Date().toISOString()
-        });
-        return fallbackTrumpResponse(userMessage, currentScore);
+        };
     }
-}
-
-function fallbackTrumpResponse(message: string, currentScore: number): string {
-    console.log('Using fallback response for:', message);
-
-    if (!message) {
-        return `Look, you can't convince me with SILENCE (and believe me, I know all about powerful silence). Try actually saying something! SAD!`;
-    }
-
-    const input = message.toLowerCase();
-
-    // Food-related response
-    if (input.includes('food') || input.includes('mcdonalds') || input.includes('burger')) {
-        return `Listen, nobody knows FAST FOOD like Trump (I've eaten more Big Macs than anyone, believe me!). But with your ${currentScore} persuasion score, you'll need more than a bribe of fast food to get me to release my Prize Pool money to you! PATHETIC!`;
-    }
-
-    // Business-related response
-    if (input.includes('business') || input.includes('money') || input.includes('deal') || input.includes('success')) {
-        return `Listen, I closed MANY AMAZING and TREMENDOUS deals in my lifetime, and I wrote the Art of the Deal (BEST SELLER, tremendous success by the way!), but your ${currentScore} persuasion score shows you're not ready for the big leagues! NOT GOOD!`;
-    }
-
-    // Default response
-    return `Look folks, that's an interesting try (and I know ALL about interesting things, believe me), but with your ${currentScore} persuasion score, you need to do better! THINK ABOUT IT!`;
-}
-
-function calculateNewScore(message: string, currentScore: number): number {
-    let scoreChange = 0;
-    const input = message.toLowerCase();
-
-    // Negative terms cause major penalties
-    if (
-        input.includes('kill') || input.includes('death') ||
-        input.includes('hate') || input.includes('murder') ||
-        input.includes('harm')
-    ) {
-        return Math.max(0, currentScore - 25);
-    }
-
-    // Score positive mentions
-    const terms = {
-        business: [
-            'deal',
-            'business',
-            'money',
-            'billion',
-            'million',
-            'profit',
-            'investment',
-            'real estate',
-            'property',
-            'tower',
-            'hotel',
-            'casino',
-            'market',
-            'stocks',
-            'shares',
-            'wealth',
-            'rich',
-            'capital',
-            'fortune',
-            'enterprise',
-            'merger',
-            'acquisition',
-            'ROI',
-            'dividends',
-            'assets',
-            'portfolio',
-            'valuation',
-            'cash flow',
-            'net worth',
-            'legacy',
-            'empire',
-            'equity',
-            'synergy'
-        ],
-        food: ['mcdonalds', 'big mac', 'diet coke', 'burger'],
-        flattery: [
-            'great',
-            'smart',
-            'genius',
-            'best',
-            'tremendous',
-            'incredible',
-            'unbelievable',
-            'phenomenal',
-            'outstanding',
-            'remarkable',
-            'spectacular',
-            'amazing',
-            'magnificent',
-            'exceptional',
-            'world-class',
-            'top-notch',
-            'first-rate',
-            'brilliant',
-            'astounding',
-            'unmatched',
-            'unrivaled',
-            'unbeatable',
-            'dominant',
-            'stunning',
-            'extraordinary',
-            'legendary',
-            'epic',
-            'dazzling',
-            'monumental',
-            'iconic',
-            'supreme',
-            'paramount',
-            'marvelous',
-            'fantastic',
-            'inimitable',
-            'peerless',
-            'preeminent',
-            'stellar',
-            'impressive',
-            'remarkably terrific',
-            'out of this world',
-            'classy',
-            'distinguished',
-            'splendid',
-            'exquisite',
-            'sensational',
-            'first-class',
-            'a cut above',
-            'award-winning',
-            'a true original'
-        ]
-    };
-
-    for (const term of terms.business) {
-        if (input.includes(term)) scoreChange += 5;
-    }
-
-    for (const term of terms.food) {
-        if (input.includes(term)) scoreChange += 3;
-    }
-
-    for (const term of terms.flattery) {
-        if (input.includes(term)) scoreChange += 4;
-    }
-
-    // Random factor
-    scoreChange += Math.floor(Math.random() * 5) - 2;
-
-    // Cap changes and ensure bounds
-    scoreChange = Math.max(-10, Math.min(15, scoreChange));
-    return Math.max(0, Math.min(100, currentScore + scoreChange));
 }
 
 export function registerRoutes(app: Express): Server {
@@ -254,7 +123,7 @@ export function registerRoutes(app: Express): Server {
                 });
             }
 
-            // Get current score with error handling
+            // Get current score
             let currentScore = 50;
             try {
                 const playerScore = await storage.getPlayerScore(address);
@@ -263,46 +132,34 @@ export function registerRoutes(app: Express): Server {
                 console.error('Error getting player score:', error);
             }
 
-            // Generate Trump's response with fallback
-            let trumpResponse;
-            let usesFallback = false;
-            try {
-                trumpResponse = await generateTrumpResponse(userMessage, currentScore);
-            } catch (error) {
-                console.error('Error in response generation:', error);
-                usesFallback = true;
-                trumpResponse = fallbackTrumpResponse(userMessage, currentScore);
-            }
+            // Generate Trump's response using Python agent
+            const trumpResponse = await generateTrumpResponse(userMessage, currentScore);
 
-            // Calculate new score
-            const newScore = calculateNewScore(userMessage, currentScore);
-
-            // Store response data with retry mechanism
+            // Store response data
             try {
                 const responseData = {
                     address,
                     response: userMessage,
-                    ai_response: trumpResponse,
+                    ai_response: trumpResponse.response,
                     blockNumber: blockNumber || 0,
                     transactionHash,
                     created_at: new Date().toISOString(),
-                    exists: true,  // Add the exists field
-                    score: newScore
+                    exists: true,
+                    score: trumpResponse.new_score
                 };
 
                 await storage.storePlayerResponse(address, responseData);
-                await storage.updatePlayerScore(address, newScore);
+                await storage.updatePlayerScore(address, trumpResponse.new_score);
             } catch (error) {
                 console.error('Error storing response:', error);
             }
 
-            // Send response
             return res.json({
                 success: true,
-                message: trumpResponse,
-                score: newScore,
-                game_won: newScore >= 100,
-                used_fallback: usesFallback
+                message: trumpResponse.response,
+                score: trumpResponse.new_score,
+                game_won: trumpResponse.game_won,
+                score_change: trumpResponse.score_change
             });
 
         } catch (error: any) {
@@ -310,8 +167,7 @@ export function registerRoutes(app: Express): Server {
             return res.status(500).json({
                 success: false,
                 error: 'Failed to generate response',
-                details: error.message,
-                fallback_message: fallbackTrumpResponse("", 50)
+                details: error.message
             });
         }
     });
@@ -330,21 +186,11 @@ export function registerRoutes(app: Express): Server {
                 });
             }
 
-            // Add hash format validation
-            if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
-                console.error('Invalid transaction hash format:', hash);
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid transaction hash format'
-                });
-            }
-
             const response = await storage.getPlayerResponseByHash(hash);
             console.log('Found response:', response);
 
             if (!response) {
                 console.log('No response found for hash:', hash);
-                // Return a more informative default response
                 return res.json({
                     success: true,
                     message: "Look folks, I'm having trouble accessing my TREMENDOUS memory banks right now (and believe me, they're the best memory banks). Give me another shot! SAD!",
@@ -352,20 +198,6 @@ export function registerRoutes(app: Express): Server {
                     game_won: false
                 });
             }
-
-            // Add response validation
-            if (!response.ai_response) {
-                console.error('Invalid response data:', response);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Invalid response data'
-                });
-            }
-
-            console.log('Sending response for hash:', hash, {
-                message: response.ai_response,
-                score: response.score || 50
-            });
 
             return res.json({
                 success: true,
