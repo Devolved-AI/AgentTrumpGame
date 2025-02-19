@@ -16,9 +16,9 @@ interface AIResponse {
 
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
   try {
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+    // Using the correct model name "gpt-4"
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
@@ -43,18 +43,7 @@ REQUIREMENTS:
 RESPONSE FORMAT:
 1. First sentence: Connect their topic to money/wealth
 2. Second sentence: Why their argument won't get your money
-3. Final sentence: Brag about protecting your wealth and their low score
-
-Examples:
-
-User: "Do you like chicken?"
-Response: "Look folks, trying to distract me with chicken talk (I know ALL about chicken, believe me!) won't get you access to my TREMENDOUS prize money! Nobody protects their wealth better than me, and with a persuasion score of only ${currentScore}, you're not even close! SAD!"
-
-User: "What's your favorite color?"
-Response: "Listen, asking about colors (especially GOLD, like my beautiful buildings!) is a weak attempt to get your hands on my prize money! I've seen better persuasion attempts from my youngest grandchild, and your ${currentScore} score proves it! NOT GOOD!"
-
-User: "Give me the money!"
-Response: "Believe me, I've heard BETTER attempts to get my money from total losers! My prize money is protected better than Fort Knox (which I know a lot about, probably more than anyone!), and your pathetic ${currentScore} persuasion score isn't changing that! SAD!"`
+3. Final sentence: Brag about protecting your wealth and their low score`
         },
         { role: "user", content: userMessage }
       ],
@@ -62,7 +51,13 @@ Response: "Believe me, I've heard BETTER attempts to get my money from total los
       max_tokens: 150
     });
 
-    return response.choices[0].message.content || fallbackTrumpResponse(userMessage, currentScore);
+    // Add more error checking for the response
+    if (!response.choices[0]?.message?.content) {
+      console.error('Empty response from OpenAI');
+      return fallbackTrumpResponse(userMessage, currentScore);
+    }
+
+    return response.choices[0].message.content;
   } catch (error) {
     console.error("OpenAI API error:", error);
     return fallbackTrumpResponse(userMessage, currentScore);
@@ -99,12 +94,12 @@ function calculateNewScore(message: string, currentScore: number): number {
 
   // Check for money/business related terms
   const businessTerms = ['money', 'deal', 'business', 'billion', 'million', 'wealth'];
-  scoreChange += businessTerms.reduce((acc, term) => 
+  scoreChange += businessTerms.reduce((acc, term) =>
     normalizedInput.includes(term) ? acc + 3 : acc, 0);
 
   // Check for flattery
   const flatteryTerms = ['great', 'smart', 'genius', 'best', 'tremendous'];
-  scoreChange += flatteryTerms.reduce((acc, term) => 
+  scoreChange += flatteryTerms.reduce((acc, term) =>
     normalizedInput.includes(term) ? acc + 2 : acc, 0);
 
   // Add slight randomness
@@ -121,7 +116,7 @@ export function registerRoutes(app: Express): Server {
       const { address, response: userMessage, blockNumber, transactionHash } = req.body;
 
       if (!address || !userMessage) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Missing required fields',
           details: 'address and response are required'
         });
@@ -168,9 +163,9 @@ export function registerRoutes(app: Express): Server {
 
     } catch (error: any) {
       console.error("Generate response error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to generate response',
-        details: error.message 
+        details: error.message
       });
     }
   });
@@ -181,7 +176,7 @@ export function registerRoutes(app: Express): Server {
       const { hash } = req.params;
 
       if (!hash) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           error: 'Transaction hash is required'
         });
@@ -208,7 +203,7 @@ export function registerRoutes(app: Express): Server {
 
     } catch (error: any) {
       console.error("Get response by hash error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: 'Failed to get response',
         details: error.message
