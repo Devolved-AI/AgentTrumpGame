@@ -173,23 +173,29 @@ export function registerRoutes(app: Express): Server {
   // API route to handle player responses
   app.post('/api/responses', async (req, res) => {
     try {
+      console.log('Received POST request to /api/responses');
+      console.log('Request body:', req.body);
+
       const { address, response: userMessage, blockNumber, transactionHash } = req.body;
 
       if (!address || !userMessage) {
+        console.error('Missing required fields:', { address, userMessage });
         return res.status(400).json({
           error: 'Missing required fields',
           details: 'address and response are required'
         });
       }
 
-      console.log('Processing response from address:', address);
+      console.log('Processing response for address:', address);
       console.log('User message:', userMessage);
 
       // Get current score
       const playerScore = await storage.getPlayerScore(address);
       const currentScore = playerScore?.persuasionScore || 50;
+      console.log('Current score:', currentScore);
 
       // Generate Trump's response using OpenAI
+      console.log('Generating Trump response...');
       const trumpResponse = await generateTrumpResponse(userMessage, currentScore);
       console.log('Generated Trump response:', trumpResponse);
 
