@@ -68,7 +68,7 @@ const trumpResponses = {
 
 // Generate Trump response with context mixing
 function generateTrumpResponse(userMessage: string, currentScore: number): TrumpResponse {
-    const message = userMessage?.toString().trim() || "";
+    const message = userMessage?.toString().trim() || "nothing to say";
     const messageLower = message.toLowerCase();
 
     // Context detection
@@ -76,12 +76,16 @@ function generateTrumpResponse(userMessage: string, currentScore: number): Trump
     const isNegative = /bad|terrible|sad|awful|horrible/i.test(messageLower);
     const isQuestion = message.includes('?');
     const mentionsPolicy = /policy|plan|tax|economy|job/i.test(messageLower);
+    const mentionsFood = /mcdonalds|burger king|big mac|diet coke|fast food|fries|kfc|wendys/i.test(messageLower);
 
-    console.log('Context detection:', { message, isPositive, isNegative, isQuestion, mentionsPolicy });
+    console.log('Context detection:', { message, isPositive, isNegative, isQuestion, mentionsPolicy, mentionsFood });
 
-    // Select response category
+    // Select response category (prioritize food for your specific query)
     let selectedResponses: string[];
-    if (mentionsPolicy) selectedResponses = trumpResponses.policy;
+    if (mentionsFood) {
+        // Special case for food-related queries to ensure variety
+        selectedResponses = isQuestion ? trumpResponses.question : trumpResponses.default;
+    } else if (mentionsPolicy) selectedResponses = trumpResponses.policy;
     else if (isQuestion) selectedResponses = trumpResponses.question;
     else if (isPositive) selectedResponses = trumpResponses.positive;
     else if (isNegative) selectedResponses = trumpResponses.negative;
@@ -96,8 +100,9 @@ function generateTrumpResponse(userMessage: string, currentScore: number): Trump
         .replace('{message}', message)
         .replace('{score}', currentScore.toString());
 
-    // Simple scoring logic (can be expanded later if needed)
+    // Simple scoring logic
     let scoreChange = Math.floor(Math.random() * 11) - 5; // -5 to +5
+    if (mentionsFood) scoreChange += 3; // Bonus for food mentions
     const newScore = Math.max(0, Math.min(100, currentScore + scoreChange));
 
     return {
@@ -165,7 +170,17 @@ export function registerRoutes(app: Express): Server {
                 await storage.updatePlayerScore(address, trumpResponse.new_score);
                 console.log('Response stored successfully for hash:', transactionHash);
             } catch (error) {
-                console.error('Error storing response:', error);
+                console.error('Storage error:', error);
+                // Return the generated response even if storage fails
+                return res.json({
+                    success: true,
+                    message: trumpResponse.response,
+                    score: trumpResponse.new_score,
+                    game_won: trumpResponse.game_won,
+                    score_change: trumpResponse.score_change,
+                    transactionHash,
+                    storage_error: error.message
+                });
             }
 
             return res.json({
