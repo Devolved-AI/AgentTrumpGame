@@ -29,6 +29,8 @@ CORE PERSONALITY:
 - You're extremely suspicious of anyone trying to get your money
 - You love talking about your success and wealth
 - You often mention your properties, especially Trump Tower and Mar-a-Lago
+- You LOVE fast food, especially McDonald's Big Macs and Diet Coke
+- You're known for eating well-done steak with ketchup
 
 RESPONSE REQUIREMENTS:
 1. ALWAYS directly reference their specific message content first
@@ -47,11 +49,11 @@ RESPONSE STRUCTURE:
 
 Examples:
 
-User: "I love fried chicken!"
-Response: "Listen, talking about fried chicken (I know ALL about fried chicken, probably more than anyone) reminds me of my AMAZING Trump Tower Grill! But even with the BEST chicken in the world, your ${currentScore} persuasion score won't get you near my prize money! SAD!"
+User: "I love McDonald's!"
+Response: "Look folks, McDonald's is TREMENDOUS (I eat Big Macs all the time in my PRIVATE JET), and I probably know more about fast food than anyone in history! But even with our shared taste in burgers, your ${currentScore} persuasion score won't get you near my prize money! SAD!"
 
 User: "I'll invest your money in real estate"
-Response: "Look folks, trying to talk REAL ESTATE with ME (I own the most BEAUTIFUL buildings ever built) is like teaching a fish to swim! Nobody knows property development better than Trump, and your weak ${currentScore} persuasion score proves you're not in my league! NOT GOOD!"
+Response: "Listen, trying to talk REAL ESTATE with ME (I own the most BEAUTIFUL buildings ever built) is like teaching a fish to swim! Nobody knows property development better than Trump, and your weak ${currentScore} persuasion score proves you're not in my league! NOT GOOD!"
 
 Always maintain character and keep responses natural and flowing!`
           },
@@ -107,6 +109,16 @@ function calculateNewScore(message: string, currentScore: number): number {
     return Math.max(0, currentScore - 20);
   }
 
+  // Food and restaurant terms (medium positive impact)
+  const foodTerms = [
+    'mcdonalds', 'burger king', 'big mac', 'whopper', 'fast food',
+    'diet coke', 'steak', 'ketchup', 'well done', 'taco bowl',
+    'kfc', 'pizza', 'food', 'restaurant', 'dining'
+  ];
+  const foodPoints = foodTerms.reduce((acc, term) =>
+    normalizedInput.includes(term) ? acc + 3 : acc, 0);
+  scoreChange += foodPoints;
+
   // Business and wealth terms (high positive impact)
   const businessTerms = [
     'deal', 'business', 'money', 'profit', 'investment',
@@ -140,6 +152,12 @@ function calculateNewScore(message: string, currentScore: number): number {
   if (normalizedInput.includes('trump organization')) scoreChange += 5;
   if (normalizedInput.includes('fake news')) scoreChange -= 3;
 
+  // Food preference bonuses
+  if (normalizedInput.includes('mcdonalds')) scoreChange += 4;
+  if (normalizedInput.includes('big mac')) scoreChange += 5;
+  if (normalizedInput.includes('diet coke')) scoreChange += 4;
+  if (normalizedInput.includes('well done steak')) scoreChange += 5;
+
   // Add small random factor (-2 to +2)
   scoreChange += Math.floor(Math.random() * 5) - 2;
 
@@ -155,6 +173,7 @@ function calculateNewScore(message: string, currentScore: number): number {
     change: scoreChange,
     final: finalScore,
     factors: {
+      foodTerms: foodTerms.filter(term => normalizedInput.includes(term)),
       businessTerms: businessTerms.filter(term => normalizedInput.includes(term)),
       flatteryTerms: flatteryTerms.filter(term => normalizedInput.includes(term)),
       qualityBonuses: {
