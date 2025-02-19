@@ -3,44 +3,67 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 
-// Initialize OpenAI with proper configuration
+// Initialize OpenAI with proper configuration and debugging
 const openai = new OpenAI({ 
     apiKey: process.env.OPENAI_API_KEY,
     maxRetries: 3,
     timeout: 30000
 });
 
-// Add a test function to verify OpenAI connection
+// Enhanced connection test function
 async function testOpenAIConnection() {
     try {
+        console.log('Testing OpenAI connection with API key:', 
+            process.env.OPENAI_API_KEY ? 'Key exists' : 'No key found');
+
         const response = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [{ role: "user", content: "Test connection" }],
             max_tokens: 5
         });
-        console.log('OpenAI connection test successful:', response);
+
+        console.log('OpenAI connection test successful:', {
+            id: response.id,
+            model: response.model,
+            usage: response.usage
+        });
         return true;
     } catch (error: any) {
         console.error('OpenAI connection test failed:', {
             error: error.message,
             status: error.status,
-            response: error.response?.data,
+            type: error.type,
+            code: error.code,
+            param: error.param,
             stack: error.stack
         });
+
+        if (error.response) {
+            console.error('API Response details:', {
+                status: error.response.status,
+                headers: error.response.headers,
+                data: error.response.data
+            });
+        }
+
         return false;
     }
 }
 
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
     try {
+        // Test connection before proceeding
         console.log('Testing OpenAI connection before generating response...');
         const isConnected = await testOpenAIConnection();
         if (!isConnected) {
-            console.error('OpenAI connection test failed, using fallback response');
-            return fallbackTrumpResponse(userMessage, currentScore);
+            throw new Error('OpenAI connection test failed');
         }
 
-        console.log('Generating Trump response for:', userMessage, 'Current score:', currentScore);
+        console.log('Generating Trump response for:', {
+            message: userMessage,
+            currentScore,
+            timestamp: new Date().toISOString()
+        });
 
         const systemPrompt = `You are Donald J. Trump responding to someone trying to convince you to give them the Prize Pool money. Their current persuasion score is ${currentScore}/100.
         CORE PERSONALITY TRAITS:
@@ -164,31 +187,53 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             frequency_penalty: 0.3
         });
 
-        console.log('OpenAI raw response:', JSON.stringify(response, null, 2));
+        console.log('OpenAI response received:', {
+            id: response.id,
+            model: response.model,
+            usage: response.usage,
+            timestamp: new Date().toISOString()
+        });
+
         const aiResponse = response.choices[0]?.message?.content?.trim();
 
         if (!aiResponse) {
-            console.error('Empty response from OpenAI', response);
-            return fallbackTrumpResponse(userMessage, currentScore);
+            console.error('Empty response from OpenAI:', {
+                response,
+                timestamp: new Date().toISOString()
+            });
+            throw new Error('Empty response from OpenAI');
         }
 
-        console.log('Generated response:', aiResponse);
+        console.log('Generated response:', {
+            response: aiResponse,
+            length: aiResponse.length,
+            timestamp: new Date().toISOString()
+        });
+
         return aiResponse;
 
     } catch (error: any) {
-        console.error('OpenAI error:', {
+        console.error('OpenAI error details:', {
             message: error.message,
+            name: error.name,
             status: error.status,
-            data: error.response?.data,
-            stack: error.stack
+            type: error.type,
+            code: error.code,
+            param: error.param,
+            timestamp: new Date().toISOString()
         });
+
         if (error.response) {
-            console.error('OpenAI API error details:', {
+            console.error('API error response:', {
                 status: error.response.status,
-                data: error.response.data
+                statusText: error.response.statusText,
+                data: error.response.data,
+                headers: error.response.headers
             });
         }
-        return fallbackTrumpResponse(userMessage, currentScore);
+
+        // Re-throw the error to trigger fallback
+        throw error;
     }
 }
 
@@ -346,7 +391,8 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('Received response request:', {
         ...req.body,
-        address: req.body.address ? `${req.body.address.substring(0, 6)}...${req.body.address.substring(38)}` : undefined
+        address: req.body.address ? `${req.body.address.substring(0, 6)}...${req.body.address.substring(38)}` : undefined,
+        timestamp: new Date().toISOString()
       });
 
       const { address, response: userMessage, blockNumber, transactionHash } = req.body;
@@ -374,7 +420,8 @@ export function registerRoutes(app: Express): Server {
       if (existingResponse) {
         console.log('Found existing response:', {
           hash: transactionHash,
-          response: existingResponse
+          response: existingResponse,
+          timestamp: new Date().toISOString()
         });
         return res.json({
           success: true,
@@ -391,19 +438,36 @@ export function registerRoutes(app: Express): Server {
 
       // Generate Trump's response with enhanced error handling
       let trumpResponse;
+      let usesFallback = false;
       try {
         trumpResponse = await generateTrumpResponse(userMessage, currentScore);
-        console.log('Generated Trump response:', trumpResponse);
+        console.log('Generated Trump response:', {
+          response: trumpResponse,
+          length: trumpResponse.length,
+          timestamp: new Date().toISOString()
+        });
       } catch (error: any) {
-        console.error('Error generating Trump response:', error);
-        // Use fallback response if OpenAI fails
+        console.error('Error generating Trump response:', {
+          error: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        });
+        usesFallback = true;
         trumpResponse = fallbackTrumpResponse(userMessage, currentScore);
-        console.log('Using fallback response:', trumpResponse);
+        console.log('Using fallback response:', {
+          response: trumpResponse,
+          reason: error.message
+        });
       }
 
       // Calculate new score
       const newScore = calculateNewScore(userMessage, currentScore);
-      console.log('New score calculated:', newScore);
+      console.log('Score calculation:', {
+        previousScore: currentScore,
+        newScore,
+        change: newScore - currentScore,
+        timestamp: new Date().toISOString()
+      });
 
       // Store response with complete data
       const responseData = {
@@ -419,7 +483,8 @@ export function registerRoutes(app: Express): Server {
 
       console.log('Storing response data:', {
         ...responseData,
-        address: `${responseData.address.substring(0, 6)}...${responseData.address.substring(38)}`
+        address: `${responseData.address.substring(0, 6)}...${responseData.address.substring(38)}`,
+        timestamp: new Date().toISOString()
       });
 
       // Save data with error handling
@@ -434,19 +499,29 @@ export function registerRoutes(app: Express): Server {
         throw new Error(`Failed to store response: ${error.message}`);
       }
 
-      // Send response
+      // Send response with fallback indication
       const response = {
         success: true,
         message: trumpResponse,
         score: newScore,
-        game_won: newScore >= 100
+        game_won: newScore >= 100,
+        used_fallback: usesFallback
       };
 
-      console.log('Sending response:', response);
+      console.log('Sending response:', {
+        ...response,
+        messageLength: trumpResponse.length,
+        timestamp: new Date().toISOString()
+      });
+
       return res.json(response);
 
     } catch (error: any) {
-      console.error('Response generation error:', error);
+      console.error('Response generation error:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
       res.status(500).json({
         error: 'Failed to generate response',
         details: error.message
