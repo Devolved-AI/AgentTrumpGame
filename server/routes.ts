@@ -3,27 +3,34 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 
-// Initialize OpenAI with proper configuration
+// Initialize OpenAI with proper configuration and error handling
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     maxRetries: 3,
     timeout: 30000
 });
 
+// Add API key check function
+function hasValidOpenAIKey(): boolean {
+    const apiKey = process.env.OPENAI_API_KEY;
+    return !!apiKey && apiKey.startsWith('sk-');
+}
+
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
-    if (!process.env.OPENAI_API_KEY) {
-        console.error('OpenAI API key is not configured');
+    // Log the start of response generation
+    console.log('Starting Trump response generation:', {
+        messagePreview: userMessage.substring(0, 50),
+        score: currentScore,
+        hasApiKey: hasValidOpenAIKey(),
+        timestamp: new Date().toISOString()
+    });
+
+    if (!hasValidOpenAIKey()) {
+        console.error('OpenAI API key is not properly configured');
         return fallbackTrumpResponse(userMessage, currentScore);
     }
 
     try {
-        console.log('Generating Trump response for:', {
-            message: userMessage,
-            currentScore,
-            timestamp: new Date().toISOString(),
-            apiKeyExists: !!process.env.OPENAI_API_KEY
-        });
-
         const response = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
             messages: [
@@ -52,22 +59,13 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             frequency_penalty: 0.3
         });
 
-        console.log('OpenAI API Response:', {
-            id: response.id,
-            model: response.model,
-            usage: response.usage,
-            hasChoices: !!response.choices?.length,
-            timestamp: new Date().toISOString()
-        });
-
         if (!response.choices?.[0]?.message?.content) {
             console.error('Empty or invalid response from OpenAI');
             return fallbackTrumpResponse(userMessage, currentScore);
         }
 
         const aiResponse = response.choices[0].message.content.trim();
-
-        console.log('Generated Trump response:', {
+        console.log('Successfully generated Trump response:', {
             length: aiResponse.length,
             preview: aiResponse.substring(0, 50) + '...',
             timestamp: new Date().toISOString()
@@ -80,17 +78,8 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             message: error.message,
             code: error.code,
             type: error.type,
-            status: error.status,
             timestamp: new Date().toISOString()
         });
-
-        if (error.response) {
-            console.error('API error details:', {
-                status: error.response.status,
-                data: error.response.data
-            });
-        }
-
         return fallbackTrumpResponse(userMessage, currentScore);
     }
 }
@@ -259,52 +248,28 @@ export function registerRoutes(app: Express): Server {
             if (!address || !userMessage || !transactionHash) {
                 console.error('Missing required fields:', { address, userMessage, transactionHash });
                 return res.status(400).json({
+                    success: false,
                     error: 'Missing required fields',
                     details: 'address, response, and transactionHash are required'
                 });
             }
 
-            // Validate transaction hash format
-            if (!/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
-                console.error('Invalid transaction hash format:', transactionHash);
-                return res.status(400).json({
-                    error: 'Invalid transaction hash format',
-                    details: 'Transaction hash must be a valid ethereum transaction hash'
-                });
+            // Get current score with error handling
+            let currentScore = 50;
+            try {
+                const playerScore = await storage.getPlayerScore(address);
+                currentScore = playerScore?.persuasionScore || 50;
+            } catch (error) {
+                console.error('Error getting player score:', error);
             }
 
-            // Check for existing response with detailed logging
-            const existingResponse = await storage.getPlayerResponseByHash(transactionHash);
-            if (existingResponse) {
-                console.log('Found existing response:', {
-                    hash: transactionHash,
-                    response: existingResponse,
-                    timestamp: new Date().toISOString()
-                });
-                return res.json({
-                    success: true,
-                    message: existingResponse.ai_response,
-                    score: existingResponse.score || 50,
-                    game_won: (existingResponse.score || 50) >= 100
-                });
-            }
-
-            // Get current score
-            const playerScore = await storage.getPlayerScore(address);
-            const currentScore = playerScore?.persuasionScore || 50;
-
-            // Generate Trump's response
+            // Generate Trump's response with fallback
             let trumpResponse;
             let usesFallback = false;
-
             try {
                 trumpResponse = await generateTrumpResponse(userMessage, currentScore);
-            } catch (error: any) {
-                console.error('Error generating Trump response:', {
-                    error: error.message,
-                    stack: error.stack,
-                    timestamp: new Date().toISOString()
-                });
+            } catch (error) {
+                console.error('Error in response generation:', error);
                 usesFallback = true;
                 trumpResponse = fallbackTrumpResponse(userMessage, currentScore);
             }
@@ -312,51 +277,40 @@ export function registerRoutes(app: Express): Server {
             // Calculate new score
             const newScore = calculateNewScore(userMessage, currentScore);
 
-            // Store response data
-            const responseData = {
-                address,
-                response: userMessage,
-                ai_response: trumpResponse,
-                blockNumber: blockNumber || 0,
-                transactionHash,
-                created_at: new Date().toISOString(),
-                exists: true,
-                score: newScore
-            };
+            // Store response data with retry mechanism
+            try {
+                const responseData = {
+                    address,
+                    response: userMessage,
+                    ai_response: trumpResponse,
+                    blockNumber: blockNumber || 0,
+                    transactionHash,
+                    created_at: new Date().toISOString(),
+                    score: newScore
+                };
 
-            // Store the response and update score
-            await Promise.all([
-                storage.storePlayerResponse(address, responseData),
-                storage.updatePlayerScore(address, newScore)
-            ]);
+                await storage.storePlayerResponse(address, responseData);
+                await storage.updatePlayerScore(address, newScore);
+            } catch (error) {
+                console.error('Error storing response:', error);
+            }
 
             // Send response
-            const response = {
+            return res.json({
                 success: true,
                 message: trumpResponse,
                 score: newScore,
                 game_won: newScore >= 100,
                 used_fallback: usesFallback
-            };
-
-            console.log('Sending response:', {
-                ...response,
-                messageLength: trumpResponse.length,
-                timestamp: new Date().toISOString()
             });
-
-            return res.json(response);
 
         } catch (error: any) {
-            console.error('Response generation error:', {
-                error: error.message,
-                stack: error.stack,
-                timestamp: new Date().toISOString()
-            });
-
+            console.error('Critical error in response generation:', error);
             return res.status(500).json({
+                success: false,
                 error: 'Failed to generate response',
-                details: error.message
+                details: error.message,
+                fallback_message: fallbackTrumpResponse("", 50)
             });
         }
     });
