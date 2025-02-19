@@ -24,11 +24,10 @@ class TrumpAgent:
         if not self.api_key:
             raise ValueError("OpenAI API key is required! Set it as OPENAI_API_KEY environment variable.")
 
-        logging.info("Initializing Trump Agent with API key")
+        logging.info("Initializing Trump Agent")
         openai.api_key = self.api_key
         logging.info("Trump Agent initialized successfully")
 
-        # Initialize scoring terms
         self.scoring_terms = {
             'business': [
                 'deal', 'business', 'money', 'billion', 'million',
@@ -49,7 +48,7 @@ class TrumpAgent:
 
     def _calculate_score(self, message: str, current_score: int) -> Tuple[int, int]:
         """Calculate score change based on message content."""
-        logging.info(f"Calculating score for message: {message[:50]}...")
+        logging.info(f"Calculating score for message: {message}")
         score_change = 0
         message = message.lower()
 
@@ -60,20 +59,18 @@ class TrumpAgent:
             return -25, max(0, current_score - 25)
 
         # Score positive mentions
-        for term in self.scoring_terms['business']:
-            if term in message:
-                score_change += 5
-                logging.info(f"Business term '{term}' found: +5")
-
-        for term in self.scoring_terms['food']:
-            if term in message:
-                score_change += 3
-                logging.info(f"Food term '{term}' found: +3")
-
-        for term in self.scoring_terms['flattery']:
-            if term in message:
-                score_change += 4
-                logging.info(f"Flattery term '{term}' found: +4")
+        for category, terms in self.scoring_terms.items():
+            for term in terms:
+                if term in message:
+                    if category == 'business':
+                        score_change += 5
+                        logging.info(f"Business term '{term}' found: +5")
+                    elif category == 'food':
+                        score_change += 3
+                        logging.info(f"Food term '{term}' found: +3")
+                    elif category == 'flattery':
+                        score_change += 4
+                        logging.info(f"Flattery term '{term}' found: +4")
 
         # Add random factor (-2 to +2)
         random_factor = random.randint(-2, 2)
@@ -133,7 +130,7 @@ RESPONSE REQUIREMENTS:
             )
 
             ai_response = response.choices[0].message.content.strip()
-            logging.info(f"Received response from OpenAI: {ai_response[:50]}...")
+            logging.info(f"Received response from OpenAI: {ai_response}")
 
             result = {
                 'response': ai_response,
@@ -144,7 +141,7 @@ RESPONSE REQUIREMENTS:
                 'timestamp': datetime.now().isoformat()
             }
 
-            logging.info("Sending response back to server")
+            logging.info("Returning response")
             return result
 
         except Exception as e:
@@ -183,13 +180,13 @@ def main():
                 current_score = int(data.get('current_score', 50))
 
                 # Generate response
-                logging.info(f"Generating response for message: {message[:50]}...")
+                logging.info(f"Generating response for message: {message}")
                 result = agent.generate_response(message, current_score)
 
                 # Send response
                 response_json = json.dumps(result)
-                logging.info(f"Sending response: {response_json[:100]}...")
-                print(response_json)
+                logging.info(f"Sending response: {response_json}")
+                print(response_json, flush=True)  # Ensure the response is sent immediately
                 sys.stdout.flush()
 
             except Exception as e:
@@ -203,7 +200,7 @@ def main():
                     'game_won': False,
                     'timestamp': datetime.now().isoformat()
                 }
-                print(json.dumps(error_response))
+                print(json.dumps(error_response), flush=True)
                 sys.stdout.flush()
 
     except Exception as e:
