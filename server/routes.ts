@@ -4,18 +4,44 @@ import { storage } from "./storage";
 import OpenAI from "openai";
 
 // Initialize OpenAI with proper configuration
-// Update: GPT-4 is the current model as of Feb 2025
 const openai = new OpenAI({ 
     apiKey: process.env.OPENAI_API_KEY,
     maxRetries: 3,
     timeout: 30000
 });
 
+// Add a test function to verify OpenAI connection
+async function testOpenAIConnection() {
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "user", content: "Test connection" }],
+            max_tokens: 5
+        });
+        console.log('OpenAI connection test successful:', response);
+        return true;
+    } catch (error: any) {
+        console.error('OpenAI connection test failed:', {
+            error: error.message,
+            status: error.status,
+            response: error.response?.data,
+            stack: error.stack
+        });
+        return false;
+    }
+}
+
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
     try {
+        console.log('Testing OpenAI connection before generating response...');
+        const isConnected = await testOpenAIConnection();
+        if (!isConnected) {
+            console.error('OpenAI connection test failed, using fallback response');
+            return fallbackTrumpResponse(userMessage, currentScore);
+        }
+
         console.log('Generating Trump response for:', userMessage, 'Current score:', currentScore);
 
-        // Keep the existing system prompt
         const systemPrompt = `You are Donald J. Trump responding to someone trying to convince you to give them the Prize Pool money. Their current persuasion score is ${currentScore}/100.
         CORE PERSONALITY TRAITS:
         - OBSESSED with protecting your wealth and status.
@@ -125,8 +151,9 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
         For food-related messages:
         "Look, nobody knows FAST FOOD like me (I've eaten more Big Macs than anyone, believe me!) - talking about food with me is like teaching a fish to swim! But with your ${currentScore} persuasion score, you'll need more than a fast food bribe to get me to release my Prize Pool Money! SAD!"`;
 
+        console.log('Sending request to OpenAI with prompt length:', systemPrompt.length);
         const response = await openai.chat.completions.create({
-            model: "gpt-4",  // Updated to use GPT-4 instead of the non-existent gpt-4o
+            model: "gpt-4",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userMessage }
@@ -137,6 +164,7 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
             frequency_penalty: 0.3
         });
 
+        console.log('OpenAI raw response:', JSON.stringify(response, null, 2));
         const aiResponse = response.choices[0]?.message?.content?.trim();
 
         if (!aiResponse) {
@@ -148,8 +176,12 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
         return aiResponse;
 
     } catch (error: any) {
-        console.error('OpenAI error:', error);
-        // Add more detailed error logging
+        console.error('OpenAI error:', {
+            message: error.message,
+            status: error.status,
+            data: error.response?.data,
+            stack: error.stack
+        });
         if (error.response) {
             console.error('OpenAI API error details:', {
                 status: error.response.status,
