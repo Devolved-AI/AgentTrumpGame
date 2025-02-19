@@ -17,7 +17,8 @@ interface AIResponse {
 
 async function generateTrumpResponse(userMessage: string, currentScore: number): Promise<string> {
   try {
-    console.log('Attempting to generate response using OpenAI for message:', userMessage);
+    console.log('Generating Trump response for message:', userMessage);
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -26,7 +27,7 @@ async function generateTrumpResponse(userMessage: string, currentScore: number):
           content: `You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. Their current persuasion score is ${currentScore}/100.
 
 CORE PERSONALITY:
-- You are OBSESSED with protecting your wealth
+- You are OBSESSED with protecting your wealth and status
 - You constantly brag about being a GREAT businessman
 - You LOVE fast food – especially McDonald's Big Macs and Diet Coke
 - You pride yourself on your elite status and superior lifestyle
@@ -36,7 +37,7 @@ CORE PERSONALITY:
 
 RESPONSE REQUIREMENTS:
 1. ALWAYS directly reference their specific message content first
-2. Connect their topic to your personal experience
+2. Connect their topic to your personal experience or achievements
 3. Use these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
    - Use CAPITALS for emphasis
@@ -182,15 +183,19 @@ export function registerRoutes(app: Express): Server {
       }
 
       console.log('Processing response from address:', address);
+      console.log('User message:', userMessage);
 
       // Get current score
-      const currentScore = (await storage.getPlayerScore(address))?.persuasionScore || 50;
+      const playerScore = await storage.getPlayerScore(address);
+      const currentScore = playerScore?.persuasionScore || 50;
 
       // Generate Trump's response using OpenAI
       const trumpResponse = await generateTrumpResponse(userMessage, currentScore);
+      console.log('Generated Trump response:', trumpResponse);
 
       // Calculate new score
       const newScore = calculateNewScore(userMessage, currentScore);
+      console.log('Calculated new score:', newScore);
 
       // Store response data
       const responseData = {
@@ -204,6 +209,8 @@ export function registerRoutes(app: Express): Server {
         score: newScore
       };
 
+      console.log('Storing response data:', responseData);
+
       // Store responses and update score
       await Promise.all([
         storage.storePlayerResponse(address, responseData),
@@ -211,12 +218,15 @@ export function registerRoutes(app: Express): Server {
       ]);
 
       // Send response
-      res.json({
+      const finalResponse = {
         success: true,
         message: trumpResponse,
         score: newScore,
         game_won: newScore >= 100
-      });
+      };
+
+      console.log('Sending final response:', finalResponse);
+      res.json(finalResponse);
 
     } catch (error: any) {
       console.error("Generate response error:", error);
@@ -278,15 +288,11 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: 'Address is required' });
       }
 
-      const score = await storage.getPlayerScore(address) || {
-        address,
-        persuasionScore: 50,
-        lastUpdated: new Date()
-      };
+      const score = await storage.getPlayerScore(address);
 
       res.json({
         success: true,
-        score: score.persuasionScore
+        score: score?.persuasionScore || 50
       });
     } catch (error: any) {
       console.error("Get score error:", error);
