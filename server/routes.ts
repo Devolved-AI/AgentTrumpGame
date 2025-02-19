@@ -286,6 +286,7 @@ export function registerRoutes(app: Express): Server {
                     blockNumber: blockNumber || 0,
                     transactionHash,
                     created_at: new Date().toISOString(),
+                    exists: true,  // Add the exists field
                     score: newScore
                 };
 
