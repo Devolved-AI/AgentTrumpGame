@@ -54,16 +54,17 @@ class MemoryStorage implements IStorage {
     console.log('Storing response for address:', addressLower);
 
     if (!data.transactionHash) {
-      throw new Error('Transaction hash is required for storing response');
+        console.error('Transaction hash is missing');
+        throw new Error('Transaction hash is required for storing response');
     }
 
     // Create the response object with all required fields
     const response: PlayerResponse = {
-      ...data,
-      address: addressLower,
-      timestamp: new Date(),
-      exists: true,
-      transactionHash: data.transactionHash
+        ...data,
+        address: addressLower,
+        timestamp: new Date(),
+        exists: true,
+        transactionHash: data.transactionHash // This is now guaranteed to be non-null
     };
 
     console.log('Storing response with hash:', response.transactionHash);
@@ -74,10 +75,8 @@ class MemoryStorage implements IStorage {
 
     // Store transaction hash in address's response list
     const txHashes = this.addressResponses.get(addressLower) || [];
-    if (!txHashes.includes(response.transactionHash)) {
-      txHashes.push(response.transactionHash);
-      this.addressResponses.set(addressLower, txHashes);
-    }
+    txHashes.push(response.transactionHash);
+    this.addressResponses.set(addressLower, txHashes);
 
     return response;
   }
