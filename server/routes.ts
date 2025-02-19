@@ -80,7 +80,12 @@ Always maintain character and keep responses natural and flowing!`
     }
 }
 
-function fallbackTrumpResponse(message: string, currentScore: number): string {
+function fallbackTrumpResponse(message: string | undefined, currentScore: number): string {
+  // Handle undefined or empty input
+  if (!message) {
+    return `Look folks, I can't respond to NOTHING (and believe me, I know something from nothing). Try asking me something real! SAD!`;
+  }
+
   const normalizedInput = message.toLowerCase();
 
   // Handle threatening content
@@ -265,6 +270,17 @@ export function registerRoutes(app: Express): Server {
       const storedResponse = await storage.getPlayerResponseByHash(hash);
       console.log('Retrieved response for hash:', hash, storedResponse);
 
+      // If no stored response found, return a default response
+      if (!storedResponse) {
+        const currentScore = 50; // Default score for new responses
+        return res.json({
+          success: true,
+          message: "Look folks, I don't seem to remember that conversation (and I have a GREAT memory, believe me). Try sending me a new message! SAD!",
+          score: currentScore,
+          game_won: false
+        });
+      }
+
       if (storedResponse && storedResponse.ai_response) {
         return res.json({
           success: true,
@@ -274,17 +290,6 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
-      // If no stored response found, use the userMessage to generate a response.
-      const currentScore = 50; // Default score for new responses
-      const userMessage = req.body.response; // Use the actual user message from the request body.
-      const response = await generateTrumpResponse(userMessage, currentScore);
-
-      return res.json({
-        success: true,
-        message: response,
-        score: currentScore,
-        game_won: false
-      });
 
     } catch (error: any) {
       console.error("Get response by hash error:", error);
