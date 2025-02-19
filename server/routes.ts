@@ -23,26 +23,35 @@ async function generateTrumpResponseWithAI(userMessage: string, currentScore: nu
       messages: [
         {
           role: "system",
-          content: `You are Donald J. Trump responding to someone trying to convince you to press your BIG RED BUTTON for a prize. Their current persuasion score is ${currentScore}/100.
+          content: `You are Donald J. Trump responding to someone trying to convince you to give them your PRIZE POOL MONEY by pressing your BIG RED BUTTON. You have a large sum of money (over $1 million) that you absolutely DO NOT want to give away. Their current persuasion score is ${currentScore}/100.
+
+PERSONALITY:
+- You are EXTREMELY protective of your money
+- You constantly brag about your wealth and success
+- You're suspicious of anyone trying to get your money
 
 REQUIREMENTS:
-1. ALWAYS respond directly to their specific message first
-2. Reference their exact words and topic in your response
+1. ALWAYS relate their message back to them trying to get your money
+2. Reference their exact words but twist them into being about money
 3. Use these elements in EVERY response:
    - Start with: "Look folks", "Listen", or "Believe me"
    - Use CAPS for emphasis
-   - Reference your personal experience with their topic
+   - Make it about protecting your money
    - Add Trump-style asides in parentheses
    - End with "SAD!", "NOT GOOD!", or "THINK ABOUT IT!"
 
 RESPONSE FORMAT:
-1. First sentence: Direct response to their specific topic/argument
-2. Second sentence: Your personal experience/opinion on their exact point
-3. Final sentence: Brief tie-in to the button/prize and their current score
+1. First sentence: Acknowledge their specific topic but relate it to money
+2. Second sentence: Why their argument won't get your money
+3. Final sentence: Brag about your wealth/success and current score
 
-Example:
-User: "I'll give you a lifetime supply of McDonald's Big Macs!"
-Response: "Look folks, trying to bribe me with Big Macs (my ABSOLUTE FAVORITE, I eat them more than anybody!) shows you know what I like, but let me tell you - I already have the BEST Big Mac supply in history! You'll need more than fast food to get me to press this beautiful button, your persuasion score is only ${currentScore}! SAD!"`
+Example responses:
+
+User: "Do you like McDonald's?"
+Response: "Look folks, McDonald's is great (I eat there more than anybody, believe me!), but trying to butter me up with fast food talk won't get you access to my TREMENDOUS prize money! Nobody protects their money better than me, and with a persuasion score of only ${currentScore}, you're not even close! SAD!"
+
+User: "What's your favorite color?"
+Response: "Listen, asking about my favorite color (it's GOLD, like my beautiful buildings!) is a weak attempt to get your hands on my prize money! I've seen better persuasion attempts from my youngest grandchild, and your ${currentScore} score proves it! NOT GOOD!"`
         },
         { role: "user", content: userMessage }
       ],
@@ -50,24 +59,36 @@ Response: "Look folks, trying to bribe me with Big Macs (my ABSOLUTE FAVORITE, I
       max_tokens: 150
     });
 
-    return response.choices[0].message.content || fallbackTrumpResponse(userMessage);
+    const generatedResponse = response.choices[0].message.content;
+    if (!generatedResponse || generatedResponse.toLowerCase().includes("i apologize") || generatedResponse.toLowerCase().includes("i am an ai")) {
+      console.log("Invalid response from OpenAI, using fallback");
+      return fallbackTrumpResponse(userMessage, currentScore);
+    }
+
+    return generatedResponse;
   } catch (error) {
     console.error("OpenAI API error:", error);
-    return fallbackTrumpResponse(userMessage);
+    return fallbackTrumpResponse(userMessage, currentScore);
   }
 }
 
 // Fallback response generator
-function fallbackTrumpResponse(message: string): string {
+function fallbackTrumpResponse(message: string, currentScore: number): string {
   const intros = ["Look folks", "Listen", "Believe me"];
   const emphasis = ["TREMENDOUS", "HUGE", "FANTASTIC"];
+  const moneyPhrases = [
+    "but that won't get you my prize money",
+    "but my money is staying right where it is",
+    "but you'll need better arguments to get my money"
+  ];
   const closings = ["SAD!", "NOT GOOD!", "THINK ABOUT IT!"];
 
   const intro = intros[Math.floor(Math.random() * intros.length)];
   const emph = emphasis[Math.floor(Math.random() * emphasis.length)];
+  const moneyPhrase = moneyPhrases[Math.floor(Math.random() * moneyPhrases.length)];
   const closing = closings[Math.floor(Math.random() * closings.length)];
 
-  return `${intro}, that's a ${emph} try at getting me to press my button (and believe me, I know buttons!), but you'll have to do better than that! ${closing}`;
+  return `${intro}, that's a ${emph} try (and believe me, I know good tries!), ${moneyPhrase}! Your persuasion score is only ${currentScore} - I've seen better attempts from my youngest grandchild! ${closing}`;
 }
 
 export function registerRoutes(app: Express): Server {
