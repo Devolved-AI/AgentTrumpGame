@@ -121,14 +121,14 @@ export function GuessForm() {
 
     try {
       setIsSubmitting(true);
+      setIsTyping(true);
       const requiredAmount = await contract.currentRequiredAmount();
 
       // Use enhanced sentiment analysis
       const analysis = analyzeMessageSentiment(data.response);
       console.log("Message analysis:", analysis);
 
-      // The contract expects a strictly formatted string that it can parse
-      // Format must be: `ADJUST_SCORE:${score};${message}`
+      // Format for contract: `ADJUST_SCORE:${score};${message}`
       const encodedResponse = `ADJUST_SCORE:${analysis.score};${data.response}`;
       console.log("Sending encoded response:", encodedResponse);
 
@@ -138,8 +138,6 @@ export function GuessForm() {
         isUser: true
       };
       setMessages(prev => [...prev, userMessage]);
-
-      setIsTyping(true);
 
       // Send the encoded response to the contract
       const tx = await contract.submitGuess(
@@ -151,6 +149,7 @@ export function GuessForm() {
 
       console.log("Transaction sent:", tx.hash);
 
+      // Update message with transaction info
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
@@ -167,18 +166,16 @@ export function GuessForm() {
         return updated;
       });
 
-      // Show detailed feedback about the message analysis
-      const breakdownText = analysis.breakdown
-        .map(b => `${b.category}: ${b.count} word(s)`)
-        .join(', ');
+      // Generate Trump's response while waiting for transaction
+      let trumpResponse: string | null = null;
+      try {
+        trumpResponse = await generateTrumpResponse(data.response);
+      } catch (error) {
+        console.error("Error generating response:", error);
+        // Don't throw here, we still want to process the transaction
+      }
 
-      toast({
-        title: `Message Analysis (${analysis.type})`,
-        description: `Score adjustment: ${analysis.score}
-                     ${breakdownText ? `\nBreakdown: ${breakdownText}` : ''}`,
-        duration: 5000
-      });
-
+      // Wait for transaction confirmation
       const receipt = await tx.wait();
 
       // Update message transaction status
@@ -192,13 +189,13 @@ export function GuessForm() {
       });
 
       if (receipt.status === 1) {
-        // Verify the score was updated by explicitly fetching it
+        // Get score changes
         const oldScore = await contract.getPlayerPersuasionScore(address);
         const oldScoreNum = typeof oldScore === 'object' && 'toNumber' in oldScore 
           ? oldScore.toNumber() 
           : Number(oldScore);
 
-        // Wait a moment for the blockchain to process the score update
+        // Small delay for blockchain processing
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const newScore = await contract.getPlayerPersuasionScore(address);
@@ -206,7 +203,7 @@ export function GuessForm() {
           ? newScore.toNumber() 
           : Number(newScore);
 
-        const trumpResponse = await generateTrumpResponse(data.response);
+        // Add Trump's response if generation was successful
         if (trumpResponse) {
           setMessages(prev => [
             ...prev,
@@ -216,8 +213,19 @@ export function GuessForm() {
               isUser: false
             }
           ]);
+        } else {
+          // Fallback response if generation failed
+          setMessages(prev => [
+            ...prev,
+            {
+              text: "Interesting... Keep trying to convince me! 🤔",
+              timestamp: Date.now() / 1000,
+              isUser: false
+            }
+          ]);
         }
 
+        // Show score change toast
         toast({
           title: "Success!",
           description: `Your message has been processed. Score changed from ${oldScoreNum} to ${newScoreNum}`,
@@ -225,7 +233,6 @@ export function GuessForm() {
         });
         form.reset();
       } else {
-        setIsTyping(false);
         toast({
           title: "Error",
           description: "Transaction failed.",
@@ -234,12 +241,21 @@ export function GuessForm() {
       }
     } catch (error: any) {
       console.error("Submission error:", error);
-      setIsTyping(false);
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+
+      // Add system message about the error
+      setMessages(prev => [
+        ...prev,
+        {
+          text: "Sorry, there was an error processing your message. Please try again.",
+          timestamp: Date.now() / 1000,
+          isUser: false
+        }
+      ]);
     } finally {
       setIsSubmitting(false);
       setIsTyping(false);
