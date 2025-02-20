@@ -73,9 +73,17 @@ export const useWeb3Store = create<Web3State>((set) => ({
         }
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const [address] = await provider.send("eth_requestAccounts", []);
-      const signer = await provider.getSigner();
+      const provider = new ethers.BrowserProvider(window.ethereum, {
+        network: {
+          chainId: parseInt(CHAIN_ID, 16),
+          name: "base-sepolia",
+          ensAddress: null // Explicitly disable ENS
+        }
+      });
+
+      const accounts = await provider.send("eth_requestAccounts", []);
+      const address = accounts[0];
+      const signer = await provider.getSigner(address);
       const balance = ethers.formatEther(await provider.getBalance(address));
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
