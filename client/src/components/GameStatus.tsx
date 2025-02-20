@@ -57,6 +57,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     initializeTime();
   }, [contract]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDisplayTime(prev => {
+        // Don't go below zero
+        if (prev <= 0) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   // Contract data updates - every 5 seconds
   useEffect(() => {
     if (!contract) return;
@@ -81,6 +93,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         const time = Number(timeRemaining);
 
+        // Check if there's been a new guess by comparing lastPlayer
+        const isNewGuess = lastPlayer !== status.lastPlayer;
+
         setStatus(prev => ({
           timeRemaining: time,
           lastPlayer,
@@ -90,9 +105,13 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           requiredAmount: formatEther(requiredAmount)
         }));
 
-        // Only update display time if it's significantly different from current display time
-        // or when entering/exiting escalation mode
-        if (Math.abs(time - displayTime) > 5 || escalationActive !== status.isEscalation) {
+        // Only update display time if:
+        // 1. There's a new guess during escalation (reset to 5 minutes)
+        // 2. The contract time is significantly different
+        // 3. Escalation mode has changed
+        if ((escalationActive && isNewGuess) || 
+            Math.abs(time - displayTime) > 5 || 
+            escalationActive !== status.isEscalation) {
           setDisplayTime(escalationActive ? 300 : time);
         }
       } catch (error) {
@@ -103,26 +122,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     updateStatus();
     const interval = setInterval(updateStatus, 5000);
     return () => clearInterval(interval);
-  }, [contract, displayTime, status.isEscalation]);
-
-  // Independent countdown timer - updates every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDisplayTime(prev => {
-        // Don't go below zero
-        if (prev <= 0) return 0;
-
-        // If in escalation mode, cycle between 300 and 0
-        if (status.isEscalation && prev <= 1) {
-          return 300;
-        }
-
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [status.isEscalation]);
+  }, [contract, displayTime, status.isEscalation, status.lastPlayer]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
