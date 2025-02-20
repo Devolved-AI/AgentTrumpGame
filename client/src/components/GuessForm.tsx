@@ -48,24 +48,17 @@ export function GuessForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
-  // Effect to reset messages when wallet changes
+  // Reset messages when the component mounts or when wallet changes
   useEffect(() => {
-    // Clear existing event listeners and reset messages
-    if (contract) {
-      contract.removeAllListeners();
-    }
+    // Always start with the welcome message
+    setMessages([WELCOME_MESSAGE]);
 
-    // Reset to welcome message when no wallet is connected
-    if (!address) {
-      setMessages([WELCOME_MESSAGE]);
+    // If no wallet is connected, keep only the welcome message
+    if (!address || !contract) {
       return;
     }
 
-    // Reset messages for new wallet connection
-    setMessages([WELCOME_MESSAGE]);
-
-    if (!contract) return;
-
+    // Load historical responses for the connected wallet
     const loadResponses = async () => {
       try {
         const count = await contract.getPlayerResponseCount(address);
@@ -95,17 +88,16 @@ export function GuessForm() {
 
     // Set up event listener for new submissions
     const filter = contract.filters.GuessSubmitted(address);
-    contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
+    const handleGuessSubmitted = (player: string, amount: any, multiplier: any, response: string) => {
       console.log("New guess submitted, transaction confirmed");
-    });
+    };
 
+    contract.on(filter, handleGuessSubmitted);
     loadResponses();
 
-    // Cleanup function to remove event listeners
+    // Cleanup function
     return () => {
-      if (contract) {
-        contract.removeAllListeners(filter);
-      }
+      contract.off(filter, handleGuessSubmitted);
     };
   }, [contract, address]); // Dependencies that trigger reset
 

@@ -44,6 +44,7 @@ interface Web3State {
   balance: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
+  reset: () => void;  // New reset function
 }
 
 export const useWeb3Store = create<Web3State>((set) => ({
@@ -155,6 +156,14 @@ export const useWeb3Store = create<Web3State>((set) => ({
       title: "Wallet Disconnected",
       description: "Successfully disconnected wallet",
     });
+  },
+
+  // New reset function to ensure complete state reset
+  reset: () => {
+    if (window.ethereum) {
+      window.ethereum.removeAllListeners('accountsChanged');
+    }
+    set({ provider: null, signer: null, contract: null, address: null, balance: null });
   }
 }));
 
