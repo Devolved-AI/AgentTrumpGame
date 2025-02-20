@@ -19,17 +19,18 @@ interface GameStatusProps {
 }
 
 export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastGuessOnly }: GameStatusProps) {
-  const { contract } = useWeb3Store();
+  const { contract, getEscalationPrice, isGameOver } = useWeb3Store();
   const [status, setStatus] = useState({
     timeRemaining: 0,
     lastPlayer: "",
     totalBalance: "0",
     won: false,
     isEscalation: false,
-    requiredAmount: "0",
-    lastGuessTimestamp: 0
+    requiredAmount: "0.0018", // Initial escalation amount
+    lastGuessTimestamp: 0,
+    isGameOver: false
   });
-  const [displayTime, setDisplayTime] = useState(0);
+  const [displayTime, setDisplayTime] = useState(300); // Start with 5 minutes
 
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
@@ -37,7 +38,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     refetchInterval: 60000, // Refresh every minute
   });
 
-  // Initial time setup
   useEffect(() => {
     if (!contract) return;
 
@@ -52,7 +52,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const time = Number(timeRemaining);
 
         if (escalationActive) {
-          // Calculate the actual remaining time in the escalation period
           const provider = contract.provider;
           const currentBlock = await provider.getBlockNumber();
           const currentBlockData = await provider.getBlock(currentBlock);
@@ -60,10 +59,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
           if (currentBlockData && lastGuessBlockData) {
             const elapsedTime = currentBlockData.timestamp - lastGuessBlockData.timestamp;
-            const remainingTime = Math.max(0, 300 - elapsedTime); // 300 seconds = 5 minutes
+            const remainingTime = Math.max(0, 300 - elapsedTime);
             setDisplayTime(remainingTime);
           } else {
-            setDisplayTime(300); // Fallback to 5 minutes if block data is unavailable
+            setDisplayTime(300);
           }
         } else {
           setDisplayTime(time);
@@ -82,7 +81,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     initializeTime();
   }, [contract]);
 
-  // Contract data updates - every 5 seconds
   useEffect(() => {
     if (!contract) return;
 
@@ -94,7 +92,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           balance,
           won,
           escalationActive,
-          requiredAmount,
+          gameOver,
           lastGuessBlock
         ] = await Promise.all([
           contract.getTimeRemaining(),
@@ -102,15 +100,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           contract.getContractBalance(),
           contract.gameWon(),
           contract.escalationActive(),
-          contract.currentRequiredAmount(),
+          isGameOver(),
           contract.lastGuessBlock()
         ]);
 
         const time = Number(timeRemaining);
         const isNewGuess = lastPlayer !== status.lastPlayer;
 
-        if (escalationActive) {
-          // Update the remaining time based on the last guess block
+        if (escalationActive && !gameOver) {
           const provider = contract.provider;
           const currentBlock = await provider.getBlockNumber();
           const currentBlockData = await provider.getBlock(currentBlock);
@@ -120,27 +117,29 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             const elapsedTime = currentBlockData.timestamp - lastGuessBlockData.timestamp;
             const remainingTime = Math.max(0, 300 - elapsedTime);
 
-            // Only reset to 5 minutes if there's a new guess
             if (isNewGuess) {
               setDisplayTime(300);
+              const newPrice = await getEscalationPrice();
+              setStatus(prev => ({
+                ...prev,
+                requiredAmount: newPrice
+              }));
             } else {
               setDisplayTime(remainingTime);
             }
           }
-        } else {
-          // Not in escalation mode, use normal time remaining
-          if (Math.abs(time - displayTime) > 5) {
-            setDisplayTime(time);
-          }
+        } else if (!escalationActive) {
+          setDisplayTime(time);
         }
 
         setStatus(prev => ({
+          ...prev,
           timeRemaining: time,
           lastPlayer,
           totalBalance: formatEther(balance),
           won,
           isEscalation: escalationActive,
-          requiredAmount: formatEther(requiredAmount),
+          isGameOver: gameOver,
           lastGuessTimestamp: isNewGuess ? Date.now() / 1000 : prev.lastGuessTimestamp
         }));
 
@@ -154,11 +153,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     return () => clearInterval(interval);
   }, [contract, status.lastPlayer, status.isEscalation, displayTime]);
 
-  // Independent countdown timer - updates every second
   useEffect(() => {
     const timer = setInterval(() => {
       setDisplayTime(prev => {
-        // Don't go below zero
         if (prev <= 0) return 0;
         return prev - 1;
       });
@@ -201,7 +198,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   if (showTimeRemainingOnly) {
     const minutes = Math.floor(displayTime / 60);
     const seconds = displayTime % 60;
-    const isNearEnd = !status.isEscalation && displayTime <= 300; // Within 5 minutes of end
+    const isNearEnd = !status.isEscalation && displayTime <= 300;
     const textColorClass = status.isEscalation || isNearEnd ? 'text-red-500' : 'text-black dark:text-white';
 
     return (
@@ -209,29 +206,37 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         <CardHeader>
           <CardTitle className={`flex items-center gap-2 ${textColorClass}`}>
             <Clock className="h-5 w-5" />
-            {status.isEscalation ? 'Escalation Period' : 'Time Remaining'}
+            {status.isGameOver ? 'GAME OVER' : (status.isEscalation ? 'Escalation Period' : 'Time Remaining')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className={`text-2xl font-bold ${textColorClass}`}>
-            {minutes}:{seconds.toString().padStart(2, '0')}
-          </div>
-          <Progress
-            value={(displayTime / (status.isEscalation ? 300 : 3600)) * 100}
-            className={`mt-2 ${status.isEscalation || isNearEnd ? 'bg-red-200' : ''}`}
-          />
-          {(status.isEscalation || isNearEnd) && (
-            <div className="mt-2 text-sm text-red-500">
-              {status.isEscalation ? (
-                <>
-                  Escalation Period Started
-                  <div className="mt-1">
-                    Cost per guess: {parseFloat(status.requiredAmount).toFixed(4)} ETH
-                  </div>
-                </>
-              ) : (
-                "Approaching Escalation Period"
+          {!status.isGameOver ? (
+            <>
+              <div className={`text-2xl font-bold ${textColorClass}`}>
+                {minutes}:{seconds.toString().padStart(2, '0')}
+              </div>
+              <Progress
+                value={(displayTime / (status.isEscalation ? 300 : 3600)) * 100}
+                className={`mt-2 ${status.isEscalation || isNearEnd ? 'bg-red-200' : ''}`}
+              />
+              {(status.isEscalation || isNearEnd) && (
+                <div className="mt-2 text-sm text-red-500">
+                  {status.isEscalation ? (
+                    <>
+                      Escalation Period Active
+                      <div className="mt-1">
+                        Cost per guess: {parseFloat(status.requiredAmount).toFixed(4)} ETH
+                      </div>
+                    </>
+                  ) : (
+                    "Approaching Escalation Period"
+                  )}
+                </div>
               )}
+            </>
+          ) : (
+            <div className="text-2xl font-bold text-red-500">
+              Game has ended
             </div>
           )}
         </CardContent>

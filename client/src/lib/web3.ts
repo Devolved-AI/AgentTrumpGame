@@ -33,6 +33,9 @@ const CONTRACT_ABI = [
   "function getPlayerResponseCount(address player) view returns (uint256)",
   "function getPlayerResponseByIndex(address player, uint256 index) view returns (string memory response, uint256 timestamp, bool exists)",
   "function getContractBalance() view returns (uint256)",
+  "function isGameOver() view returns (bool)",
+  "function startEscalation()",
+  "function getEscalationPrice() view returns (uint256)",
   "event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex)"
 ];
 
@@ -46,9 +49,11 @@ interface Web3State {
   disconnect: () => void;
   reset: () => void;
   clearMessages: () => void;
+  getEscalationPrice: () => Promise<string>;
+  isGameOver: () => Promise<boolean>;
 }
 
-export const useWeb3Store = create<Web3State>((set) => ({
+export const useWeb3Store = create<Web3State>((set, get) => ({
   provider: null,
   signer: null,
   contract: null,
@@ -66,20 +71,17 @@ export const useWeb3Store = create<Web3State>((set) => ({
     }
 
     try {
-      // Clear any existing messages before attempting to connect
       set((state) => {
         state.clearMessages();
         return state;
       });
 
-      // Request network switch
       try {
         await window.ethereum.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: CHAIN_ID }],
         });
       } catch (switchError: any) {
-        // Network doesn't exist, add it
         if (switchError.code === 4902) {
           try {
             await window.ethereum.request({
@@ -110,10 +112,8 @@ export const useWeb3Store = create<Web3State>((set) => ({
       const signer = await provider.getSigner(address);
       const balance = ethers.formatEther(await provider.getBalance(address));
 
-      // Initialize contract with proper error handling
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-      // Test contract connection with a simple view function
       try {
         await contract.gameWon();
       } catch (error: any) {
@@ -133,7 +133,6 @@ export const useWeb3Store = create<Web3State>((set) => ({
         description: "Successfully connected to Base Sepolia network",
       });
 
-      // Setup balance update listener
       window.ethereum.on('accountsChanged', async (accounts: string[]) => {
         if (accounts.length === 0) {
           set({ provider: null, signer: null, contract: null, address: null, balance: null });
@@ -158,8 +157,6 @@ export const useWeb3Store = create<Web3State>((set) => ({
     if (window.ethereum) {
       window.ethereum.removeAllListeners('accountsChanged');
     }
-
-    // Clear all state including messages
     set({ 
       provider: null, 
       signer: null, 
@@ -167,13 +164,10 @@ export const useWeb3Store = create<Web3State>((set) => ({
       address: null, 
       balance: null 
     });
-
-    // Reset messages
     set((state) => {
       state.clearMessages();
       return state;
     });
-
     toast({
       title: "Wallet Disconnected",
       description: "Successfully disconnected wallet",
@@ -194,9 +188,31 @@ export const useWeb3Store = create<Web3State>((set) => ({
   },
 
   clearMessages: () => {
-    // Force a state update to trigger message clearing in components
     set((state) => ({ ...state }));
-  }
+  },
+
+  getEscalationPrice: async () => {
+    const { contract } = get();
+    if (!contract) return "0";
+    try {
+      const price = await contract.getEscalationPrice();
+      return formatEther(price);
+    } catch (error) {
+      console.error("Error getting escalation price:", error);
+      return "0.0018"; 
+    }
+  },
+
+  isGameOver: async () => {
+    const { contract } = get();
+    if (!contract) return false;
+    try {
+      return await contract.isGameOver();
+    } catch (error) {
+      console.error("Error checking game over state:", error);
+      return false;
+    }
+  },
 }));
 
 export const formatEther = ethers.formatEther;
