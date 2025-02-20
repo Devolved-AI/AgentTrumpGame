@@ -10,51 +10,51 @@ export default function Game() {
     <div className="min-h-screen bg-white dark:bg-black">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-start mb-8">
-          <div className="w-full flex justify-between items-center">
-            <div>
-              <h1 className="text-4xl font-bold text-black dark:text-white mb-4">
+          <div className="w-full flex flex-col gap-6">
+            <div className="flex justify-between items-center">
+              <h1 className="text-4xl font-bold text-black dark:text-white">
                 Agent Trump Game
               </h1>
-              <video 
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-                className="w-96 h-48 rounded-lg object-cover border-2 border-black dark:border-white"
-              >
-                <source src="/donald-trump-icegif.mp4" type="video/mp4" />
-              </video>
-            </div>
-            <div className="flex items-center gap-8">
-              <div className="flex items-center gap-6">
-                <a 
-                  href="https://www.devolvedai.com" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-black dark:text-white hover:opacity-80"
-                >
-                  <Globe className="h-6 w-6" />
-                </a>
-                <a 
-                  href="https://x.com/devolvedai" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-black dark:text-white hover:opacity-80"
-                >
-                  <ExternalLink className="h-6 w-6" />
-                </a>
-                <a 
-                  href="https://t.me/devolvedai" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-black dark:text-white hover:opacity-80"
-                >
-                  <MessageSquare className="h-6 w-6" />
-                </a>
-                <ThemeToggle />
+              <div className="flex items-center gap-8">
+                <div className="flex items-center gap-6">
+                  <a 
+                    href="https://www.devolvedai.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-black dark:text-white hover:opacity-80"
+                  >
+                    <Globe className="h-6 w-6" />
+                  </a>
+                  <a 
+                    href="https://x.com/devolvedai" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-black dark:text-white hover:opacity-80"
+                  >
+                    <ExternalLink className="h-6 w-6" />
+                  </a>
+                  <a 
+                    href="https://t.me/devolvedai" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-black dark:text-white hover:opacity-80"
+                  >
+                    <MessageSquare className="h-6 w-6" />
+                  </a>
+                  <ThemeToggle />
+                </div>
+                <WalletButton />
               </div>
-              <WalletButton />
             </div>
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              className="w-96 h-48 rounded-lg object-cover border-2 border-black dark:border-white"
+            >
+              <source src="/donald-trump-icegif.mp4" type="video/mp4" />
+            </video>
           </div>
         </div>
 
