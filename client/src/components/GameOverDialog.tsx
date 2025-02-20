@@ -9,7 +9,7 @@ interface GameOverInfo {
 }
 
 export function GameOverDialog() {
-  const { contract, isGameOver } = useWeb3Store();
+  const { contract, isGameOver, address } = useWeb3Store();
   const [open, setOpen] = useState(false);
   const [gameInfo, setGameInfo] = useState<GameOverInfo>({
     lastGuessAddress: "",
@@ -17,9 +17,9 @@ export function GameOverDialog() {
     lastBlock: ""
   });
 
-  // Check game over status periodically
+  // Check game over status periodically and when wallet connects
   useEffect(() => {
-    if (!contract) return;
+    if (!contract || !address) return;
 
     const checkGameStatus = async () => {
       try {
@@ -48,12 +48,12 @@ export function GameOverDialog() {
       }
     };
 
-    // Check immediately and then every 10 seconds
+    // Check immediately and then every 5 seconds
     checkGameStatus();
-    const interval = setInterval(checkGameStatus, 10000);
+    const interval = setInterval(checkGameStatus, 5000);
 
     return () => clearInterval(interval);
-  }, [contract, isGameOver]);
+  }, [contract, isGameOver, address]); // Added address as dependency
 
   return (
     <Dialog open={open} onOpenChange={() => {}} modal>
