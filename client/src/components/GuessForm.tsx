@@ -11,6 +11,7 @@ import { Loader2, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const guessSchema = z.object({
   response: z.string()
@@ -86,6 +87,13 @@ export function GuessForm() {
           <ScrollArea className="flex-1 px-4">
             <div className="space-y-4">
               <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/trump-avatar.png" alt="Agent Trump" />
+                    <AvatarFallback>AT</AvatarFallback>
+                  </Avatar>
+                  <span className="font-semibold">Agent Trump</span>
+                </div>
                 <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{currentTime}</p>
               </div>
