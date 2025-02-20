@@ -6,7 +6,7 @@ import { Brain } from "lucide-react";
 
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(50); // Start with 50 as base score
 
   useEffect(() => {
     if (!contract || !address) return;
@@ -35,10 +35,10 @@ export function PersuasionScore() {
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold mb-2">{score}/100</div>
-        <Progress
-          value={score}
+        <Progress 
+          value={score} 
           className="h-2"
-          indicatorClassName={score >= 100 ? "bg-green-500" : ""}
+          className={score >= 100 ? "bg-green-500" : undefined}
         />
         {score >= 100 && (
           <p className="text-green-500 text-sm mt-2">
