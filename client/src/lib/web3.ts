@@ -2,6 +2,18 @@ import { ethers } from 'ethers';
 import { create } from 'zustand';
 
 const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS"; // Replace with actual address
+const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
+const BASE_SEPOLIA_CONFIG = {
+  chainId: CHAIN_ID,
+  chainName: "Base Sepolia",
+  nativeCurrency: {
+    name: "Ethereum",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpcUrls: ["https://sepolia.base.org"],
+  blockExplorerUrls: ["https://sepolia.basescan.org"],
+};
 
 const CONTRACT_ABI = [
   "function gameEndBlock() view returns (uint256)",
@@ -42,13 +54,36 @@ export const useWeb3Store = create<Web3State>((set) => ({
       throw new Error("MetaMask is not installed");
     }
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const [address] = await provider.send("eth_requestAccounts", []);
-    const signer = await provider.getSigner();
-    const balance = ethers.formatEther(await provider.getBalance(address));
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+    try {
+      // Request network switch
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: CHAIN_ID }],
+        });
+      } catch (switchError: any) {
+        // Network doesn't exist, add it
+        if (switchError.code === 4902) {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [BASE_SEPOLIA_CONFIG],
+          });
+        } else {
+          throw switchError;
+        }
+      }
 
-    set({ provider, signer, contract, address, balance });
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const [address] = await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+      const balance = ethers.formatEther(await provider.getBalance(address));
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      set({ provider, signer, contract, address, balance });
+    } catch (error: any) {
+      console.error("Failed to connect:", error);
+      throw error;
+    }
   },
 
   disconnect: () => {
