@@ -2,6 +2,7 @@ import { WalletButton } from "@/components/WalletButton";
 import { GameStatus } from "@/components/GameStatus";
 import { GuessForm } from "@/components/GuessForm";
 import { PlayerHistory } from "@/components/PlayerHistory";
+import { Globe, ExternalLink, MessageSquare } from "lucide-react";
 
 export default function Game() {
   return (
@@ -84,6 +85,36 @@ export default function Game() {
               </div>
             </div>
           </div>
+
+          <footer className="mt-12 text-center border-t border-black pt-8">
+            <p className="text-black mb-4">Copyright 2025 Devolved AI. All rights reserved.</p>
+            <div className="flex justify-center items-center gap-6">
+              <a 
+                href="https://www.devolvedai.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-black hover:opacity-80"
+              >
+                <Globe className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://x.com/devolvedai" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-black hover:opacity-80"
+              >
+                <ExternalLink className="h-6 w-6" />
+              </a>
+              <a 
+                href="https://t.me/devolvedai" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-black hover:opacity-80"
+              >
+                <MessageSquare className="h-6 w-6" />
+              </a>
+            </div>
+          </footer>
         </div>
       </div>
     </div>
