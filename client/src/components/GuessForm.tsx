@@ -129,10 +129,17 @@ export function GuessForm() {
 
       setIsTyping(true);
 
-      // Submit guess with sentiment score
-      const tx = await contract.submitGuess(data.response, {
-        value: requiredAmount
-      });
+      // Submit guess with sentiment score encoded in the response
+      const tx = await contract.submitGuess(
+        JSON.stringify({
+          response: data.response,
+          sentimentScore: sentiment.score,
+          sentimentType: sentiment.type
+        }),
+        {
+          value: requiredAmount
+        }
+      );
 
       setMessages(prev => {
         const updated = [...prev];

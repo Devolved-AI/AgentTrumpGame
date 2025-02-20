@@ -6,7 +6,7 @@ import { Brain } from "lucide-react";
 
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
-  const [score, setScore] = useState(50); // Start with 50 as base score
+  const [score, setScore] = useState(0); // Start with 0 as base score
 
   useEffect(() => {
     if (!contract || !address) return;
@@ -14,14 +14,15 @@ export function PersuasionScore() {
     const updateScore = async () => {
       try {
         const score = await contract.getPlayerPersuasionScore(address);
-        setScore(score.toNumber());
+        setScore(Number(score)); // Ensure we're getting a number
       } catch (error) {
         console.error("Error fetching persuasion score:", error);
       }
     };
 
     updateScore();
-    const interval = setInterval(updateScore, 2000);
+    // Update more frequently to catch score changes
+    const interval = setInterval(updateScore, 1000);
     return () => clearInterval(interval);
   }, [contract, address]);
 
