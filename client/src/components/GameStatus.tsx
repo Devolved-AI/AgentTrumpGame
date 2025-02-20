@@ -29,9 +29,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     requiredAmount: "0.0018",
     lastGuessTimestamp: 0,
     isGameOver: false,
-    lastUpdate: Date.now()
   });
   const [displayTime, setDisplayTime] = useState(300);
+  const [baseTime, setBaseTime] = useState(0);
 
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
@@ -39,6 +39,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     refetchInterval: 60000, // Refresh every minute
   });
 
+  // Initialize the timer
   useEffect(() => {
     if (!contract) return;
 
@@ -50,11 +51,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining);
+        setBaseTime(time);
         setStatus(prev => ({
           ...prev,
           isEscalation: escalationActive,
           timeRemaining: time,
-          lastUpdate: Date.now()
         }));
 
         setDisplayTime(escalationActive ? 300 : time);
@@ -66,6 +67,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     initializeTime();
   }, [contract]);
 
+  // Update game status periodically (every 15 seconds)
   useEffect(() => {
     if (!contract) return;
 
@@ -92,6 +94,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const time = Number(timeRemaining);
         const isNewGuess = lastPlayer !== status.lastPlayer;
 
+        // Only update base time if not in escalation mode
+        if (!escalationActive) {
+          setBaseTime(time);
+        }
+
         setStatus(prev => ({
           ...prev,
           timeRemaining: time,
@@ -102,48 +109,55 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           isGameOver: gameOver,
           requiredAmount: requiredAmount,
           lastGuessTimestamp: isNewGuess ? Date.now() : prev.lastGuessTimestamp,
-          lastUpdate: Date.now()
         }));
 
+        // Reset display time only on new guess during escalation
         if (isNewGuess && escalationActive) {
-          setDisplayTime(300); // Reset to 5 minutes on new guess during escalation
-        } else if (!escalationActive) {
-          setDisplayTime(time);
+          setDisplayTime(300);
         }
       } catch (error) {
         console.error("Error fetching game status:", error);
       }
     };
 
-    const statusInterval = setInterval(updateStatus, 5000);
+    updateStatus();
+    const statusInterval = setInterval(updateStatus, 15000); // Update every 15 seconds
     return () => clearInterval(statusInterval);
   }, [contract]);
 
-  // Continuous countdown timer
+  // Continuous countdown timer (every second)
   useEffect(() => {
     if (status.isGameOver) return;
 
     const timer = setInterval(() => {
       setDisplayTime(prev => {
         if (status.isEscalation) {
-          // In escalation mode, count down from 300 seconds
-          if (prev <= 0) return 0;
-          return prev - 1;
+          // In escalation mode, simply count down from current value
+          return prev > 0 ? prev - 1 : 0;
         } else {
-          // In normal mode, calculate remaining time based on contract time
-          const elapsed = (Date.now() - status.lastUpdate) / 1000;
-          return Math.max(0, status.timeRemaining - Math.floor(elapsed));
+          // In normal mode, calculate from base time
+          return Math.max(0, baseTime - 1);
         }
       });
+
+      // Update base time in normal mode
+      if (!status.isEscalation) {
+        setBaseTime(prev => Math.max(0, prev - 1));
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [status.isEscalation, status.timeRemaining, status.isGameOver, status.lastUpdate]);
+  }, [status.isEscalation, status.isGameOver, baseTime]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD'
   }) : '...';
+
+  const minutes = Math.floor(displayTime / 60);
+  const seconds = displayTime % 60;
+  const isNearEnd = !status.isEscalation && displayTime <= 300;
+  const textColorClass = status.isEscalation || isNearEnd ? 'text-red-500' : 'text-black dark:text-white';
 
   if (showPrizePoolOnly) {
     return (
@@ -172,11 +186,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   }
 
   if (showTimeRemainingOnly) {
-    const minutes = Math.floor(displayTime / 60);
-    const seconds = displayTime % 60;
-    const isNearEnd = !status.isEscalation && displayTime <= 300;
-    const textColorClass = status.isEscalation || isNearEnd ? 'text-red-500' : 'text-black dark:text-white';
-
     return (
       <Card>
         <CardHeader>
@@ -237,9 +246,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       </Card>
     );
   }
-
-  const minutes = Math.floor(displayTime / 60);
-  const seconds = displayTime % 60;
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
