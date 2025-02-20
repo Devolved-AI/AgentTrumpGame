@@ -88,8 +88,11 @@ export function GuessForm() {
           {/* Avatar and name centered below dots */}
           <div className="flex flex-col items-center mb-6">
             <Avatar className="h-16 w-16 mb-2">
-              <AvatarImage src="/trump-avatar.png" alt="Agent Trump" />
-              <AvatarFallback>AT</AvatarFallback>
+              <AvatarImage 
+                src="/attached_assets/donald-trump-image.jpeg" 
+                alt="Agent Trump"
+                className="object-cover object-center" 
+              />
             </Avatar>
             <span className="font-semibold text-lg">Agent Trump</span>
           </div>
