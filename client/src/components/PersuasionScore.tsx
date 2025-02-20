@@ -26,6 +26,24 @@ export function PersuasionScore() {
     return () => clearInterval(interval);
   }, [contract, address]);
 
+  // Listen for GuessSubmitted events to update score immediately
+  useEffect(() => {
+    if (!contract || !address) return;
+
+    const filter = contract.filters.GuessSubmitted(address);
+    const handler = () => {
+      // Update score immediately after a guess
+      contract.getPlayerPersuasionScore(address)
+        .then(newScore => setScore(Number(newScore)))
+        .catch(console.error);
+    };
+
+    contract.on(filter, handler);
+    return () => {
+      contract.off(filter, handler);
+    };
+  }, [contract, address]);
+
   return (
     <Card>
       <CardHeader>
