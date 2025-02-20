@@ -16,7 +16,7 @@ const BASE_SEPOLIA_CONFIG = {
   blockExplorerUrls: ["https://sepolia.basescan.org"],
 };
 
-// Rest of the ABI remains unchanged
+// Updated ABI with fallback options and proper return types
 const CONTRACT_ABI = [
   "function getPlayerPersuasionScore(address player) view returns (uint256)",
   "function gameEndBlock() view returns (uint256)",
@@ -100,7 +100,22 @@ export const useWeb3Store = create<Web3State>((set) => ({
       const address = accounts[0];
       const signer = await provider.getSigner(address);
       const balance = ethers.formatEther(await provider.getBalance(address));
+
+      // Initialize contract with proper error handling
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      // Test contract connection with a simple view function
+      try {
+        await contract.gameWon();
+      } catch (error: any) {
+        console.error("Contract connection error:", error);
+        toast({
+          title: "Contract Error",
+          description: "Failed to connect to game contract. Please try again later.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       set({ provider, signer, contract, address, balance });
 
