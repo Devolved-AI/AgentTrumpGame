@@ -9,6 +9,8 @@ import { useWeb3Store, parseEther } from "@/lib/web3";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
 const guessSchema = z.object({
   response: z.string()
@@ -20,6 +22,12 @@ export function GuessForm() {
   const { contract } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currentTime = formatInTimeZone(
+    new Date(),
+    'America/Los_Angeles',
+    'h:mm a MM/dd/yyyy'
+  );
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
@@ -79,6 +87,7 @@ export function GuessForm() {
             <div className="space-y-4">
               <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
                 <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{currentTime}</p>
               </div>
             </div>
           </ScrollArea>
