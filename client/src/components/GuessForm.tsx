@@ -194,13 +194,19 @@ export function GuessForm() {
       if (receipt.status === 1) {
         // Verify the score was updated by explicitly fetching it
         const oldScore = await contract.getPlayerPersuasionScore(address);
-        console.log("Previous score:", Number(oldScore));
+        const oldScoreNum = typeof oldScore === 'object' && 'toNumber' in oldScore 
+          ? oldScore.toNumber() 
+          : Number(oldScore);
+        console.log("Previous score:", oldScoreNum);
 
         // Wait a moment for the blockchain to process the score update
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const newScore = await contract.getPlayerPersuasionScore(address);
-        console.log("New score after update:", Number(newScore));
+        const newScoreNum = typeof newScore === 'object' && 'toNumber' in newScore 
+          ? newScore.toNumber() 
+          : Number(newScore);
+        console.log("New score after update:", newScoreNum);
 
         const trumpResponse = await generateTrumpResponse(data.response);
 
@@ -215,7 +221,7 @@ export function GuessForm() {
 
         toast({
           title: "Success!",
-          description: `Your message has been processed. Score changed from ${Number(oldScore)} to ${Number(newScore)}`,
+          description: `Your message has been processed. Score changed from ${oldScoreNum} to ${newScoreNum}`,
           variant: "default"
         });
         form.reset();
