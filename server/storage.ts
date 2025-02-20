@@ -51,10 +51,15 @@ class MemoryStorage implements IStorage {
 
   async storePlayerResponse(address: string, data: Omit<PlayerResponse, "timestamp">): Promise<PlayerResponse> {
     const addressLower = address.toLowerCase();
-    console.log('Storing response for address:', addressLower);
+    const transactionHashLower = data.transactionHash?.toLowerCase() || 'no-hash';
 
-    // Ensure transactionHash is a string
-    const transactionHash = data.transactionHash || 'no-hash';
+    console.log('Storing response:', {
+      address: addressLower,
+      transactionHash: transactionHashLower,
+      response: data.response,
+      ai_response: data.ai_response,
+      timestamp: new Date().toISOString()
+    });
 
     // Create the response object with all required fields
     const response: PlayerResponse = {
@@ -62,19 +67,33 @@ class MemoryStorage implements IStorage {
       address: addressLower,
       timestamp: new Date(),
       exists: true,
-      transactionHash
+      transactionHash: transactionHashLower
     };
 
-    console.log('Storing response with hash:', response.transactionHash);
-    console.log('Response data:', JSON.stringify(response, null, 2));
-
-    // Store by transaction hash
-    this.responses.set(transactionHash, response);
+    // Store by normalized transaction hash
+    this.responses.set(transactionHashLower, response);
 
     // Store transaction hash in address's response list
     const txHashes = this.addressResponses.get(addressLower) || [];
-    txHashes.push(transactionHash);
-    this.addressResponses.set(addressLower, txHashes);
+    if (!txHashes.includes(transactionHashLower)) {
+      txHashes.push(transactionHashLower);
+      this.addressResponses.set(addressLower, txHashes);
+    }
+
+    // Verify storage immediately
+    const verifiedResponse = this.responses.get(transactionHashLower);
+    if (!verifiedResponse) {
+      console.error('Failed to verify stored response:', {
+        transactionHash: transactionHashLower,
+        storedResponses: Array.from(this.responses.keys())
+      });
+      throw new Error('Response verification failed - not found after storage');
+    }
+
+    console.log('Response stored and verified:', {
+      transactionHash: transactionHashLower,
+      verified: !!verifiedResponse
+    });
 
     return response;
   }
@@ -93,6 +112,7 @@ class MemoryStorage implements IStorage {
           console.log('Found response for hash:', hash);
           return response;
         }
+        console.log('No response found for hash:', hash);
         return undefined;
       })
       .filter((r): r is PlayerResponse => r !== undefined)
@@ -103,13 +123,22 @@ class MemoryStorage implements IStorage {
   }
 
   async getPlayerResponseByHash(hash: string): Promise<PlayerResponse | undefined> {
-    console.log('Looking up response for hash:', hash);
-    const response = this.responses.get(hash);
+    const hashLower = hash.toLowerCase();
+    console.log('Looking up response for hash:', hashLower);
+    console.log('Available hashes:', Array.from(this.responses.keys()));
+
+    const response = this.responses.get(hashLower);
     if (response) {
-      console.log('Found stored response:', JSON.stringify(response, null, 2));
+      console.log('Found stored response:', {
+        hash: hashLower,
+        response: response.response,
+        ai_response: response.ai_response,
+        timestamp: response.timestamp
+      });
       return response;
     }
-    console.log('No response found for hash:', hash);
+
+    console.log('No response found for hash:', hashLower);
     return undefined;
   }
 }

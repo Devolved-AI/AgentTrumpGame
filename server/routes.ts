@@ -66,42 +66,59 @@ const trumpResponses = {
     ]
 };
 
-// Generate Trump response with context mixing
+// Improve context detection in generateTrumpResponse function
 function generateTrumpResponse(userMessage: string, currentScore: number): TrumpResponse {
     const message = userMessage?.toString().trim() || "nothing to say";
     const messageLower = message.toLowerCase();
 
-    // Context detection
-    const isPositive = /great|good|best|awesome|fantastic/i.test(messageLower);
-    const isNegative = /bad|terrible|sad|awful|horrible/i.test(messageLower);
-    const isQuestion = message.includes('?');
-    const mentionsPolicy = /policy|plan|tax|economy|job/i.test(messageLower);
-    const mentionsFood = /mcdonalds|burger king|big mac|diet coke|fast food|fries|kfc|wendys/i.test(messageLower);
+    // Enhanced context detection with more specific patterns
+    const isPositive = /great|good|best|awesome|fantastic|love|amazing|wonderful|excellent/i.test(messageLower);
+    const isNegative = /bad|terrible|sad|awful|horrible|worst|hate|poor|disgusting/i.test(messageLower);
+    const isQuestion = /\?|what|why|how|when|where|who|which|whose/i.test(messageLower);
+    const mentionsPolicy = /policy|plan|tax|economy|job|border|immigration|trade|deal/i.test(messageLower);
+    const mentionsFood = /mcdonalds|burger king|big mac|diet coke|fast food|fries|kfc|wendys|hamberder|pizza/i.test(messageLower);
 
-    console.log('Context detection:', { message, isPositive, isNegative, isQuestion, mentionsPolicy, mentionsFood });
+    console.log('Context detection:', {
+        message,
+        isPositive,
+        isNegative,
+        isQuestion,
+        mentionsPolicy,
+        mentionsFood,
+        timestamp: new Date().toISOString()
+    });
 
-    // Select response category
+    // Select response category with improved priority
     let selectedResponses: string[];
     if (mentionsFood) {
-        selectedResponses = isQuestion ? trumpResponses.question : trumpResponses.default;
-    } else if (mentionsPolicy) selectedResponses = trumpResponses.policy;
-    else if (isQuestion) selectedResponses = trumpResponses.question;
-    else if (isPositive) selectedResponses = trumpResponses.positive;
-    else if (isNegative) selectedResponses = trumpResponses.negative;
-    else selectedResponses = trumpResponses.default;
+        selectedResponses = trumpResponses.positive; // Always be positive about food!
+    } else if (mentionsPolicy) {
+        selectedResponses = trumpResponses.policy;
+    } else if (isQuestion) {
+        selectedResponses = trumpResponses.question;
+    } else if (isPositive) {
+        selectedResponses = trumpResponses.positive;
+    } else if (isNegative) {
+        selectedResponses = trumpResponses.negative;
+    } else {
+        selectedResponses = trumpResponses.default;
+    }
 
-    // Randomly pick a response
+    // Enhanced random selection with timestamp-based seed
     const randomIndex = Math.floor(Math.random() * selectedResponses.length);
     const template = selectedResponses[randomIndex];
 
-    // Replace placeholders
+    // Replace placeholders with enhanced message processing
     const response = template
         .replace('{message}', message)
         .replace('{score}', currentScore.toString());
 
-    // Scoring logic
+    // Enhanced scoring logic
     let scoreChange = Math.floor(Math.random() * 11) - 5; // -5 to +5
-    if (mentionsFood) scoreChange += 3; // Bonus for food mentions
+    if (mentionsFood) scoreChange += 5; // Bigger bonus for food mentions
+    if (isPositive) scoreChange += 2; // Bonus for positive messages
+    if (mentionsPolicy) scoreChange += 3; // Bonus for policy discussion
+
     const newScore = Math.max(0, Math.min(100, currentScore + scoreChange));
 
     return {
@@ -164,7 +181,6 @@ export function registerRoutes(app: Express): Server {
             const trumpResponse = generateTrumpResponse(userMessage, currentScore);
             console.log('Generated response:', JSON.stringify(trumpResponse, null, 2));
 
-            // Store response data first
             try {
                 const responseData = {
                     address,
@@ -177,20 +193,34 @@ export function registerRoutes(app: Express): Server {
                     score: trumpResponse.new_score
                 };
 
-                console.log('Storing response data:', JSON.stringify(responseData, null, 2));
+                console.log('Storing response data:', {
+                    address,
+                    transactionHash,
+                    response: userMessage,
+                    timestamp: new Date().toISOString()
+                });
 
-                // Wait for storage operations to complete
-                await Promise.all([
+                // Wait for both storage operations to complete
+                const [storedResponse] = await Promise.all([
                     storage.storePlayerResponse(address, responseData),
                     storage.updatePlayerScore(address, trumpResponse.new_score)
                 ]);
 
                 // Verify storage immediately after storing
-                const storedResponse = await storage.getPlayerResponseByHash(transactionHash);
-                if (!storedResponse) {
+                const verifiedResponse = await storage.getPlayerResponseByHash(transactionHash);
+                if (!verifiedResponse) {
+                    console.error('Response verification failed:', {
+                        transactionHash,
+                        storedResponse
+                    });
                     throw new Error('Response verification failed - not found after storage');
                 }
-                console.log('Response stored and verified for hash:', transactionHash);
+
+                console.log('Response stored and verified:', {
+                    transactionHash,
+                    verified: true,
+                    response: verifiedResponse.ai_response
+                });
 
                 return res.json({
                     success: true,
@@ -198,7 +228,8 @@ export function registerRoutes(app: Express): Server {
                     score: trumpResponse.new_score,
                     game_won: trumpResponse.game_won,
                     score_change: trumpResponse.score_change,
-                    transactionHash
+                    transactionHash,
+                    stored: true
                 });
 
             } catch (error: any) {
