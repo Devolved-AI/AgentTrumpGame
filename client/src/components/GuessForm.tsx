@@ -51,10 +51,8 @@ export function GuessForm() {
 
   // Reset messages when the component mounts or when wallet changes
   useEffect(() => {
-    // Always start with the welcome message
     setMessages([WELCOME_MESSAGE]);
 
-    // If no wallet is connected, keep only the welcome message
     if (!address || !contract) {
       return;
     }
@@ -66,7 +64,17 @@ export function GuessForm() {
         const responses: Message[] = [];
 
         for (let i = 0; i < count; i++) {
-          const [text, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
+          const [response, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
+          // Parse the response to extract only the user's message
+          let text = response;
+          try {
+            const parsed = JSON.parse(response);
+            text = parsed.response; // Only use the actual message text
+          } catch (e) {
+            // If parsing fails, use the response as-is
+            console.log("Response parsing failed, using raw text");
+          }
+
           const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp 
             ? timestamp.toNumber() 
             : Number(timestamp);
@@ -87,7 +95,6 @@ export function GuessForm() {
       }
     };
 
-    // Set up event listener for new submissions
     const filter = contract.filters.GuessSubmitted(address);
     const handleGuessSubmitted = (player: string, amount: any, multiplier: any, response: string) => {
       console.log("New guess submitted, transaction confirmed");
@@ -96,11 +103,10 @@ export function GuessForm() {
     contract.on(filter, handleGuessSubmitted);
     loadResponses();
 
-    // Cleanup function
     return () => {
       contract.off(filter, handleGuessSubmitted);
     };
-  }, [contract, address]); // Dependencies that trigger reset
+  }, [contract, address]);
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
@@ -133,9 +139,9 @@ export function GuessForm() {
       const tx = await contract.submitGuess(
         JSON.stringify({
           response: data.response,
-          scoreAdjustment: sentiment.score, // Changed to explicitly show this is an adjustment
+          scoreAdjustment: sentiment.score, 
           sentimentType: sentiment.type,
-          isAdjustment: true // Flag to indicate this should adjust the current score
+          isAdjustment: true 
         }),
         {
           value: requiredAmount
