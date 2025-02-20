@@ -14,7 +14,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TransactionVisualization } from "./TransactionVisualization";
 import { generateTrumpResponse } from "@/lib/openai";
-import { analyzeMessageSentiment } from "@/lib/utils";
 
 const WELCOME_MESSAGE = {
   text: "Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!",
@@ -49,17 +48,13 @@ export function GuessForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
-  // Reset messages when wallet changes
   useEffect(() => {
-    // Always reset to just the welcome message when wallet changes
     setMessages([WELCOME_MESSAGE]);
 
-    // Don't try to load history if no wallet is connected
     if (!contract || !address) {
       return;
     }
 
-    // Load historical responses only if wallet is connected
     const loadResponses = async () => {
       try {
         const count = await contract.getPlayerResponseCount(address);
@@ -87,7 +82,6 @@ export function GuessForm() {
           });
         }
 
-        // Only append responses if we're still connected
         if (contract && address) {
           setMessages(prev => [WELCOME_MESSAGE, ...responses]);
         }
@@ -104,10 +98,9 @@ export function GuessForm() {
     loadResponses();
 
     return () => {
-      // Reset to welcome message when cleaning up
       setMessages([WELCOME_MESSAGE]);
     };
-  }, [contract, address]); // Only depend on contract and address changes
+  }, [contract, address]);
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
@@ -124,14 +117,6 @@ export function GuessForm() {
       setIsTyping(true);
       const requiredAmount = await contract.currentRequiredAmount();
 
-      // Use enhanced sentiment analysis
-      const analysis = analyzeMessageSentiment(data.response);
-      console.log("Message analysis:", analysis);
-
-      // Format for contract: `ADJUST_SCORE:${score};${message}`
-      const encodedResponse = `ADJUST_SCORE:${analysis.score};${data.response}`;
-      console.log("Sending encoded response:", encodedResponse);
-
       const userMessage: Message = {
         text: data.response,
         timestamp: Date.now() / 1000,
@@ -139,9 +124,8 @@ export function GuessForm() {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // Send the encoded response to the contract
       const tx = await contract.submitGuess(
-        encodedResponse,
+        data.response,
         {
           value: requiredAmount
         }
@@ -149,7 +133,6 @@ export function GuessForm() {
 
       console.log("Transaction sent:", tx.hash);
 
-      // Update message with transaction info
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
@@ -166,19 +149,15 @@ export function GuessForm() {
         return updated;
       });
 
-      // Generate Trump's response while waiting for transaction
       let trumpResponse: string | null = null;
       try {
         trumpResponse = await generateTrumpResponse(data.response);
       } catch (error) {
         console.error("Error generating response:", error);
-        // Don't throw here, we still want to process the transaction
       }
 
-      // Wait for transaction confirmation
       const receipt = await tx.wait();
 
-      // Update message transaction status
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
@@ -189,21 +168,6 @@ export function GuessForm() {
       });
 
       if (receipt.status === 1) {
-        // Get score changes
-        const oldScore = await contract.getPlayerPersuasionScore(address);
-        const oldScoreNum = typeof oldScore === 'object' && 'toNumber' in oldScore 
-          ? oldScore.toNumber() 
-          : Number(oldScore);
-
-        // Small delay for blockchain processing
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        const newScore = await contract.getPlayerPersuasionScore(address);
-        const newScoreNum = typeof newScore === 'object' && 'toNumber' in newScore 
-          ? newScore.toNumber() 
-          : Number(newScore);
-
-        // Add Trump's response if generation was successful
         if (trumpResponse) {
           setMessages(prev => [
             ...prev,
@@ -214,7 +178,6 @@ export function GuessForm() {
             }
           ]);
         } else {
-          // Fallback response if generation failed
           setMessages(prev => [
             ...prev,
             {
@@ -225,10 +188,9 @@ export function GuessForm() {
           ]);
         }
 
-        // Show score change toast
         toast({
           title: "Success!",
-          description: `Your message has been processed. Score changed from ${oldScoreNum} to ${newScoreNum}`,
+          description: "Your message has been processed.",
           variant: "default"
         });
         form.reset();
@@ -247,7 +209,6 @@ export function GuessForm() {
         variant: "destructive"
       });
 
-      // Add system message about the error
       setMessages(prev => [
         ...prev,
         {
