@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useWeb3Store, parseEther } from "@/lib/web3";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 
 const guessSchema = z.object({
   response: z.string()
@@ -36,14 +36,14 @@ export function GuessForm() {
       const tx = await contract.submitGuess(data.response, {
         value: requiredAmount
       });
-      
+
       toast({
         title: "Submitting guess...",
         description: "Please wait for the transaction to be confirmed."
       });
 
       await tx.wait();
-      
+
       toast({
         title: "Success!",
         description: "Your guess has been submitted.",
@@ -63,40 +63,56 @@ export function GuessForm() {
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="response"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Input
-                  placeholder="Enter your guess..."
-                  className="h-20 text-lg"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <Button 
-          type="submit" 
-          disabled={isSubmitting}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
-            </>
-          ) : (
-            'Submit Guess'
-          )}
-        </Button>
-      </form>
-    </Form>
+    <div className="max-w-2xl mx-auto">
+      <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-2xl shadow-lg">
+        <div className="flex justify-center mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-500 rounded-full" />
+            <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+            <div className="w-3 h-3 bg-green-500 rounded-full" />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
+            <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to press the big red button!</p>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2 items-end mt-auto">
+              <FormField
+                control={form.control}
+                name="response"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <Input
+                        placeholder="iMessage"
+                        className="rounded-full bg-white dark:bg-gray-800 pl-4 pr-12 py-6 text-base border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="rounded-full p-3 bg-blue-500 hover:bg-blue-600 text-white"
+                size="icon"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+              </Button>
+            </form>
+          </Form>
+        </div>
+      </div>
+    </div>
   );
 }

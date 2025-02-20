@@ -73,11 +73,15 @@ export default function Game() {
           </div>
 
           <div className="grid gap-8 lg:grid-cols-2">
-            <div className="space-y-4">
-              <h2 className="text-2xl font-semibold text-black dark:text-white">Stump Agent Trump</h2>
+            <div className="space-y-4 lg:col-span-2">
+              <h2 className="text-2xl font-semibold text-black dark:text-white text-center">
+                Stump Agent Trump
+              </h2>
               <GuessForm />
             </div>
-            <PlayerHistory />
+            <div className="lg:col-span-2">
+              <PlayerHistory />
+            </div>
           </div>
 
           <div className="mt-12 bg-white dark:bg-black rounded-lg p-6 border border-black dark:border-white">
