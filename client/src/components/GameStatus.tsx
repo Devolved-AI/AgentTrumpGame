@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useWeb3Store, formatEther } from "@/lib/web3";
-import { Clock, User, Trophy } from "lucide-react";
+import { Clock, User, Banknote } from "lucide-react";
+import { SiEthereum } from "react-icons/si";
 
 export function GameStatus() {
   const { contract } = useWeb3Store();
@@ -73,16 +74,16 @@ export function GameStatus() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-green-500">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-green-500">
+            <Banknote className="h-5 w-5" />
             Prize Pool
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
-            {status.totalBalance} ETH
+          <div className="text-2xl font-bold text-green-500 flex items-center gap-2">
+            {status.totalBalance} <SiEthereum className="h-5 w-5" />
           </div>
           {status.won && (
             <div className="text-green-500 mt-2">Game Won!</div>
