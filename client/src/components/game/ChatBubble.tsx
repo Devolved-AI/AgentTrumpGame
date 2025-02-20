@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { ExternalLink } from "lucide-react";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 
 interface ChatBubbleProps {
   message: string;
@@ -20,13 +21,18 @@ export function ChatBubble({
   return (
     <motion.div 
       className={cn(
-        "flex w-full mb-4",
-        isUser ? "justify-end" : "justify-start"
+        "flex w-full mb-4 items-start gap-2",
+        isUser ? "justify-end flex-row-reverse" : "justify-start"
       )}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
     >
+      {!isUser && (
+        <Avatar className="w-8 h-8">
+          <AvatarImage src="/trump-avatar.jpg" alt="Trump" className="object-cover" />
+        </Avatar>
+      )}
       <div className={cn(
         "max-w-[70%] rounded-[22px] px-4 py-2 shadow-sm relative",
         isUser 
