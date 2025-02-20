@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useWeb3Store, parseEther } from "@/lib/web3";
+import { useWeb3Store, formatEther } from "@/lib/web3";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,6 +30,7 @@ interface Message {
   text: string;
   timestamp: number;
   isUser: boolean;
+  exists?: boolean; // Added exists property
 }
 
 export function GuessForm() {
@@ -49,15 +50,12 @@ export function GuessForm() {
 
       for (let i = 0; i < count; i++) {
         const [text, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
+        // Safely convert timestamp to number, handling both BigNumber and regular number cases
         const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp 
           ? timestamp.toNumber() 
           : Number(timestamp);
 
-        responses.push({ 
-          text, 
-          timestamp: timestampNum,
-          isUser: true 
-        });
+        responses.push({ text, timestamp: timestampNum, exists });
       }
 
       setMessages(responses.reverse());
@@ -65,11 +63,12 @@ export function GuessForm() {
 
     loadResponses();
 
+    // Listen for new responses
     const filter = contract.filters.GuessSubmitted(address);
-    contract.on(filter, (player, amount, multiplier, response) => {
+    contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
       setMessages(prev => [{
         text: response,
-        timestamp: Date.now() / 1000,
+        timestamp: Date.now() / 1000, // Convert to Unix timestamp (seconds)
         isUser: true
       }, ...prev]);
     });
@@ -107,7 +106,7 @@ export function GuessForm() {
       // Add user message immediately
       setMessages(prev => [...prev, {
         text: data.response,
-        timestamp: Date.now() / 1000,
+        timestamp: Date.now() / 1000, // Convert to Unix timestamp (seconds)
         isUser: true
       }]);
 
