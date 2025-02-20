@@ -1,0 +1,60 @@
+import { ethers } from 'ethers';
+import { create } from 'zustand';
+
+const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS"; // Replace with actual address
+
+const CONTRACT_ABI = [
+  "function gameEndBlock() view returns (uint256)",
+  "function escalationStartBlock() view returns (uint256)",
+  "function lastGuessBlock() view returns (uint256)",
+  "function currentMultiplier() view returns (uint256)",
+  "function totalCollected() view returns (uint256)",
+  "function currentRequiredAmount() view returns (uint256)",
+  "function lastPlayer() view returns (address)",
+  "function gameWon() view returns (bool)",
+  "function escalationActive() view returns (bool)",
+  "function getTimeRemaining() view returns (uint256)",
+  "function submitGuess(string calldata response) payable",
+  "function getPlayerResponseCount(address player) view returns (uint256)",
+  "function getPlayerResponseByIndex(address player, uint256 index) view returns (string memory response, uint256 timestamp, bool exists)",
+  "event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex)"
+];
+
+interface Web3State {
+  provider: ethers.BrowserProvider | null;
+  signer: ethers.JsonRpcSigner | null;
+  contract: ethers.Contract | null;
+  address: string | null;
+  balance: string | null;
+  connect: () => Promise<void>;
+  disconnect: () => void;
+}
+
+export const useWeb3Store = create<Web3State>((set) => ({
+  provider: null,
+  signer: null,
+  contract: null,
+  address: null,
+  balance: null,
+
+  connect: async () => {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      throw new Error("MetaMask is not installed");
+    }
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const [address] = await provider.send("eth_requestAccounts", []);
+    const signer = await provider.getSigner();
+    const balance = ethers.formatEther(await provider.getBalance(address));
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+    set({ provider, signer, contract, address, balance });
+  },
+
+  disconnect: () => {
+    set({ provider: null, signer: null, contract: null, address: null, balance: null });
+  }
+}));
+
+export const formatEther = ethers.formatEther;
+export const parseEther = ethers.parseEther;
