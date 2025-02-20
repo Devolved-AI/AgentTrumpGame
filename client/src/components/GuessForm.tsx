@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatInTimeZone } from "date-fns-tz";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TypingIndicator } from "./TypingIndicator";
+import { TransactionVisualization } from "./TransactionVisualization";
 
 const guessSchema = z.object({
   response: z.string()
@@ -19,11 +20,18 @@ const guessSchema = z.object({
     .max(2000, "Response too long")
 });
 
+interface TransactionState {
+  hash: string;
+  status: 'pending' | 'confirmed' | 'failed';
+  value?: string;
+}
+
 export function GuessForm() {
   const { contract } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [transaction, setTransaction] = useState<TransactionState | null>(null);
 
   const currentTime = formatInTimeZone(
     new Date(),
@@ -43,11 +51,18 @@ export function GuessForm() {
 
     try {
       setIsSubmitting(true);
-      setIsTyping(true); // Show typing indicator right after submission
+      setIsTyping(true);
 
       const requiredAmount = await contract.currentRequiredAmount();
       const tx = await contract.submitGuess(data.response, {
         value: requiredAmount
+      });
+
+      // Set initial transaction state
+      setTransaction({
+        hash: tx.hash,
+        status: 'pending',
+        value: requiredAmount.toString()
       });
 
       toast({
@@ -55,21 +70,40 @@ export function GuessForm() {
         description: "Please wait for the transaction to be confirmed."
       });
 
-      await tx.wait();
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+
+      // Update transaction state based on receipt
+      setTransaction(prev => prev ? {
+        ...prev,
+        status: receipt.status === 1 ? 'confirmed' : 'failed'
+      } : null);
 
       // Simulate Agent Trump typing before showing response
       await new Promise(resolve => setTimeout(resolve, 2000));
       setIsTyping(false);
 
-      toast({
-        title: "Success!",
-        description: "Your guess has been submitted.",
-        variant: "default"
-      });
-
-      form.reset();
+      if (receipt.status === 1) {
+        toast({
+          title: "Success!",
+          description: "Your guess has been submitted.",
+          variant: "default"
+        });
+        form.reset();
+      } else {
+        toast({
+          title: "Error",
+          description: "Transaction failed.",
+          variant: "destructive"
+        });
+      }
     } catch (error: any) {
       setIsTyping(false);
+      setTransaction(prev => prev ? {
+        ...prev,
+        status: 'failed'
+      } : null);
+
       toast({
         title: "Error",
         description: error.message,
@@ -105,6 +139,7 @@ export function GuessForm() {
                   <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
                   <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{currentTime}</p>
                 </div>
+                {transaction && <TransactionVisualization {...transaction} />}
                 {isTyping && <TypingIndicator />}
               </div>
             </ScrollArea>
