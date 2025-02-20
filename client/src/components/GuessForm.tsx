@@ -15,6 +15,12 @@ import { TypingIndicator } from "./TypingIndicator";
 import { TransactionVisualization } from "./TransactionVisualization";
 import { generateTrumpResponse } from "@/lib/openai";
 
+const WELCOME_MESSAGE = {
+  text: "Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!",
+  timestamp: Date.now() / 1000,
+  isUser: false
+};
+
 const guessSchema = z.object({
   response: z.string()
     .min(1, "Response is required")
@@ -40,35 +46,50 @@ export function GuessForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
+  // Reset messages when wallet changes
   useEffect(() => {
-    if (!contract || !address) return;
+    if (!address) {
+      setMessages([WELCOME_MESSAGE]);
+      return;
+    }
+
+    // Reset messages and load responses for new wallet
+    setMessages([WELCOME_MESSAGE]);
+
+    if (!contract) return;
 
     const loadResponses = async () => {
-      const count = await contract.getPlayerResponseCount(address);
-      const responses = [];
+      try {
+        const count = await contract.getPlayerResponseCount(address);
+        const responses = [];
 
-      for (let i = 0; i < count; i++) {
-        const [text, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
-        const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp 
-          ? timestamp.toNumber() 
-          : Number(timestamp);
+        for (let i = 0; i < count; i++) {
+          const [text, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
+          const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp 
+            ? timestamp.toNumber() 
+            : Number(timestamp);
 
-        responses.push({ 
-          text, 
-          timestamp: timestampNum, 
-          exists,
-          isUser: true 
-        });
+          responses.push({ 
+            text, 
+            timestamp: timestampNum, 
+            exists,
+            isUser: true 
+          });
+        }
+
+        if (responses.length > 0) {
+          setMessages(prev => [...prev, ...responses]);
+        }
+      } catch (error) {
+        console.error("Error loading responses:", error);
       }
-
-      setMessages(responses);
     };
 
     loadResponses();
 
-    // Only listen for new submissions to update the message list
+    // Listen for new submissions
     const filter = contract.filters.GuessSubmitted(address);
     contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
       console.log("New guess submitted, transaction confirmed");
@@ -99,7 +120,6 @@ export function GuessForm() {
       setIsSubmitting(true);
       const requiredAmount = await contract.currentRequiredAmount();
 
-      // Add user message immediately
       const userMessage: Message = {
         text: data.response,
         timestamp: Date.now() / 1000,
@@ -107,14 +127,12 @@ export function GuessForm() {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // Show typing indicator right after user message
       setIsTyping(true);
 
       const tx = await contract.submitGuess(data.response, {
         value: requiredAmount
       });
 
-      // Update the last message to include transaction details
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
@@ -138,7 +156,6 @@ export function GuessForm() {
 
       const receipt = await tx.wait();
 
-      // Update transaction status in the message
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
@@ -149,10 +166,8 @@ export function GuessForm() {
       });
 
       if (receipt.status === 1) {
-        // Generate Trump's response after transaction confirmation
         const trumpResponse = await generateTrumpResponse(data.response);
 
-        // Add Trump's response as a new message
         setMessages(prev => [
           ...prev,
           {
@@ -208,11 +223,6 @@ export function GuessForm() {
           <div className="flex flex-col h-[400px]">
             <ScrollArea className="flex-1 px-4">
               <div className="space-y-4">
-                <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
-                  <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{currentTime}</p>
-                </div>
-
                 {messages.map((message, index) => (
                   <div
                     key={index}
