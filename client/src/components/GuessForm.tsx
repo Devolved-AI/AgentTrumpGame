@@ -68,20 +68,10 @@ export function GuessForm() {
 
     loadResponses();
 
-    // We'll only listen for events to handle Trump's responses
+    // Only listen for new submissions to update the message list
     const filter = contract.filters.GuessSubmitted(address);
-    contract.on(filter, async (player, amount, multiplier, response, blockNumber) => {
-      const trumpResponse = await generateTrumpResponse(response);
-
-      setMessages(prev => [
-        ...prev,
-        {
-          text: trumpResponse,
-          timestamp: Date.now() / 1000,
-          isUser: false
-        }
-      ]);
-      setIsTyping(false); // Hide typing indicator after Trump responds
+    contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
+      console.log("New guess submitted, transaction confirmed");
     });
 
     return () => {
@@ -127,14 +117,17 @@ export function GuessForm() {
       // Update the last message to include transaction details
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          transaction: {
-            hash: tx.hash,
-            status: 'pending',
-            value: requiredAmount.toString()
-          }
-        };
+        const lastIdx = updated.length - 1;
+        if (lastIdx >= 0) {
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            transaction: {
+              hash: tx.hash,
+              status: 'pending',
+              value: requiredAmount.toString()
+            }
+          };
+        }
         return updated;
       });
 
@@ -148,13 +141,27 @@ export function GuessForm() {
       // Update transaction status in the message
       setMessages(prev => {
         const updated = [...prev];
-        if (updated[updated.length - 1].transaction) {
-          updated[updated.length - 1].transaction.status = receipt.status === 1 ? 'confirmed' : 'failed';
+        const lastIdx = updated.length - 1;
+        if (lastIdx >= 0 && updated[lastIdx].transaction) {
+          updated[lastIdx].transaction.status = receipt.status === 1 ? 'confirmed' : 'failed';
         }
         return updated;
       });
 
       if (receipt.status === 1) {
+        // Generate Trump's response after transaction confirmation
+        const trumpResponse = await generateTrumpResponse(data.response);
+
+        // Add Trump's response as a new message
+        setMessages(prev => [
+          ...prev,
+          {
+            text: trumpResponse,
+            timestamp: Date.now() / 1000,
+            isUser: false
+          }
+        ]);
+
         toast({
           title: "Success!",
           description: "Your guess has been submitted.",
@@ -162,7 +169,7 @@ export function GuessForm() {
         });
         form.reset();
       } else {
-        setIsTyping(false); // Hide typing indicator if transaction failed
+        setIsTyping(false);
         toast({
           title: "Error",
           description: "Transaction failed.",
@@ -170,7 +177,7 @@ export function GuessForm() {
         });
       }
     } catch (error: any) {
-      setIsTyping(false); // Hide typing indicator if there's an error
+      setIsTyping(false);
       toast({
         title: "Error",
         description: error.message,
@@ -178,6 +185,7 @@ export function GuessForm() {
       });
     } finally {
       setIsSubmitting(false);
+      setIsTyping(false);
     }
   }
 
