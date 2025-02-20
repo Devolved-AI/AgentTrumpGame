@@ -16,13 +16,13 @@ export default function Game() {
 
         <div className="space-y-8">
           <GameStatus />
-          
+
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">
-              <h2 className="text-2xl font-semibold">Submit Your Guess</h2>
+              <h2 className="text-2xl font-semibold">Stump Agent Trump</h2>
               <GuessForm />
             </div>
-            
+
             <PlayerHistory />
           </div>
         </div>
