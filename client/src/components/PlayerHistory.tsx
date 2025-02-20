@@ -23,20 +23,25 @@ export function PlayerHistory() {
 
       for (let i = 0; i < count; i++) {
         const [text, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
-        responses.push({ text, timestamp: timestamp.toNumber(), exists });
+        // Safely convert timestamp to number, handling both BigNumber and regular number cases
+        const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp 
+          ? timestamp.toNumber() 
+          : Number(timestamp);
+
+        responses.push({ text, timestamp: timestampNum, exists });
       }
 
       setResponses(responses.reverse());
     };
 
     loadResponses();
-    
+
     // Listen for new responses
     const filter = contract.filters.GuessSubmitted(address);
     contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
       setResponses(prev => [{
         text: response,
-        timestamp: Date.now(),
+        timestamp: Date.now() / 1000, // Convert to Unix timestamp (seconds)
         exists: true
       }, ...prev]);
     });
