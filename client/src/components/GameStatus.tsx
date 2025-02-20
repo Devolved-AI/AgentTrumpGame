@@ -29,6 +29,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     requiredAmount: "0.0018",
     lastGuessTimestamp: 0,
     isGameOver: false,
+    escalationStartTime: 0,
   });
   const [displayTime, setDisplayTime] = useState(300);
   const [baseTime, setBaseTime] = useState(0);
@@ -36,7 +37,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
     queryFn: fetchEthPrice,
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
   });
 
   // Initialize the timer
@@ -51,14 +52,24 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining);
-        setBaseTime(time);
-        setStatus(prev => ({
-          ...prev,
-          isEscalation: escalationActive,
-          timeRemaining: time,
-        }));
 
-        setDisplayTime(escalationActive ? 300 : time);
+        if (escalationActive && status.escalationStartTime === 0) {
+          setStatus(prev => ({
+            ...prev,
+            isEscalation: true,
+            timeRemaining: time,
+            escalationStartTime: Date.now(),
+          }));
+        } else {
+          setBaseTime(time);
+          setStatus(prev => ({
+            ...prev,
+            isEscalation: escalationActive,
+            timeRemaining: time,
+          }));
+        }
+
+        setDisplayTime(time);
       } catch (error) {
         console.error("Error fetching initial time:", error);
       }
@@ -67,7 +78,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     initializeTime();
   }, [contract]);
 
-  // Update game status periodically (every 15 seconds)
+  // Update game status periodically
   useEffect(() => {
     if (!contract) return;
 
@@ -93,8 +104,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         const time = Number(timeRemaining);
         const isNewGuess = lastPlayer !== status.lastPlayer;
+        const isNewEscalation = escalationActive && !status.isEscalation;
 
-        // Only update base time if not in escalation mode
+        // Handle transition to escalation mode
+        if (isNewEscalation) {
+          setStatus(prev => ({
+            ...prev,
+            isEscalation: true,
+            escalationStartTime: Date.now(),
+          }));
+        }
+
+        // Update base time only in normal mode
         if (!escalationActive) {
           setBaseTime(time);
         }
@@ -114,6 +135,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         // Reset display time only on new guess during escalation
         if (isNewGuess && escalationActive) {
           setDisplayTime(300);
+          setStatus(prev => ({
+            ...prev,
+            escalationStartTime: Date.now(),
+          }));
         }
       } catch (error) {
         console.error("Error fetching game status:", error);
@@ -121,33 +146,29 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     };
 
     updateStatus();
-    const statusInterval = setInterval(updateStatus, 15000); // Update every 15 seconds
+    const statusInterval = setInterval(updateStatus, 15000);
     return () => clearInterval(statusInterval);
   }, [contract]);
 
-  // Continuous countdown timer (every second)
+  // Continuous countdown timer
   useEffect(() => {
     if (status.isGameOver) return;
 
     const timer = setInterval(() => {
-      setDisplayTime(prev => {
-        if (status.isEscalation) {
-          // In escalation mode, simply count down from current value
-          return prev > 0 ? prev - 1 : 0;
-        } else {
-          // In normal mode, calculate from base time
-          return Math.max(0, baseTime - 1);
-        }
-      });
-
-      // Update base time in normal mode
-      if (!status.isEscalation) {
+      if (status.isEscalation) {
+        // In escalation mode, calculate time since last guess
+        const elapsed = Math.floor((Date.now() - status.escalationStartTime) / 1000);
+        const remaining = Math.max(0, 300 - elapsed);
+        setDisplayTime(remaining);
+      } else {
+        // In normal mode, update from base time
+        setDisplayTime(prev => Math.max(0, baseTime - 1));
         setBaseTime(prev => Math.max(0, prev - 1));
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [status.isEscalation, status.isGameOver, baseTime]);
+  }, [status.isEscalation, status.isGameOver, baseTime, status.escalationStartTime]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
