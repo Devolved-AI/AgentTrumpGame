@@ -75,7 +75,7 @@ export function GuessForm() {
 
         <div className="flex flex-col gap-4">
           <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
-            <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to press the big red button!</p>
+            <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
           </div>
 
           <Form {...form}>
