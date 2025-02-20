@@ -6,6 +6,7 @@ import { Globe } from "lucide-react";
 import { SiX, SiTelegram } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersuasionScore } from "@/components/PersuasionScore";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Game() {
   return (
@@ -14,9 +15,6 @@ export default function Game() {
         <div className="flex flex-col items-start mb-8">
           <div className="w-full flex flex-col gap-6">
             <div className="flex justify-between items-center">
-              <h1 className="text-4xl font-bold text-black dark:text-white">
-                Agent Trump Game
-              </h1>
               <div className="flex items-center gap-8">
                 <div className="flex items-center gap-6">
                   <a 
@@ -48,6 +46,18 @@ export default function Game() {
                 <WalletButton />
               </div>
             </div>
+
+            <div className="flex flex-col items-center w-full mb-8">
+              <Avatar className="h-24 w-24 mb-4 border-2 border-gray-200 dark:border-gray-800">
+                <AvatarImage src="/trump-avatar.png" alt="Agent Trump" />
+                <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-xl">AT</AvatarFallback>
+              </Avatar>
+              <h1 className="text-2xl font-bold text-black dark:text-white text-center mb-1">
+                Agent Trump
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Base Sepolia</p>
+            </div>
+
             <div className="flex gap-8 items-start">
               <video 
                 autoPlay 
@@ -74,9 +84,6 @@ export default function Game() {
 
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="space-y-4 lg:col-span-2">
-              <h2 className="text-2xl font-semibold text-black dark:text-white text-center">
-                Stump Agent Trump
-              </h2>
               <GuessForm />
             </div>
             <div className="lg:col-span-2">
