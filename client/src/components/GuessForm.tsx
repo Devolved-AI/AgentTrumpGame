@@ -116,7 +116,7 @@ export function GuessForm() {
     }
   });
 
-  async function onSubmit(data: z.infer<typeof guessSchema>) {
+  const onSubmit = async (data: z.infer<typeof guessSchema>) => {
     if (!contract) return;
 
     try {
@@ -136,15 +136,12 @@ export function GuessForm() {
 
       setIsTyping(true);
 
-      // Submit guess with enhanced sentiment data
+      // Submit guess with encoded score adjustment in the response string
+      // Format: [SCORE:number]message
+      // This allows the contract to easily parse and apply the score adjustment
+      const scorePrefix = `[SCORE:${analysis.score}]`;
       const tx = await contract.submitGuess(
-        JSON.stringify({
-          response: data.response,
-          scoreAdjustment: analysis.score,
-          sentimentType: analysis.type,
-          breakdown: analysis.breakdown,
-          isAdjustment: true
-        }),
+        `${scorePrefix}${data.response}`,
         {
           value: requiredAmount
         }
@@ -203,7 +200,7 @@ export function GuessForm() {
 
         toast({
           title: "Success!",
-          description: "Your message has been processed.",
+          description: "Your message has been processed and score has been adjusted.",
           variant: "default"
         });
         form.reset();
@@ -226,7 +223,7 @@ export function GuessForm() {
       setIsSubmitting(false);
       setIsTyping(false);
     }
-  }
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto">

@@ -21,7 +21,7 @@ export function PersuasionScore() {
     };
 
     updateScore();
-    // Update more frequently to catch score changes
+    // Poll every second to catch score changes quickly
     const interval = setInterval(updateScore, 1000);
     return () => clearInterval(interval);
   }, [contract, address]);
@@ -31,11 +31,13 @@ export function PersuasionScore() {
     if (!contract || !address) return;
 
     const filter = contract.filters.GuessSubmitted(address);
-    const handler = () => {
-      // Update score immediately after a guess
-      contract.getPlayerPersuasionScore(address)
-        .then(newScore => setScore(Number(newScore)))
-        .catch(console.error);
+    const handler = async () => {
+      try {
+        const newScore = await contract.getPlayerPersuasionScore(address);
+        setScore(Number(newScore));
+      } catch (error) {
+        console.error("Error updating score after guess:", error);
+      }
     };
 
     contract.on(filter, handler);
