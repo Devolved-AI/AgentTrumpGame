@@ -6,14 +6,7 @@ const openai = new OpenAI({
 });
 
 export async function generateTrumpResponse(userGuess: string): Promise<string> {
-  if (!import.meta.env.VITE_OPENAI_API_KEY) {
-    console.error("OpenAI API key is not set");
-    return "Listen folks, we need our API key to Make Communication Great Again! Sad!";
-  }
-
   try {
-    console.log("Generating Trump response for input:", userGuess);
-
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -37,10 +30,7 @@ export async function generateTrumpResponse(userGuess: string): Promise<string> 
       max_tokens: 200
     });
 
-    const generatedResponse = response.choices[0].message.content;
-    console.log("Generated Trump response:", generatedResponse);
-
-    return generatedResponse || "Believe me, that was not a good try. NEXT!";
+    return response.choices[0].message.content || "Believe me, that was not a good try. NEXT!";
   } catch (error) {
     console.error("Error generating Trump response:", error);
     return "Listen folks, we're having some technical difficulties. But we'll be back, bigger and better than ever before!";

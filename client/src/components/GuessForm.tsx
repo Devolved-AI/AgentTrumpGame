@@ -197,7 +197,6 @@ export function GuessForm() {
         const oldScoreNum = typeof oldScore === 'object' && 'toNumber' in oldScore 
           ? oldScore.toNumber() 
           : Number(oldScore);
-        console.log("Previous score:", oldScoreNum);
 
         // Wait a moment for the blockchain to process the score update
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -206,31 +205,13 @@ export function GuessForm() {
         const newScoreNum = typeof newScore === 'object' && 'toNumber' in newScore 
           ? newScore.toNumber() 
           : Number(newScore);
-        console.log("New score after update:", newScoreNum);
 
-        // Generate Trump's response with better error handling
-        try {
-          const trumpResponse = await generateTrumpResponse(data.response);
-          console.log("Trump response generated:", trumpResponse);
-
-          if (trumpResponse) {
-            setMessages(prev => [
-              ...prev,
-              {
-                text: trumpResponse,
-                timestamp: Date.now() / 1000,
-                isUser: false
-              }
-            ]);
-          } else {
-            throw new Error("No response generated");
-          }
-        } catch (error) {
-          console.error("Error generating Trump response:", error);
+        const trumpResponse = await generateTrumpResponse(data.response);
+        if (trumpResponse) {
           setMessages(prev => [
             ...prev,
             {
-              text: "Listen folks, we're having some technical difficulties. But we'll be back, bigger and better than ever before!",
+              text: trumpResponse,
               timestamp: Date.now() / 1000,
               isUser: false
             }
