@@ -17,7 +17,7 @@ import { generateTrumpResponse } from "@/lib/openai";
 
 const WELCOME_MESSAGE = {
   text: "Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!",
-  timestamp: Date.now() / 1000,
+  timestamp: Math.floor(Date.now() / 1000),
   isUser: false
 };
 
@@ -48,12 +48,9 @@ export function GuessForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
-  // Reset messages and load responses when wallet connection changes
   useEffect(() => {
-    // Always reset to welcome message when component mounts or wallet disconnects
     setMessages([WELCOME_MESSAGE]);
 
-    // Only proceed to load messages if we have both contract and address
     if (!contract || !address) {
       return;
     }
@@ -66,7 +63,7 @@ export function GuessForm() {
         const responses: Message[] = [];
 
         for (let i = 0; i < count; i++) {
-          if (!mounted) return; // Stop loading if component unmounted
+          if (!mounted) return;
 
           const [response, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
           let text = response;
@@ -83,7 +80,7 @@ export function GuessForm() {
 
           responses.push({ 
             text, 
-            timestamp: timestampNum, 
+            timestamp: timestampNum,
             exists,
             isUser: true 
           });
@@ -106,12 +103,11 @@ export function GuessForm() {
 
     loadResponses();
 
-    // Cleanup function
     return () => {
       mounted = false;
       setMessages([WELCOME_MESSAGE]);
     };
-  }, [contract, address]); // Dependencies include both contract and address
+  }, [contract, address]);
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
@@ -130,7 +126,7 @@ export function GuessForm() {
 
       const userMessage: Message = {
         text: data.response,
-        timestamp: Date.now() / 1000,
+        timestamp: Math.floor(Date.now() / 1000),
         isUser: true
       };
       setMessages(prev => [...prev, userMessage]);
@@ -184,7 +180,7 @@ export function GuessForm() {
             ...prev,
             {
               text: trumpResponse,
-              timestamp: Date.now() / 1000,
+              timestamp: Math.floor(Date.now() / 1000),
               isUser: false
             }
           ]);
@@ -193,7 +189,7 @@ export function GuessForm() {
             ...prev,
             {
               text: "Interesting... Keep trying to convince me! 🤔",
-              timestamp: Date.now() / 1000,
+              timestamp: Math.floor(Date.now() / 1000),
               isUser: false
             }
           ]);
@@ -224,7 +220,7 @@ export function GuessForm() {
         ...prev,
         {
           text: "Sorry, there was an error processing your message. Please try again.",
-          timestamp: Date.now() / 1000,
+          timestamp: Math.floor(Date.now() / 1000),
           isUser: false
         }
       ]);
