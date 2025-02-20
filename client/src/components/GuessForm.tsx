@@ -48,20 +48,26 @@ export function GuessForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
-  // Reset messages when wallet disconnects
+  // Reset messages and load responses when wallet connection changes
   useEffect(() => {
+    // Always reset to welcome message when component mounts or wallet disconnects
+    setMessages([WELCOME_MESSAGE]);
+
+    // Only proceed to load messages if we have both contract and address
     if (!contract || !address) {
-      setMessages([WELCOME_MESSAGE]);
       return;
     }
 
-    // Load responses only when wallet is connected
+    let mounted = true;
+
     const loadResponses = async () => {
       try {
         const count = await contract.getPlayerResponseCount(address);
-        const responses: Message[] = [];  // Explicitly type the array
+        const responses: Message[] = [];
 
         for (let i = 0; i < count; i++) {
+          if (!mounted) return; // Stop loading if component unmounted
+
           const [response, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
           let text = response;
           try {
@@ -83,18 +89,28 @@ export function GuessForm() {
           });
         }
 
-        setMessages([WELCOME_MESSAGE, ...responses]);
+        if (mounted) {
+          setMessages([WELCOME_MESSAGE, ...responses]);
+        }
       } catch (error) {
         console.error("Error loading responses:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load message history",
-          variant: "destructive"
-        });
+        if (mounted) {
+          toast({
+            title: "Error",
+            description: "Failed to load message history",
+            variant: "destructive"
+          });
+        }
       }
     };
 
     loadResponses();
+
+    // Cleanup function
+    return () => {
+      mounted = false;
+      setMessages([WELCOME_MESSAGE]);
+    };
   }, [contract, address]); // Dependencies include both contract and address
 
   const form = useForm<z.infer<typeof guessSchema>>({
