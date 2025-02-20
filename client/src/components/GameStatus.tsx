@@ -58,7 +58,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           totalBalance: formatEther(balance),
           won
         });
-        setDisplayTime(Number(timeRemaining)); // Update display time when contract data updates
+
+        // Only update display time when first loading or when there's a significant change
+        if (Math.abs(Number(timeRemaining) - displayTime) > 2) {
+          setDisplayTime(Number(timeRemaining));
+        }
       } catch (error) {
         console.error("Error fetching game status:", error);
       }
@@ -67,9 +71,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     updateStatus();
     const interval = setInterval(updateStatus, 2000);
     return () => clearInterval(interval);
-  }, [contract]);
+  }, [contract, displayTime]);
 
-  // Separate effect for countdown display
+  // Separate effect for smooth countdown display
   useEffect(() => {
     const timer = setInterval(() => {
       setDisplayTime(prev => {
