@@ -208,16 +208,34 @@ export function GuessForm() {
           : Number(newScore);
         console.log("New score after update:", newScoreNum);
 
-        const trumpResponse = await generateTrumpResponse(data.response);
+        // Generate Trump's response with better error handling
+        try {
+          const trumpResponse = await generateTrumpResponse(data.response);
+          console.log("Trump response generated:", trumpResponse);
 
-        setMessages(prev => [
-          ...prev,
-          {
-            text: trumpResponse,
-            timestamp: Date.now() / 1000,
-            isUser: false
+          if (trumpResponse) {
+            setMessages(prev => [
+              ...prev,
+              {
+                text: trumpResponse,
+                timestamp: Date.now() / 1000,
+                isUser: false
+              }
+            ]);
+          } else {
+            throw new Error("No response generated");
           }
-        ]);
+        } catch (error) {
+          console.error("Error generating Trump response:", error);
+          setMessages(prev => [
+            ...prev,
+            {
+              text: "Listen folks, we're having some technical difficulties. But we'll be back, bigger and better than ever before!",
+              timestamp: Date.now() / 1000,
+              isUser: false
+            }
+          ]);
+        }
 
         toast({
           title: "Success!",
