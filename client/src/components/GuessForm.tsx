@@ -123,9 +123,9 @@ export function GuessForm() {
       setIsSubmitting(true);
       const requiredAmount = await contract.currentRequiredAmount();
 
-      // Analyze message sentiment before submitting
-      const sentiment = analyzeMessageSentiment(data.response);
-      console.log("Message sentiment:", sentiment);
+      // Use enhanced sentiment analysis
+      const analysis = analyzeMessageSentiment(data.response);
+      console.log("Message analysis:", analysis);
 
       const userMessage: Message = {
         text: data.response,
@@ -136,13 +136,14 @@ export function GuessForm() {
 
       setIsTyping(true);
 
-      // Submit guess with sentiment score encoded in the response
+      // Submit guess with enhanced sentiment data
       const tx = await contract.submitGuess(
         JSON.stringify({
           response: data.response,
-          scoreAdjustment: sentiment.score, 
-          sentimentType: sentiment.type,
-          isAdjustment: true 
+          scoreAdjustment: analysis.score,
+          sentimentType: analysis.type,
+          breakdown: analysis.breakdown,
+          isAdjustment: true
         }),
         {
           value: requiredAmount
@@ -165,9 +166,16 @@ export function GuessForm() {
         return updated;
       });
 
+      // Show detailed feedback about the message analysis
+      const breakdownText = analysis.breakdown
+        .map(b => `${b.category}: ${b.count} word(s)`)
+        .join(', ');
+
       toast({
-        title: `Submitting guess... (${sentiment.type})`,
-        description: `Your message was analyzed as ${sentiment.type} (score adjustment: ${sentiment.score})`
+        title: `Message Analysis (${analysis.type})`,
+        description: `Score adjustment: ${analysis.score}
+                     ${breakdownText ? `\nBreakdown: ${breakdownText}` : ''}`,
+        duration: 5000
       });
 
       const receipt = await tx.wait();
@@ -195,7 +203,7 @@ export function GuessForm() {
 
         toast({
           title: "Success!",
-          description: "Your guess has been submitted.",
+          description: "Your message has been processed.",
           variant: "default"
         });
         form.reset();
