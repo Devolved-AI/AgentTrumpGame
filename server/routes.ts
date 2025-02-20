@@ -124,6 +124,18 @@ interface TrumpResponse {
     error?: string;
 }
 
+interface PlayerResponse {
+    address: string;
+    response: string;
+    ai_response: string;
+    blockNumber: number;
+    transactionHash: string;
+    created_at: string;
+    exists: boolean;
+    score: number;
+}
+
+
 export function registerRoutes(app: Express): Server {
     app.post('/api/responses', async (req, res) => {
         try {
@@ -152,6 +164,7 @@ export function registerRoutes(app: Express): Server {
             const trumpResponse = generateTrumpResponse(userMessage, currentScore);
             console.log('Generated response:', JSON.stringify(trumpResponse, null, 2));
 
+            // Store response data first
             try {
                 const responseData = {
                     address,
@@ -165,39 +178,39 @@ export function registerRoutes(app: Express): Server {
                 };
 
                 console.log('Storing response data:', JSON.stringify(responseData, null, 2));
-                await storage.storePlayerResponse(address, responseData);
-                await storage.updatePlayerScore(address, trumpResponse.new_score);
-                console.log('Response stored successfully for hash:', transactionHash);
-                // Verify storage immediately
+
+                // Wait for storage operations to complete
+                await Promise.all([
+                    storage.storePlayerResponse(address, responseData),
+                    storage.updatePlayerScore(address, trumpResponse.new_score)
+                ]);
+
+                // Verify storage immediately after storing
                 const storedResponse = await storage.getPlayerResponseByHash(transactionHash);
-                console.log('Immediate retrieval check:', JSON.stringify(storedResponse, null, 2));
-            } catch (error) {
-                console.error('Storage error:', error);
+                if (!storedResponse) {
+                    throw new Error('Response verification failed - not found after storage');
+                }
+                console.log('Response stored and verified for hash:', transactionHash);
+
                 return res.json({
                     success: true,
                     message: trumpResponse.response,
                     score: trumpResponse.new_score,
                     game_won: trumpResponse.game_won,
                     score_change: trumpResponse.score_change,
-                    transactionHash,
-                    storage_error: error.message
+                    transactionHash
                 });
-            }
 
-            return res.json({
-                success: true,
-                message: trumpResponse.response,
-                score: trumpResponse.new_score,
-                game_won: trumpResponse.game_won,
-                score_change: trumpResponse.score_change,
-                transactionHash
-            });
+            } catch (error: any) {
+                console.error('Storage error:', error);
+                throw new Error(`Failed to store response: ${error.message}`);
+            }
 
         } catch (error: any) {
             console.error('Critical error in POST /api/responses:', error);
             return res.status(500).json({
                 success: false,
-                error: 'Failed to generate response',
+                error: 'Failed to generate or store response',
                 details: error.message
             });
         }

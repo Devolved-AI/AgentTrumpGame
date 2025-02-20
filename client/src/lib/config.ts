@@ -1,5 +1,5 @@
 // Smart contract configuration
-export const CONTRACT_ADDRESS = import.meta.env.VITE_BASE_CONTRACT_ADDRESS || "0x6B9B7Bb6DA9556D2bA964c9e611723d1A4e8E8b4";
+export const CONTRACT_ADDRESS = import.meta.env.VITE_BASE_CONTRACT_ADDRESS || "0x3330425E7e6165F77339AF1DA8846df451DfcEA8";
 
 // When updating the ABI, make sure to include only the functions you need
 // Current minimum required functions:
