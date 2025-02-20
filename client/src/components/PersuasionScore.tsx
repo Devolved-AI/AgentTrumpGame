@@ -11,39 +11,57 @@ export function PersuasionScore() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchScore = async () => {
-    if (!contract || !address) return;
+    if (!contract || !address) {
+      console.log("Contract or address not available");
+      return;
+    }
 
     try {
       setError(null);
-      const newScore = await contract.getPlayerPersuasionScore(address);
+      // First check if the method exists on the contract
+      if (typeof contract.getPlayerPersuasionScore !== 'function') {
+        console.error("getPlayerPersuasionScore method not found on contract");
+        setError("Contract method not available");
+        return;
+      }
 
-      // Handle the case where the score might be undefined or null
-      if (!newScore) {
+      const newScore = await contract.getPlayerPersuasionScore(address);
+      console.log("Raw score from contract:", newScore);
+
+      // Handle the case where the score might be undefined, null, or empty
+      if (newScore === undefined || newScore === null || newScore === "0x") {
         console.log("No score found, using default");
         setScore(50);
         return;
       }
 
-      // Properly handle BigNumber conversion
+      // Properly handle BigNumber conversion with more detailed error logging
       let scoreValue: number;
       try {
-        scoreValue = typeof newScore === 'object' && 'toNumber' in newScore 
-          ? newScore.toNumber() 
-          : Number(newScore);
+        if (typeof newScore === 'object' && 'toNumber' in newScore) {
+          scoreValue = newScore.toNumber();
+          console.log("Converted BigNumber score:", scoreValue);
+        } else {
+          scoreValue = Number(newScore);
+          console.log("Converted number score:", scoreValue);
+        }
 
         // Validate the converted score
         if (isNaN(scoreValue)) {
           console.log("Invalid score value, using default");
           scoreValue = 50;
         }
+
+        // Ensure score is within valid range
+        scoreValue = Math.max(0, Math.min(100, scoreValue));
       } catch (conversionError) {
         console.error("Score conversion error:", conversionError);
         scoreValue = 50;
       }
 
-      console.log("Fetched persuasion score:", scoreValue);
+      console.log("Final persuasion score:", scoreValue);
       setScore(scoreValue);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching persuasion score:", error);
       setError("Could not fetch score");
       // Keep the current score instead of resetting
@@ -74,24 +92,28 @@ export function PersuasionScore() {
   useEffect(() => {
     if (!contract || !address) return;
 
-    const filter = contract.filters.GuessSubmitted(address);
-    const handler = async () => {
-      setIsUpdating(true);
-      try {
-        // Add a small delay to ensure the contract state is updated
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await fetchScore();
-      } catch (error) {
-        console.error("Error updating score after guess:", error);
-      } finally {
-        setIsUpdating(false);
-      }
-    };
+    try {
+      const filter = contract.filters.GuessSubmitted(address);
+      const handler = async () => {
+        setIsUpdating(true);
+        try {
+          // Add a small delay to ensure the contract state is updated
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await fetchScore();
+        } catch (error) {
+          console.error("Error updating score after guess:", error);
+        } finally {
+          setIsUpdating(false);
+        }
+      };
 
-    contract.on(filter, handler);
-    return () => {
-      contract.off(filter, handler);
-    };
+      contract.on(filter, handler);
+      return () => {
+        contract.off(filter, handler);
+      };
+    } catch (error) {
+      console.error("Error setting up event listener:", error);
+    }
   }, [contract, address]);
 
   return (
