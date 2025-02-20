@@ -136,12 +136,14 @@ export function GuessForm() {
 
       setIsTyping(true);
 
-      // Submit guess with encoded score adjustment in the response string
-      // Format: [SCORE:number]message
-      // This allows the contract to easily parse and apply the score adjustment
-      const scorePrefix = `[SCORE:${analysis.score}]`;
+      // Encode the score adjustment in a format the contract expects:
+      // Format: SCORE_ADJUST:{number}:::{message}
+      const encodedMessage = `SCORE_ADJUST:${analysis.score}:::${data.response}`;
+
+      console.log("Sending encoded message:", encodedMessage);
+
       const tx = await contract.submitGuess(
-        `${scorePrefix}${data.response}`,
+        encodedMessage,
         {
           value: requiredAmount
         }
@@ -187,6 +189,10 @@ export function GuessForm() {
       });
 
       if (receipt.status === 1) {
+        // Verify the score was updated
+        const newScore = await contract.getPlayerPersuasionScore(address);
+        console.log("New persuasion score:", Number(newScore));
+
         const trumpResponse = await generateTrumpResponse(data.response);
 
         setMessages(prev => [
