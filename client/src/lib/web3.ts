@@ -32,6 +32,7 @@ const CONTRACT_ABI = [
   "function submitGuess(string calldata response) payable",
   "function getPlayerResponseCount(address player) view returns (uint256)",
   "function getPlayerResponseByIndex(address player, uint256 index) view returns (string memory response, uint256 timestamp, bool exists)",
+  "function getContractBalance() view returns (uint256)",
   "event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex)"
 ];
 
