@@ -37,24 +37,28 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     if (!contract) return;
 
     const updateStatus = async () => {
-      const [
-        timeRemaining,
-        lastPlayer,
-        balance,
-        won
-      ] = await Promise.all([
-        contract.getTimeRemaining(),
-        contract.lastPlayer(),
-        contract.getContractBalance(),
-        contract.gameWon()
-      ]);
+      try {
+        const [
+          timeRemaining,
+          lastPlayer,
+          balance,
+          won
+        ] = await Promise.all([
+          contract.getTimeRemaining(),
+          contract.lastPlayer(),
+          contract.getContractBalance(),
+          contract.gameWon()
+        ]);
 
-      setStatus({
-        timeRemaining: timeRemaining.toNumber(),
-        lastPlayer,
-        totalBalance: formatEther(balance),
-        won
-      });
+        setStatus({
+          timeRemaining: Number(timeRemaining), // Convert BigInt to number
+          lastPlayer,
+          totalBalance: formatEther(balance), // Format BigInt balance to ETH
+          won
+        });
+      } catch (error) {
+        console.error("Error fetching game status:", error);
+      }
     };
 
     updateStatus();
