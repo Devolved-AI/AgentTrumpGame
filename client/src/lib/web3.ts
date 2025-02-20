@@ -1,7 +1,8 @@
 import { ethers } from 'ethers';
 import { create } from 'zustand';
+import { toast } from '@/hooks/use-toast';
 
-const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS"; // Replace with actual address
+const CONTRACT_ADDRESS = "0x0803D65B93621C0D89F2081D6980c0A6E1cE2E98"; // Agent Trump Contract
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -15,6 +16,7 @@ const BASE_SEPOLIA_CONFIG = {
   blockExplorerUrls: ["https://sepolia.basescan.org"],
 };
 
+// Rest of the ABI remains unchanged
 const CONTRACT_ABI = [
   "function getPlayerPersuasionScore(address player) view returns (uint256)",
   "function gameEndBlock() view returns (uint256)",
@@ -52,7 +54,12 @@ export const useWeb3Store = create<Web3State>((set) => ({
 
   connect: async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error("MetaMask is not installed");
+      toast({
+        title: "MetaMask Required",
+        description: "Please install MetaMask to connect your wallet",
+        variant: "destructive",
+      });
+      return;
     }
 
     try {
@@ -65,23 +72,30 @@ export const useWeb3Store = create<Web3State>((set) => ({
       } catch (switchError: any) {
         // Network doesn't exist, add it
         if (switchError.code === 4902) {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [BASE_SEPOLIA_CONFIG],
-          });
+          try {
+            await window.ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [BASE_SEPOLIA_CONFIG],
+            });
+          } catch (addError) {
+            toast({
+              title: "Network Error",
+              description: "Failed to add Base Sepolia network",
+              variant: "destructive",
+            });
+            return;
+          }
         } else {
-          throw switchError;
+          toast({
+            title: "Network Error",
+            description: "Please switch to Base Sepolia network",
+            variant: "destructive",
+          });
+          return;
         }
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum, {
-        network: {
-          chainId: parseInt(CHAIN_ID, 16),
-          name: "base-sepolia",
-          ensAddress: null // Explicitly disable ENS
-        }
-      });
-
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const accounts = await provider.send("eth_requestAccounts", []);
       const address = accounts[0];
       const signer = await provider.getSigner(address);
@@ -89,14 +103,42 @@ export const useWeb3Store = create<Web3State>((set) => ({
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
       set({ provider, signer, contract, address, balance });
+
+      toast({
+        title: "Wallet Connected",
+        description: "Successfully connected to Base Sepolia network",
+      });
+
+      // Setup balance update listener
+      window.ethereum.on('accountsChanged', async (accounts: string[]) => {
+        if (accounts.length === 0) {
+          set({ provider: null, signer: null, contract: null, address: null, balance: null });
+        } else {
+          const newAddress = accounts[0];
+          const newBalance = ethers.formatEther(await provider.getBalance(newAddress));
+          set((state) => ({ ...state, address: newAddress, balance: newBalance }));
+        }
+      });
+
     } catch (error: any) {
       console.error("Failed to connect:", error);
-      throw error;
+      toast({
+        title: "Connection Error",
+        description: error.message || "Failed to connect wallet",
+        variant: "destructive",
+      });
     }
   },
 
   disconnect: () => {
+    if (window.ethereum) {
+      window.ethereum.removeAllListeners('accountsChanged');
+    }
     set({ provider: null, signer: null, contract: null, address: null, balance: null });
+    toast({
+      title: "Wallet Disconnected",
+      description: "Successfully disconnected wallet",
+    });
   }
 }));
 
