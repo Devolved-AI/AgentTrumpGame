@@ -2,7 +2,8 @@ import { WalletButton } from "@/components/WalletButton";
 import { GameStatus } from "@/components/GameStatus";
 import { GuessForm } from "@/components/GuessForm";
 import { PlayerHistory } from "@/components/PlayerHistory";
-import { Globe, ExternalLink, MessageSquare } from "lucide-react";
+import { Globe } from "lucide-react";
+import { SiX, SiTelegram } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Game() {
@@ -31,7 +32,7 @@ export default function Game() {
                     rel="noopener noreferrer"
                     className="text-black dark:text-white hover:opacity-80"
                   >
-                    <ExternalLink className="h-6 w-6" />
+                    <SiX className="h-6 w-6" />
                   </a>
                   <a 
                     href="https://t.me/devolvedai" 
@@ -39,7 +40,7 @@ export default function Game() {
                     rel="noopener noreferrer"
                     className="text-black dark:text-white hover:opacity-80"
                   >
-                    <MessageSquare className="h-6 w-6" />
+                    <SiTelegram className="h-6 w-6" />
                   </a>
                   <ThemeToggle />
                 </div>
