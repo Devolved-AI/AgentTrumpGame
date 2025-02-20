@@ -26,7 +26,7 @@ export function GuessForm() {
   const currentTime = formatInTimeZone(
     new Date(),
     'America/Los_Angeles',
-    'h:mm a MM/dd/yyyy'
+    'h:mma MM/dd/yyyy'
   );
 
   const form = useForm<z.infer<typeof guessSchema>>({
