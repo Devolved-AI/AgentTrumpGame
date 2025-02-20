@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useWeb3Store, parseEther } from "@/lib/web3";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Send } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const guessSchema = z.object({
   response: z.string()
@@ -73,44 +74,50 @@ export function GuessForm() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
-            <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
+        <div className="flex flex-col h-[400px]">
+          <ScrollArea className="flex-1 px-4">
+            <div className="space-y-4">
+              <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
+                <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <div className="mt-4 px-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2 items-end">
+                <FormField
+                  control={form.control}
+                  name="response"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormControl>
+                        <Input
+                          placeholder="iMessage"
+                          className="rounded-full bg-white dark:bg-gray-800 pl-4 pr-12 py-6 text-base border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="rounded-full p-3 bg-blue-500 hover:bg-blue-600 text-white"
+                  size="icon"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </Button>
+              </form>
+            </Form>
           </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2 items-end mt-auto">
-              <FormField
-                control={form.control}
-                name="response"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormControl>
-                      <Input
-                        placeholder="iMessage"
-                        className="rounded-full bg-white dark:bg-gray-800 pl-4 pr-12 py-6 text-base border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="rounded-full p-3 bg-blue-500 hover:bg-blue-600 text-white"
-                size="icon"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Send className="h-5 w-5" />
-                )}
-              </Button>
-            </form>
-          </Form>
         </div>
       </div>
     </div>
