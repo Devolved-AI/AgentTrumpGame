@@ -9,9 +9,9 @@ import { useWeb3Store, parseEther } from "@/lib/web3";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { TypingIndicator } from "./TypingIndicator";
 
 const guessSchema = z.object({
   response: z.string()
@@ -23,6 +23,7 @@ export function GuessForm() {
   const { contract } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   const currentTime = formatInTimeZone(
     new Date(),
@@ -42,6 +43,8 @@ export function GuessForm() {
 
     try {
       setIsSubmitting(true);
+      setIsTyping(true); // Show typing indicator right after submission
+
       const requiredAmount = await contract.currentRequiredAmount();
       const tx = await contract.submitGuess(data.response, {
         value: requiredAmount
@@ -54,6 +57,10 @@ export function GuessForm() {
 
       await tx.wait();
 
+      // Simulate Agent Trump typing before showing response
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setIsTyping(false);
+
       toast({
         title: "Success!",
         description: "Your guess has been submitted.",
@@ -62,6 +69,7 @@ export function GuessForm() {
 
       form.reset();
     } catch (error: any) {
+      setIsTyping(false);
       toast({
         title: "Error",
         description: error.message,
@@ -97,6 +105,7 @@ export function GuessForm() {
                   <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
                   <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{currentTime}</p>
                 </div>
+                {isTyping && <TypingIndicator />}
               </div>
             </ScrollArea>
 
