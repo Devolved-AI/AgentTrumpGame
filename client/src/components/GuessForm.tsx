@@ -75,65 +75,71 @@ export function GuessForm() {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-2xl shadow-lg">
-        <div className="flex justify-center mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full" />
-            <div className="w-3 h-3 bg-yellow-500 rounded-full" />
-            <div className="w-3 h-3 bg-green-500 rounded-full" />
-          </div>
-        </div>
-
-        <div className="flex flex-col h-[400px]">
-          <ScrollArea className="flex-1 px-4">
-            <div className="space-y-4">
-              <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/trump-avatar.png" alt="Agent Trump" />
-                    <AvatarFallback>AT</AvatarFallback>
-                  </Avatar>
-                  <span className="font-semibold">Agent Trump</span>
-                </div>
-                <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{currentTime}</p>
-              </div>
+        <div className="flex flex-col">
+          {/* Dots at the top */}
+          <div className="flex justify-center mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full" />
+              <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+              <div className="w-3 h-3 bg-green-500 rounded-full" />
             </div>
-          </ScrollArea>
+          </div>
 
-          <div className="mt-4 px-4">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2 items-end">
-                <FormField
-                  control={form.control}
-                  name="response"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Input
-                          placeholder="iMessage"
-                          className="rounded-full bg-white dark:bg-gray-800 pl-4 pr-12 py-6 text-base border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          {/* Avatar and name centered below dots */}
+          <div className="flex flex-col items-center mb-6">
+            <Avatar className="h-16 w-16 mb-2">
+              <AvatarImage src="/trump-avatar.png" alt="Agent Trump" />
+              <AvatarFallback>AT</AvatarFallback>
+            </Avatar>
+            <span className="font-semibold text-lg">Agent Trump</span>
+          </div>
 
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="rounded-full p-3 bg-blue-500 hover:bg-blue-600 text-white"
-                  size="icon"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Send className="h-5 w-5" />
-                  )}
-                </Button>
-              </form>
-            </Form>
+          {/* Messages container */}
+          <div className="flex flex-col h-[400px]">
+            <ScrollArea className="flex-1 px-4">
+              <div className="space-y-4">
+                <div className="self-start max-w-[70%] bg-gray-300 dark:bg-gray-700 p-3 rounded-2xl rounded-tl-sm">
+                  <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{currentTime}</p>
+                </div>
+              </div>
+            </ScrollArea>
+
+            <div className="mt-4 px-4">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2 items-end">
+                  <FormField
+                    control={form.control}
+                    name="response"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            placeholder="iMessage"
+                            className="rounded-full bg-white dark:bg-gray-800 pl-4 pr-12 py-6 text-base border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="rounded-full p-3 bg-blue-500 hover:bg-blue-600 text-white"
+                    size="icon"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </div>
           </div>
         </div>
       </div>
