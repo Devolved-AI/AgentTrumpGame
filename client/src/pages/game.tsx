@@ -66,18 +66,16 @@ export default function Game() {
         </div>
 
         <div className="space-y-8">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <PersuasionScore />
-            <div className="flex justify-center">
-              <GameStatus showTimeRemainingOnly={true} />
-            </div>
+            <GameStatus showTimeRemainingOnly={true} />
+            <GameStatus showLastGuessOnly={true} />
           </div>
 
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold text-black dark:text-white">Stump Agent Trump</h2>
               <GuessForm />
-              <GameStatus showLastGuessOnly={true} />
             </div>
             <PlayerHistory />
           </div>
