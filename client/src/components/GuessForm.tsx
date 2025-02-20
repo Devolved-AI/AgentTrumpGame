@@ -48,14 +48,20 @@ export function GuessForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
-  // Reset messages when wallet changes
+  // Effect to reset messages when wallet changes
   useEffect(() => {
+    // Clear existing event listeners and reset messages
+    if (contract) {
+      contract.removeAllListeners();
+    }
+
+    // Reset to welcome message when no wallet is connected
     if (!address) {
       setMessages([WELCOME_MESSAGE]);
       return;
     }
 
-    // Reset messages and load responses for new wallet
+    // Reset messages for new wallet connection
     setMessages([WELCOME_MESSAGE]);
 
     if (!contract) return;
@@ -63,7 +69,7 @@ export function GuessForm() {
     const loadResponses = async () => {
       try {
         const count = await contract.getPlayerResponseCount(address);
-        const responses = [];
+        const responses: Message[] = [];
 
         for (let i = 0; i < count; i++) {
           const [text, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
@@ -87,24 +93,21 @@ export function GuessForm() {
       }
     };
 
-    loadResponses();
-
-    // Listen for new submissions
+    // Set up event listener for new submissions
     const filter = contract.filters.GuessSubmitted(address);
     contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
       console.log("New guess submitted, transaction confirmed");
     });
 
-    return () => {
-      contract.removeAllListeners(filter);
-    };
-  }, [contract, address]);
+    loadResponses();
 
-  const currentTime = formatInTimeZone(
-    new Date(),
-    'America/Los_Angeles',
-    'h:mma MM/dd/yyyy'
-  );
+    // Cleanup function to remove event listeners
+    return () => {
+      if (contract) {
+        contract.removeAllListeners(filter);
+      }
+    };
+  }, [contract, address]); // Dependencies that trigger reset
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
