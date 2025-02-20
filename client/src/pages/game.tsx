@@ -48,28 +48,37 @@ export default function Game() {
                 <WalletButton />
               </div>
             </div>
-            <video 
-              autoPlay 
-              loop 
-              muted 
-              playsInline
-              className="w-96 h-48 rounded-lg object-cover border-2 border-black dark:border-white"
-            >
-              <source src="/donald-trump-icegif.mp4" type="video/mp4" />
-            </video>
+            <div className="flex gap-8 items-start">
+              <video 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+                className="w-96 h-48 rounded-lg object-cover border-2 border-black dark:border-white"
+              >
+                <source src="/donald-trump-icegif.mp4" type="video/mp4" />
+              </video>
+              <div className="flex-1">
+                <GameStatus showPrizePoolOnly={true} />
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="space-y-8">
-          <GameStatus />
+          <div className="grid grid-cols-2 gap-4">
+            <PersuasionScore />
+            <div className="flex justify-center">
+              <GameStatus showTimeRemainingOnly={true} />
+            </div>
+          </div>
 
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold text-black dark:text-white">Stump Agent Trump</h2>
               <GuessForm />
-              <PersuasionScore />
+              <GameStatus showLastGuessOnly={true} />
             </div>
-
             <PlayerHistory />
           </div>
 
