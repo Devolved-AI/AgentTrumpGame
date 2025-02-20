@@ -64,7 +64,7 @@ export function GuessForm() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto">
       <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-2xl shadow-lg">
         <div className="flex justify-center mb-4">
           <div className="flex items-center gap-2">
