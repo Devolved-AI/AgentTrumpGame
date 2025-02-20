@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWeb3Store, formatEther } from "@/lib/web3";
-import { formatDistance } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 
 interface Response {
   text: string;
@@ -41,7 +41,7 @@ export function PlayerHistory() {
     contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
       setResponses(prev => [{
         text: response,
-        timestamp: Date.now() / 1000, // Convert to Unix timestamp (seconds)
+        timestamp: Math.floor(Date.now() / 1000), // Convert to Unix timestamp (seconds)
         exists: true
       }, ...prev]);
     });
@@ -67,7 +67,11 @@ export function PlayerHistory() {
             >
               <p className="text-lg">{response.text}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                {formatDistance(response.timestamp * 1000, Date.now())} ago
+                {formatInTimeZone(
+                  new Date(response.timestamp * 1000), // Convert Unix timestamp to Date object
+                  'America/Los_Angeles',
+                  'h:mmaaa MM/dd/yyyy'
+                )}
               </p>
             </div>
           ))}
