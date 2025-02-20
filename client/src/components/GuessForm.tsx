@@ -76,16 +76,7 @@ export function GuessForm() {
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-2xl shadow-lg">
         <div className="flex flex-col">
-          {/* Dots at the top */}
-          <div className="flex justify-center mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full" />
-              <div className="w-3 h-3 bg-yellow-500 rounded-full" />
-              <div className="w-3 h-3 bg-green-500 rounded-full" />
-            </div>
-          </div>
-
-          {/* Avatar and name centered below dots */}
+          {/* Avatar and name at the top */}
           <div className="flex flex-col items-center mb-6">
             <Avatar className="h-16 w-16 mb-2">
               <AvatarImage 
