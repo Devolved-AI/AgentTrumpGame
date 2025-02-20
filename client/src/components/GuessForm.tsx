@@ -32,6 +32,7 @@ interface Message {
   timestamp: number;
   isUser: boolean;
   exists?: boolean;
+  transaction?: TransactionState;
 }
 
 export function GuessForm() {
@@ -39,7 +40,6 @@ export function GuessForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [transaction, setTransaction] = useState<TransactionState | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
@@ -71,7 +71,6 @@ export function GuessForm() {
     // We'll only listen for events to handle Trump's responses
     const filter = contract.filters.GuessSubmitted(address);
     contract.on(filter, async (player, amount, multiplier, response, blockNumber) => {
-      setIsTyping(true); // Show typing indicator
       const trumpResponse = await generateTrumpResponse(response);
 
       setMessages(prev => [
@@ -82,7 +81,7 @@ export function GuessForm() {
           isUser: false
         }
       ]);
-      setIsTyping(false); // Hide typing indicator
+      setIsTyping(false); // Hide typing indicator after Trump responds
     });
 
     return () => {
@@ -108,7 +107,6 @@ export function GuessForm() {
 
     try {
       setIsSubmitting(true);
-
       const requiredAmount = await contract.currentRequiredAmount();
 
       // Add user message immediately
@@ -119,14 +117,25 @@ export function GuessForm() {
       };
       setMessages(prev => [...prev, userMessage]);
 
+      // Show typing indicator right after user message
+      setIsTyping(true);
+
       const tx = await contract.submitGuess(data.response, {
         value: requiredAmount
       });
 
-      setTransaction({
-        hash: tx.hash,
-        status: 'pending',
-        value: requiredAmount.toString()
+      // Update the last message to include transaction details
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          ...updated[updated.length - 1],
+          transaction: {
+            hash: tx.hash,
+            status: 'pending',
+            value: requiredAmount.toString()
+          }
+        };
+        return updated;
       });
 
       toast({
@@ -136,10 +145,14 @@ export function GuessForm() {
 
       const receipt = await tx.wait();
 
-      setTransaction(prev => prev ? {
-        ...prev,
-        status: receipt.status === 1 ? 'confirmed' : 'failed'
-      } : null);
+      // Update transaction status in the message
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated[updated.length - 1].transaction) {
+          updated[updated.length - 1].transaction.status = receipt.status === 1 ? 'confirmed' : 'failed';
+        }
+        return updated;
+      });
 
       if (receipt.status === 1) {
         toast({
@@ -149,6 +162,7 @@ export function GuessForm() {
         });
         form.reset();
       } else {
+        setIsTyping(false); // Hide typing indicator if transaction failed
         toast({
           title: "Error",
           description: "Transaction failed.",
@@ -156,11 +170,7 @@ export function GuessForm() {
         });
       }
     } catch (error: any) {
-      setTransaction(prev => prev ? {
-        ...prev,
-        status: 'failed'
-      } : null);
-
+      setIsTyping(false); // Hide typing indicator if there's an error
       toast({
         title: "Error",
         description: error.message,
@@ -217,11 +227,15 @@ export function GuessForm() {
                           'h:mma MM/dd/yyyy'
                         )}
                       </p>
+                      {message.transaction && (
+                        <div className="mt-2 border-t border-white/20 pt-2">
+                          <TransactionVisualization {...message.transaction} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
 
-                {transaction && <TransactionVisualization {...transaction} />}
                 {isTyping && (
                   <div className="flex justify-start">
                     <div className="max-w-[70%] p-3 rounded-2xl bg-gray-300 dark:bg-gray-700 rounded-tl-sm">
