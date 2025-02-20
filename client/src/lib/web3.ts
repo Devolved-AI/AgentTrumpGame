@@ -45,7 +45,7 @@ interface Web3State {
   connect: () => Promise<void>;
   disconnect: () => void;
   reset: () => void;
-  clearMessages: () => void;  // New action
+  clearMessages: () => void;
 }
 
 export const useWeb3Store = create<Web3State>((set) => ({
@@ -66,6 +66,12 @@ export const useWeb3Store = create<Web3State>((set) => ({
     }
 
     try {
+      // Clear any existing messages before attempting to connect
+      set((state) => {
+        state.clearMessages();
+        return state;
+      });
+
       // Request network switch
       try {
         await window.ethereum.request({
@@ -152,9 +158,17 @@ export const useWeb3Store = create<Web3State>((set) => ({
     if (window.ethereum) {
       window.ethereum.removeAllListeners('accountsChanged');
     }
-    set({ provider: null, signer: null, contract: null, address: null, balance: null });
 
-    // Clear messages when disconnecting
+    // Clear all state including messages
+    set({ 
+      provider: null, 
+      signer: null, 
+      contract: null, 
+      address: null, 
+      balance: null 
+    });
+
+    // Reset messages
     set((state) => {
       state.clearMessages();
       return state;
@@ -170,7 +184,13 @@ export const useWeb3Store = create<Web3State>((set) => ({
     if (window.ethereum) {
       window.ethereum.removeAllListeners('accountsChanged');
     }
-    set({ provider: null, signer: null, contract: null, address: null, balance: null });
+    set({ 
+      provider: null, 
+      signer: null, 
+      contract: null, 
+      address: null, 
+      balance: null 
+    });
   },
 
   clearMessages: () => {

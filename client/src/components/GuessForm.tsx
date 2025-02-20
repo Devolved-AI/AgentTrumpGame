@@ -48,17 +48,18 @@ export function GuessForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
+  // Reset messages when wallet disconnects
   useEffect(() => {
-    setMessages([WELCOME_MESSAGE]);
-
     if (!contract || !address) {
+      setMessages([WELCOME_MESSAGE]);
       return;
     }
 
+    // Load responses only when wallet is connected
     const loadResponses = async () => {
       try {
         const count = await contract.getPlayerResponseCount(address);
-        const responses = [];
+        const responses: Message[] = [];  // Explicitly type the array
 
         for (let i = 0; i < count; i++) {
           const [response, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
@@ -82,9 +83,7 @@ export function GuessForm() {
           });
         }
 
-        if (contract && address) {
-          setMessages(prev => [WELCOME_MESSAGE, ...responses]);
-        }
+        setMessages([WELCOME_MESSAGE, ...responses]);
       } catch (error) {
         console.error("Error loading responses:", error);
         toast({
@@ -96,11 +95,7 @@ export function GuessForm() {
     };
 
     loadResponses();
-
-    return () => {
-      setMessages([WELCOME_MESSAGE]);
-    };
-  }, [contract, address]);
+  }, [contract, address]); // Dependencies include both contract and address
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
