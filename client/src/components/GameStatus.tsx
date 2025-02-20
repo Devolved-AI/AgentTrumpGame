@@ -4,6 +4,13 @@ import { Progress } from "@/components/ui/progress";
 import { useWeb3Store, formatEther } from "@/lib/web3";
 import { Clock, User, Banknote } from "lucide-react";
 import { SiEthereum } from "react-icons/si";
+import { useQuery } from "@tanstack/react-query";
+
+const fetchEthPrice = async () => {
+  const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+  const data = await response.json();
+  return data.ethereum.usd;
+};
 
 export function GameStatus() {
   const { contract } = useWeb3Store();
@@ -12,6 +19,12 @@ export function GameStatus() {
     lastPlayer: "",
     totalBalance: "0",
     won: false
+  });
+
+  const { data: ethPrice } = useQuery({
+    queryKey: ['ethPrice'],
+    queryFn: fetchEthPrice,
+    refetchInterval: 60000, // Refresh every minute
   });
 
   useEffect(() => {
@@ -42,6 +55,11 @@ export function GameStatus() {
     const interval = setInterval(updateStatus, 2000);
     return () => clearInterval(interval);
   }, [contract]);
+
+  const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }) : '...';
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -82,8 +100,13 @@ export function GameStatus() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-500 flex items-center gap-2">
-            {status.totalBalance} <SiEthereum className="h-5 w-5" />
+          <div className="flex flex-col gap-1">
+            <div className="text-2xl font-bold text-green-500 flex items-center gap-2">
+              <SiEthereum className="h-5 w-5" /> {status.totalBalance}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {usdValue}
+            </div>
           </div>
           {status.won && (
             <div className="text-green-500 mt-2">Game Won!</div>
