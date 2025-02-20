@@ -26,7 +26,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     totalBalance: "0",
     won: false,
     isEscalation: false,
-    requiredAmount: "0"
+    requiredAmount: "0",
+    lastGuessTimestamp: 0
   });
   const [displayTime, setDisplayTime] = useState(0);
 
@@ -48,7 +49,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining);
-        setDisplayTime(escalationActive ? 300 : time); // 5 minutes if in escalation
+        setDisplayTime(escalationActive ? 300 : time);
+        setStatus(prev => ({
+          ...prev,
+          isEscalation: escalationActive,
+          timeRemaining: time
+        }));
       } catch (error) {
         console.error("Error fetching initial time:", error);
       }
@@ -56,18 +62,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     initializeTime();
   }, [contract]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDisplayTime(prev => {
-        // Don't go below zero
-        if (prev <= 0) return 0;
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   // Contract data updates - every 5 seconds
   useEffect(() => {
@@ -92,27 +86,37 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining);
+        const currentTimestamp = Math.floor(Date.now() / 1000);
 
         // Check if there's been a new guess by comparing lastPlayer
         const isNewGuess = lastPlayer !== status.lastPlayer;
 
-        setStatus(prev => ({
-          timeRemaining: time,
-          lastPlayer,
-          totalBalance: formatEther(balance),
-          won,
-          isEscalation: escalationActive,
-          requiredAmount: formatEther(requiredAmount)
-        }));
+        setStatus(prev => {
+          // If there's a new guess during escalation, update the last guess timestamp
+          if (isNewGuess && escalationActive) {
+            setDisplayTime(300); // Reset to 5 minutes only on new guess during escalation
+          }
+
+          return {
+            timeRemaining: time,
+            lastPlayer,
+            totalBalance: formatEther(balance),
+            won,
+            isEscalation: escalationActive,
+            requiredAmount: formatEther(requiredAmount),
+            lastGuessTimestamp: isNewGuess ? currentTimestamp : prev.lastGuessTimestamp
+          };
+        });
 
         // Only update display time if:
-        // 1. There's a new guess during escalation (reset to 5 minutes)
-        // 2. The contract time is significantly different
-        // 3. Escalation mode has changed
-        if ((escalationActive && isNewGuess) || 
-            Math.abs(time - displayTime) > 5 || 
-            escalationActive !== status.isEscalation) {
-          setDisplayTime(escalationActive ? 300 : time);
+        // 1. We're transitioning into or out of escalation mode
+        // 2. We're not in escalation mode and the contract time is significantly different
+        if (!status.isEscalation && escalationActive) {
+          setDisplayTime(300); // Starting escalation
+        } else if (status.isEscalation && !escalationActive) {
+          setDisplayTime(time); // Ending escalation
+        } else if (!escalationActive && Math.abs(time - displayTime) > 5) {
+          setDisplayTime(time);
         }
       } catch (error) {
         console.error("Error fetching game status:", error);
@@ -122,7 +126,20 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     updateStatus();
     const interval = setInterval(updateStatus, 5000);
     return () => clearInterval(interval);
-  }, [contract, displayTime, status.isEscalation, status.lastPlayer]);
+  }, [contract, status.lastPlayer, status.isEscalation]);
+
+  // Independent countdown timer - updates every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDisplayTime(prev => {
+        // Don't go below zero
+        if (prev <= 0) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
