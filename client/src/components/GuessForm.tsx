@@ -49,10 +49,12 @@ export function GuessForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
-  // Reset messages when the component mounts or when wallet changes
+  // Reset messages and reload history when wallet changes
   useEffect(() => {
+    // Always reset to welcome message when component mounts or wallet changes
     setMessages([WELCOME_MESSAGE]);
 
+    // If no wallet is connected, don't try to load history
     if (!address || !contract) {
       return;
     }
@@ -88,13 +90,19 @@ export function GuessForm() {
         }
 
         if (responses.length > 0) {
-          setMessages(prev => [...prev, ...responses]);
+          setMessages(prev => [WELCOME_MESSAGE, ...responses]);
         }
       } catch (error) {
         console.error("Error loading responses:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load message history",
+          variant: "destructive"
+        });
       }
     };
 
+    // Set up event listener for new guesses
     const filter = contract.filters.GuessSubmitted(address);
     const handleGuessSubmitted = (player: string, amount: any, multiplier: any, response: string) => {
       console.log("New guess submitted, transaction confirmed");
@@ -106,7 +114,7 @@ export function GuessForm() {
     return () => {
       contract.off(filter, handleGuessSubmitted);
     };
-  }, [contract, address]);
+  }, [contract, address]); // Re-run when wallet or contract changes
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
