@@ -23,17 +23,17 @@ export default function Game() {
     refetchInterval: 60000, // Refresh every minute
   });
 
-  const { isGameOver, address } = useWeb3Store();
+  const { contract, address } = useWeb3Store();
   const [gameOver, setGameOver] = useState(false);
 
   // Check game over status periodically and when wallet connects
   useEffect(() => {
-    if (!address) return;
+    if (!contract || !address) return;
 
     const checkGameOver = async () => {
       try {
-        const isOver = await isGameOver();
-        setGameOver(isOver);
+        const timeRemaining = await contract.getTimeRemaining();
+        setGameOver(timeRemaining.toNumber() <= 0);
       } catch (error) {
         console.error("Error checking game over status:", error);
       }
@@ -44,7 +44,7 @@ export default function Game() {
     const interval = setInterval(checkGameOver, 5000);
 
     return () => clearInterval(interval);
-  }, [isGameOver, address]); // Added address as dependency
+  }, [contract, address]); // Added address as dependency
 
   const guessPrice = 0.0009;
   const guessPriceUsd = (guessPrice * ethPrice).toLocaleString('en-US', {

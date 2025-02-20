@@ -10,7 +10,7 @@ interface GameOverInfo {
 }
 
 export function GameOverDialog() {
-  const { contract, isGameOver, address } = useWeb3Store();
+  const { contract, address } = useWeb3Store();
   const [open, setOpen] = useState(false);
   const [gameInfo, setGameInfo] = useState<GameOverInfo>({
     lastGuessAddress: "",
@@ -18,16 +18,18 @@ export function GameOverDialog() {
     lastBlock: ""
   });
 
-  // Check game over status periodically and when wallet connects
+  // Check game over status when timer reaches zero
   useEffect(() => {
     if (!contract || !address) return;
 
     const checkGameStatus = async () => {
       try {
-        const gameOver = await isGameOver();
+        // Get the time remaining
+        const timeRemaining = await contract.getTimeRemaining();
 
-        if (gameOver) {
-          // Fetch game over info when game is detected as over
+        // Only proceed if time has actually run out
+        if (timeRemaining.toNumber() <= 0) {
+          // Fetch game over info when timer has reached zero
           const [lastPlayer, winner] = await Promise.all([
             contract.lastPlayer(),
             contract.winner()
@@ -55,7 +57,7 @@ export function GameOverDialog() {
     const interval = setInterval(checkGameStatus, 5000);
 
     return () => clearInterval(interval);
-  }, [contract, isGameOver, address]); // Added address as dependency
+  }, [contract, address]); // Dependencies include contract and address
 
   return (
     <Dialog open={open} onOpenChange={() => {}} modal>
