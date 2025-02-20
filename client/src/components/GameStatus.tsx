@@ -34,7 +34,23 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     refetchInterval: 60000, // Refresh every minute
   });
 
-  // Effect for contract data updates
+  // Initial time setup
+  useEffect(() => {
+    if (!contract) return;
+
+    const initializeTime = async () => {
+      try {
+        const timeRemaining = await contract.getTimeRemaining();
+        setDisplayTime(Number(timeRemaining));
+      } catch (error) {
+        console.error("Error fetching initial time:", error);
+      }
+    };
+
+    initializeTime();
+  }, [contract]); // Only run when contract changes
+
+  // Contract data updates
   useEffect(() => {
     if (!contract) return;
 
@@ -59,8 +75,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           won
         });
 
-        // Only update display time when first loading or when there's a significant change
-        if (Math.abs(Number(timeRemaining) - displayTime) > 2) {
+        // Only update display time if there's a large discrepancy (>10 seconds)
+        const timeDiff = Math.abs(Number(timeRemaining) - displayTime);
+        if (timeDiff > 10) {
           setDisplayTime(Number(timeRemaining));
         }
       } catch (error) {
@@ -69,11 +86,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     };
 
     updateStatus();
-    const interval = setInterval(updateStatus, 2000);
+    const interval = setInterval(updateStatus, 5000); // Check contract every 5 seconds
     return () => clearInterval(interval);
-  }, [contract, displayTime]);
+  }, [contract]); // Remove displayTime dependency
 
-  // Separate effect for smooth countdown display
+  // Countdown timer
   useEffect(() => {
     const timer = setInterval(() => {
       setDisplayTime(prev => {
@@ -83,7 +100,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, []); // Empty dependency array for continuous countdown
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
