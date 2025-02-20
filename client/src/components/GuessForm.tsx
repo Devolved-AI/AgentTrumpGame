@@ -43,19 +43,19 @@ interface Message {
 }
 
 export function GuessForm() {
-  const { contract, address } = useWeb3Store();
+  const { contract, address, clearMessages } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
-  // Reset messages and reload history when wallet changes
+  // Listen to wallet changes and clear messages
   useEffect(() => {
-    // Always reset to welcome message when component mounts or wallet changes
+    // Reset messages when address changes (connect/disconnect)
     setMessages([WELCOME_MESSAGE]);
 
     // If no wallet is connected, don't try to load history
-    if (!address || !contract) {
+    if (!contract || !address) {
       return;
     }
 
@@ -102,19 +102,13 @@ export function GuessForm() {
       }
     };
 
-    // Set up event listener for new guesses
-    const filter = contract.filters.GuessSubmitted(address);
-    const handleGuessSubmitted = (player: string, amount: any, multiplier: any, response: string) => {
-      console.log("New guess submitted, transaction confirmed");
-    };
-
-    contract.on(filter, handleGuessSubmitted);
     loadResponses();
 
+    // Clean up function
     return () => {
-      contract.off(filter, handleGuessSubmitted);
+      setMessages([WELCOME_MESSAGE]);
     };
-  }, [contract, address]); // Re-run when wallet or contract changes
+  }, [contract, address, clearMessages]); // Re-run when wallet or contract changes
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),

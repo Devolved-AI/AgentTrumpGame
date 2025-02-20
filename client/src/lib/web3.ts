@@ -44,7 +44,8 @@ interface Web3State {
   balance: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
-  reset: () => void;  // New reset function
+  reset: () => void;
+  clearMessages: () => void;  // New action
 }
 
 export const useWeb3Store = create<Web3State>((set) => ({
@@ -158,12 +159,16 @@ export const useWeb3Store = create<Web3State>((set) => ({
     });
   },
 
-  // New reset function to ensure complete state reset
   reset: () => {
     if (window.ethereum) {
       window.ethereum.removeAllListeners('accountsChanged');
     }
     set({ provider: null, signer: null, contract: null, address: null, balance: null });
+  },
+
+  clearMessages: () => {
+    // This is just a trigger action that components can listen to
+    set((state) => ({ ...state }));
   }
 }));
 
