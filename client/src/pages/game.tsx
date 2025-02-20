@@ -3,15 +3,16 @@ import { GameStatus } from "@/components/GameStatus";
 import { GuessForm } from "@/components/GuessForm";
 import { PlayerHistory } from "@/components/PlayerHistory";
 import { Globe, ExternalLink, MessageSquare } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Game() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-black">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-start mb-8">
           <div className="w-full flex justify-between items-center">
             <div>
-              <h1 className="text-4xl font-bold text-black mb-4">
+              <h1 className="text-4xl font-bold text-black dark:text-white mb-4">
                 Agent Trump Game
               </h1>
               <video 
@@ -19,7 +20,7 @@ export default function Game() {
                 loop 
                 muted 
                 playsInline
-                className="w-96 h-48 rounded-lg object-cover border-2 border-black"
+                className="w-96 h-48 rounded-lg object-cover border-2 border-black dark:border-white"
               >
                 <source src="/donald-trump-icegif.mp4" type="video/mp4" />
               </video>
@@ -30,7 +31,7 @@ export default function Game() {
                   href="https://www.devolvedai.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-black hover:opacity-80"
+                  className="text-black dark:text-white hover:opacity-80"
                 >
                   <Globe className="h-6 w-6" />
                 </a>
@@ -38,7 +39,7 @@ export default function Game() {
                   href="https://x.com/devolvedai" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-black hover:opacity-80"
+                  className="text-black dark:text-white hover:opacity-80"
                 >
                   <ExternalLink className="h-6 w-6" />
                 </a>
@@ -46,10 +47,11 @@ export default function Game() {
                   href="https://t.me/devolvedai" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-black hover:opacity-80"
+                  className="text-black dark:text-white hover:opacity-80"
                 >
                   <MessageSquare className="h-6 w-6" />
                 </a>
+                <ThemeToggle />
               </div>
               <WalletButton />
             </div>
@@ -61,19 +63,19 @@ export default function Game() {
 
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">
-              <h2 className="text-2xl font-semibold text-black">Stump Agent Trump</h2>
+              <h2 className="text-2xl font-semibold text-black dark:text-white">Stump Agent Trump</h2>
               <GuessForm />
             </div>
 
             <PlayerHistory />
           </div>
 
-          <div className="mt-12 bg-white rounded-lg p-6 border border-black">
-            <h2 className="text-2xl font-bold mb-6 text-black">
+          <div className="mt-12 bg-white dark:bg-black rounded-lg p-6 border border-black dark:border-white">
+            <h2 className="text-2xl font-bold mb-6 text-black dark:text-white">
               Agent Trump Game Rules
             </h2>
 
-            <div className="space-y-6 text-black">
+            <div className="space-y-6 text-black dark:text-white">
               <p>
                 You have 72 hours to convince Agent Trump (AGT) to press the big red button and claim his prize pot.
               </p>
@@ -115,7 +117,7 @@ export default function Game() {
           </div>
 
           <footer className="mt-12 text-center pt-8">
-            <p className="text-black mb-4">Copyright 2025 Devolved AI. All rights reserved.</p>
+            <p className="text-black dark:text-white mb-4">Copyright 2025 Devolved AI. All rights reserved.</p>
           </footer>
         </div>
       </div>
