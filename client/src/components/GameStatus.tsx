@@ -71,22 +71,22 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     return (
       <Card className="border-green-500 h-48 flex flex-col">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-500">
-            <Banknote className="h-5 w-5" />
+          <CardTitle className="flex items-center justify-center gap-2 text-green-500 text-2xl">
+            <Banknote className="h-7 w-7" />
             Prize Pool
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col justify-center">
-          <div className="flex flex-col gap-1">
-            <div className="text-2xl font-bold text-green-500 flex items-center gap-2">
-              <SiEthereum className="h-5 w-5" /> {status.totalBalance}
+        <CardContent className="flex-1 flex flex-col justify-center items-center">
+          <div className="flex flex-col gap-2 items-center">
+            <div className="text-4xl font-bold text-green-500 flex items-center gap-2">
+              <SiEthereum className="h-8 w-8" /> {status.totalBalance}
             </div>
-            <div className="text-sm text-muted-foreground font-bold">
+            <div className="text-xl text-muted-foreground font-bold">
               {usdValue}
             </div>
           </div>
           {status.won && (
-            <div className="text-green-500 mt-2">Game Won!</div>
+            <div className="text-green-500 mt-2 text-xl">Game Won!</div>
           )}
         </CardContent>
       </Card>
