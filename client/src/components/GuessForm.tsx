@@ -63,7 +63,7 @@ export function GuessForm() {
         });
       }
 
-      setMessages(responses.reverse());
+      setMessages(responses);
     };
 
     loadResponses();
@@ -71,16 +71,18 @@ export function GuessForm() {
     // We'll only listen for events to handle Trump's responses
     const filter = contract.filters.GuessSubmitted(address);
     contract.on(filter, async (player, amount, multiplier, response, blockNumber) => {
+      setIsTyping(true); // Show typing indicator
       const trumpResponse = await generateTrumpResponse(response);
 
       setMessages(prev => [
+        ...prev,
         {
           text: trumpResponse,
           timestamp: Date.now() / 1000,
           isUser: false
-        },
-        ...prev
+        }
       ]);
+      setIsTyping(false); // Hide typing indicator
     });
 
     return () => {
@@ -106,7 +108,6 @@ export function GuessForm() {
 
     try {
       setIsSubmitting(true);
-      setIsTyping(true);
 
       const requiredAmount = await contract.currentRequiredAmount();
 
@@ -116,7 +117,7 @@ export function GuessForm() {
         timestamp: Date.now() / 1000,
         isUser: true
       };
-      setMessages(prev => [userMessage, ...prev]);
+      setMessages(prev => [...prev, userMessage]);
 
       const tx = await contract.submitGuess(data.response, {
         value: requiredAmount
@@ -167,7 +168,6 @@ export function GuessForm() {
       });
     } finally {
       setIsSubmitting(false);
-      setIsTyping(false);
     }
   }
 
@@ -222,7 +222,13 @@ export function GuessForm() {
                 ))}
 
                 {transaction && <TransactionVisualization {...transaction} />}
-                {isTyping && <TypingIndicator />}
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[70%] p-3 rounded-2xl bg-gray-300 dark:bg-gray-700 rounded-tl-sm">
+                      <TypingIndicator />
+                    </div>
+                  </div>
+                )}
               </div>
             </ScrollArea>
 
