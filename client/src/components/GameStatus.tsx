@@ -2,14 +2,13 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useWeb3Store, formatEther } from "@/lib/web3";
-import { Clock, TrendingUp, Trophy } from "lucide-react";
+import { Clock, User, Trophy } from "lucide-react";
 
 export function GameStatus() {
   const { contract } = useWeb3Store();
   const [status, setStatus] = useState({
     timeRemaining: 0,
-    requiredAmount: "0",
-    isEscalating: false,
+    lastPlayer: "",
     totalBalance: "0",
     won: false
   });
@@ -20,22 +19,19 @@ export function GameStatus() {
     const updateStatus = async () => {
       const [
         timeRemaining,
-        requiredAmount,
-        isEscalating,
+        lastPlayer,
         balance,
         won
       ] = await Promise.all([
         contract.getTimeRemaining(),
-        contract.currentRequiredAmount(),
-        contract.escalationActive(),
+        contract.lastPlayer(),
         contract.getContractBalance(),
         contract.gameWon()
       ]);
 
       setStatus({
         timeRemaining: timeRemaining.toNumber(),
-        requiredAmount: formatEther(requiredAmount),
-        isEscalating,
+        lastPlayer,
         totalBalance: formatEther(balance),
         won
       });
@@ -66,17 +62,14 @@ export function GameStatus() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Current Stake
+            <User className="h-5 w-5" />
+            Last Guess Address
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
-            {status.requiredAmount} ETH
+          <div className="text-sm font-mono break-all">
+            {status.lastPlayer || "No guesses yet"}
           </div>
-          {status.isEscalating && (
-            <div className="text-orange-500 mt-2">Escalation Active!</div>
-          )}
         </CardContent>
       </Card>
 
