@@ -26,14 +26,16 @@ export default function Game() {
   const { contract, address } = useWeb3Store();
   const [gameOver, setGameOver] = useState(false);
 
-  // Check game over status periodically and when wallet connects
+  // Check game over status when timer reaches zero
   useEffect(() => {
     if (!contract || !address) return;
 
     const checkGameOver = async () => {
       try {
         const timeRemaining = await contract.getTimeRemaining();
-        setGameOver(timeRemaining.toNumber() <= 0);
+        const isOver = timeRemaining.toNumber() <= 0;
+        console.log("Game page - Time remaining:", timeRemaining.toString(), "Game over:", isOver);
+        setGameOver(isOver);
       } catch (error) {
         console.error("Error checking game over status:", error);
       }
@@ -44,7 +46,7 @@ export default function Game() {
     const interval = setInterval(checkGameOver, 5000);
 
     return () => clearInterval(interval);
-  }, [contract, address]); // Added address as dependency
+  }, [contract, address]); // Dependencies include both contract and address
 
   const guessPrice = 0.0009;
   const guessPriceUsd = (guessPrice * ethPrice).toLocaleString('en-US', {

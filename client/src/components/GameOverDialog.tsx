@@ -26,9 +26,11 @@ export function GameOverDialog() {
       try {
         // Get the time remaining
         const timeRemaining = await contract.getTimeRemaining();
+        console.log("Time remaining:", timeRemaining.toString());
 
         // Only proceed if time has actually run out
         if (timeRemaining.toNumber() <= 0) {
+          console.log("Timer expired, fetching game over info");
           // Fetch game over info when timer has reached zero
           const [lastPlayer, winner] = await Promise.all([
             contract.lastPlayer(),
@@ -38,6 +40,8 @@ export function GameOverDialog() {
           // Get the provider and latest block
           const provider = new ethers.providers.Web3Provider(window.ethereum);
           const block = await provider.getBlock('latest');
+
+          console.log("Setting game over info:", { lastPlayer, winner, blockNumber: block?.number });
 
           setGameInfo({
             lastGuessAddress: lastPlayer || "No last player",
