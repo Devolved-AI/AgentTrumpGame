@@ -2,11 +2,30 @@ import { WalletButton } from "@/components/WalletButton";
 import { GameStatus } from "@/components/GameStatus";
 import { GuessForm } from "@/components/GuessForm";
 import { Globe } from "lucide-react";
-import { SiX, SiTelegram } from "react-icons/si";
+import { SiX, SiTelegram, SiEthereum } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersuasionScore } from "@/components/PersuasionScore";
+import { useQuery } from "@tanstack/react-query";
+
+const fetchEthPrice = async () => {
+  const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+  const data = await response.json();
+  return data.ethereum.usd;
+};
 
 export default function Game() {
+  const { data: ethPrice = 0 } = useQuery({
+    queryKey: ['ethPrice'],
+    queryFn: fetchEthPrice,
+    refetchInterval: 60000, // Refresh every minute
+  });
+
+  const guessPrice = 0.0009;
+  const guessPriceUsd = (guessPrice * ethPrice).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  });
+
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       <div className="container mx-auto px-4 py-8">
@@ -82,8 +101,12 @@ export default function Game() {
             </h2>
 
             <div className="space-y-6 text-black dark:text-white">
+              <p className="font-bold uppercase flex items-center gap-2">
+                THE COST TO SUBMIT A GUESS IS <SiEthereum className="h-5 w-5" /> {guessPrice} ({guessPriceUsd}).
+              </p>
+
               <p>
-                You have 72 hours to convince Agent Trump (AGT) to press the big red button and claim his prize pot.
+                You have 72 hours to convince Agent Trump (AGT) to give the Prize Pool Money to you.
               </p>
 
               <div>
