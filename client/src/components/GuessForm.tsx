@@ -127,6 +127,11 @@ export function GuessForm() {
       const analysis = analyzeMessageSentiment(data.response);
       console.log("Message analysis:", analysis);
 
+      // Format the message with score adjustment in a strict format
+      // The contract looks for this exact prefix pattern
+      const encodedResponse = `SCORE_${analysis.score}_${data.response}`;
+      console.log("Sending encoded response:", encodedResponse);
+
       const userMessage: Message = {
         text: data.response,
         timestamp: Date.now() / 1000,
@@ -136,18 +141,15 @@ export function GuessForm() {
 
       setIsTyping(true);
 
-      // Encode the score adjustment in a format the contract expects:
-      // Format: SCORE_ADJUST:{number}:::{message}
-      const encodedMessage = `SCORE_ADJUST:${analysis.score}:::${data.response}`;
-
-      console.log("Sending encoded message:", encodedMessage);
-
+      // Send the encoded response to the contract
       const tx = await contract.submitGuess(
-        encodedMessage,
+        encodedResponse,
         {
           value: requiredAmount
         }
       );
+
+      console.log("Transaction sent:", tx.hash);
 
       setMessages(prev => {
         const updated = [...prev];
@@ -179,6 +181,7 @@ export function GuessForm() {
 
       const receipt = await tx.wait();
 
+      // Update message transaction status
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
@@ -189,9 +192,15 @@ export function GuessForm() {
       });
 
       if (receipt.status === 1) {
-        // Verify the score was updated
+        // Verify the score was updated by explicitly fetching it
+        const oldScore = await contract.getPlayerPersuasionScore(address);
+        console.log("Previous score:", Number(oldScore));
+
+        // Wait a moment for the blockchain to process the score update
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
         const newScore = await contract.getPlayerPersuasionScore(address);
-        console.log("New persuasion score:", Number(newScore));
+        console.log("New score after update:", Number(newScore));
 
         const trumpResponse = await generateTrumpResponse(data.response);
 
@@ -206,7 +215,7 @@ export function GuessForm() {
 
         toast({
           title: "Success!",
-          description: "Your message has been processed and score has been adjusted.",
+          description: `Your message has been processed. Score changed from ${Number(oldScore)} to ${Number(newScore)}`,
           variant: "default"
         });
         form.reset();
@@ -219,6 +228,7 @@ export function GuessForm() {
         });
       }
     } catch (error: any) {
+      console.error("Submission error:", error);
       setIsTyping(false);
       toast({
         title: "Error",
