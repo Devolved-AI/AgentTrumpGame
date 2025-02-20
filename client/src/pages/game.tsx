@@ -24,7 +24,35 @@ export default function Game() {
                 <source src="/donald-trump-icegif.mp4" type="video/mp4" />
               </video>
             </div>
-            <WalletButton />
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-6">
+                <a 
+                  href="https://www.devolvedai.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-black hover:opacity-80"
+                >
+                  <Globe className="h-6 w-6" />
+                </a>
+                <a 
+                  href="https://x.com/devolvedai" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-black hover:opacity-80"
+                >
+                  <ExternalLink className="h-6 w-6" />
+                </a>
+                <a 
+                  href="https://t.me/devolvedai" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-black hover:opacity-80"
+                >
+                  <MessageSquare className="h-6 w-6" />
+                </a>
+              </div>
+              <WalletButton />
+            </div>
           </div>
         </div>
 
@@ -88,32 +116,6 @@ export default function Game() {
 
           <footer className="mt-12 text-center pt-8">
             <p className="text-black mb-4">Copyright 2025 Devolved AI. All rights reserved.</p>
-            <div className="flex justify-center items-center gap-6">
-              <a 
-                href="https://www.devolvedai.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-black hover:opacity-80"
-              >
-                <Globe className="h-6 w-6" />
-              </a>
-              <a 
-                href="https://x.com/devolvedai" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-black hover:opacity-80"
-              >
-                <ExternalLink className="h-6 w-6" />
-              </a>
-              <a 
-                href="https://t.me/devolvedai" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-black hover:opacity-80"
-              >
-                <MessageSquare className="h-6 w-6" />
-              </a>
-            </div>
           </footer>
         </div>
       </div>
