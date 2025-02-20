@@ -1,6 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useWeb3Store } from "@/lib/web3";
 import { useEffect, useState } from "react";
+import { ethers } from "ethers";
 
 interface GameOverInfo {
   lastGuessAddress: string;
@@ -32,7 +33,8 @@ export function GameOverDialog() {
             contract.winner()
           ]);
 
-          const provider = contract.provider;
+          // Get the provider and latest block
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
           const block = await provider.getBlock('latest');
 
           setGameInfo({
