@@ -127,9 +127,9 @@ export function GuessForm() {
       const analysis = analyzeMessageSentiment(data.response);
       console.log("Message analysis:", analysis);
 
-      // Format the message with score adjustment in a strict format
-      // The contract looks for this exact prefix pattern
-      const encodedResponse = `SCORE_${analysis.score}_${data.response}`;
+      // The contract expects a strictly formatted string that it can parse
+      // Format must be: `ADJUST_SCORE:${score};${message}`
+      const encodedResponse = `ADJUST_SCORE:${analysis.score};${data.response}`;
       console.log("Sending encoded response:", encodedResponse);
 
       const userMessage: Message = {
