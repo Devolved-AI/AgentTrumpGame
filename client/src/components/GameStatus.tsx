@@ -26,11 +26,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     totalBalance: "0",
     won: false,
     isEscalation: false,
-    requiredAmount: "0.0018", // Initial escalation amount
+    requiredAmount: "0.0018",
     lastGuessTimestamp: 0,
-    isGameOver: false
+    isGameOver: false,
+    lastUpdate: Date.now()
   });
-  const [displayTime, setDisplayTime] = useState(300); // Start with 5 minutes
+  const [displayTime, setDisplayTime] = useState(300);
 
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
@@ -43,36 +44,20 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     const initializeTime = async () => {
       try {
-        const [timeRemaining, escalationActive, lastGuessBlock] = await Promise.all([
+        const [timeRemaining, escalationActive] = await Promise.all([
           contract.getTimeRemaining(),
-          contract.escalationActive(),
-          contract.lastGuessBlock()
+          contract.escalationActive()
         ]);
 
         const time = Number(timeRemaining);
-
-        if (escalationActive) {
-          const provider = contract.provider;
-          const currentBlock = await provider.getBlockNumber();
-          const currentBlockData = await provider.getBlock(currentBlock);
-          const lastGuessBlockData = await provider.getBlock(Number(lastGuessBlock));
-
-          if (currentBlockData && lastGuessBlockData) {
-            const elapsedTime = currentBlockData.timestamp - lastGuessBlockData.timestamp;
-            const remainingTime = Math.max(0, 300 - elapsedTime);
-            setDisplayTime(remainingTime);
-          } else {
-            setDisplayTime(300);
-          }
-        } else {
-          setDisplayTime(time);
-        }
-
         setStatus(prev => ({
           ...prev,
           isEscalation: escalationActive,
-          timeRemaining: time
+          timeRemaining: time,
+          lastUpdate: Date.now()
         }));
+
+        setDisplayTime(escalationActive ? 300 : time);
       } catch (error) {
         console.error("Error fetching initial time:", error);
       }
@@ -93,7 +78,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           won,
           escalationActive,
           gameOver,
-          lastGuessBlock
+          requiredAmount
         ] = await Promise.all([
           contract.getTimeRemaining(),
           contract.lastPlayer(),
@@ -101,36 +86,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           contract.gameWon(),
           contract.escalationActive(),
           isGameOver(),
-          contract.lastGuessBlock()
+          getEscalationPrice()
         ]);
 
         const time = Number(timeRemaining);
         const isNewGuess = lastPlayer !== status.lastPlayer;
-
-        if (escalationActive && !gameOver) {
-          const provider = contract.provider;
-          const currentBlock = await provider.getBlockNumber();
-          const currentBlockData = await provider.getBlock(currentBlock);
-          const lastGuessBlockData = await provider.getBlock(Number(lastGuessBlock));
-
-          if (currentBlockData && lastGuessBlockData) {
-            const elapsedTime = currentBlockData.timestamp - lastGuessBlockData.timestamp;
-            const remainingTime = Math.max(0, 300 - elapsedTime);
-
-            if (isNewGuess) {
-              setDisplayTime(300);
-              const newPrice = await getEscalationPrice();
-              setStatus(prev => ({
-                ...prev,
-                requiredAmount: newPrice
-              }));
-            } else {
-              setDisplayTime(remainingTime);
-            }
-          }
-        } else if (!escalationActive) {
-          setDisplayTime(time);
-        }
 
         setStatus(prev => ({
           ...prev,
@@ -140,29 +100,45 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           won,
           isEscalation: escalationActive,
           isGameOver: gameOver,
-          lastGuessTimestamp: isNewGuess ? Date.now() / 1000 : prev.lastGuessTimestamp
+          requiredAmount: requiredAmount,
+          lastGuessTimestamp: isNewGuess ? Date.now() : prev.lastGuessTimestamp,
+          lastUpdate: Date.now()
         }));
 
+        if (isNewGuess && escalationActive) {
+          setDisplayTime(300); // Reset to 5 minutes on new guess during escalation
+        } else if (!escalationActive) {
+          setDisplayTime(time);
+        }
       } catch (error) {
         console.error("Error fetching game status:", error);
       }
     };
 
-    updateStatus();
-    const interval = setInterval(updateStatus, 5000);
-    return () => clearInterval(interval);
-  }, [contract, status.lastPlayer, status.isEscalation, displayTime]);
+    const statusInterval = setInterval(updateStatus, 5000);
+    return () => clearInterval(statusInterval);
+  }, [contract]);
 
+  // Continuous countdown timer
   useEffect(() => {
+    if (status.isGameOver) return;
+
     const timer = setInterval(() => {
       setDisplayTime(prev => {
-        if (prev <= 0) return 0;
-        return prev - 1;
+        if (status.isEscalation) {
+          // In escalation mode, count down from 300 seconds
+          if (prev <= 0) return 0;
+          return prev - 1;
+        } else {
+          // In normal mode, calculate remaining time based on contract time
+          const elapsed = (Date.now() - status.lastUpdate) / 1000;
+          return Math.max(0, status.timeRemaining - Math.floor(elapsed));
+        }
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [status.isEscalation, status.timeRemaining, status.isGameOver, status.lastUpdate]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
