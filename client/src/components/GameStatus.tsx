@@ -69,14 +69,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
   if (showPrizePoolOnly) {
     return (
-      <Card className="border-green-500">
+      <Card className="border-green-500 h-48 flex flex-col">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-500">
             <Banknote className="h-5 w-5" />
             Prize Pool
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col justify-center">
           <div className="flex flex-col gap-1">
             <div className="text-2xl font-bold text-green-500 flex items-center gap-2">
               <SiEthereum className="h-5 w-5" /> {status.totalBalance}
