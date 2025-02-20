@@ -26,6 +26,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     totalBalance: "0",
     won: false
   });
+  const [displayTime, setDisplayTime] = useState(0);
 
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
@@ -33,6 +34,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     refetchInterval: 60000, // Refresh every minute
   });
 
+  // Effect for contract data updates
   useEffect(() => {
     if (!contract) return;
 
@@ -51,11 +53,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         setStatus({
-          timeRemaining: Number(timeRemaining), // Convert BigInt to number
+          timeRemaining: Number(timeRemaining),
           lastPlayer,
-          totalBalance: formatEther(balance), // Format BigInt balance to ETH
+          totalBalance: formatEther(balance),
           won
         });
+        setDisplayTime(Number(timeRemaining)); // Update display time when contract data updates
       } catch (error) {
         console.error("Error fetching game status:", error);
       }
@@ -65,6 +68,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     const interval = setInterval(updateStatus, 2000);
     return () => clearInterval(interval);
   }, [contract]);
+
+  // Separate effect for countdown display
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDisplayTime(prev => {
+        if (prev <= 0) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
@@ -98,6 +113,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   }
 
   if (showTimeRemainingOnly) {
+    const minutes = Math.floor(displayTime / 60);
+    const seconds = displayTime % 60;
+
     return (
       <Card>
         <CardHeader>
@@ -108,9 +126,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {Math.floor(status.timeRemaining / 60)}:{(status.timeRemaining % 60).toString().padStart(2, '0')}
+            {minutes}:{seconds.toString().padStart(2, '0')}
           </div>
-          <Progress value={(status.timeRemaining / 3600) * 100} className="mt-2" />
+          <Progress value={(displayTime / 3600) * 100} className="mt-2" />
         </CardContent>
       </Card>
     );
@@ -134,6 +152,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     );
   }
 
+  const minutes = Math.floor(displayTime / 60);
+  const seconds = displayTime % 60;
+
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <Card>
@@ -145,9 +166,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {Math.floor(status.timeRemaining / 60)}:{(status.timeRemaining % 60).toString().padStart(2, '0')}
+            {minutes}:{seconds.toString().padStart(2, '0')}
           </div>
-          <Progress value={(status.timeRemaining / 3600) * 100} className="mt-2" />
+          <Progress value={(displayTime / 3600) * 100} className="mt-2" />
         </CardContent>
       </Card>
 
