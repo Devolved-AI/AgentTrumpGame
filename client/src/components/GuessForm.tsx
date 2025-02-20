@@ -13,6 +13,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TransactionVisualization } from "./TransactionVisualization";
+import { generateTrumpResponse } from "@/lib/openai";
 
 const guessSchema = z.object({
   response: z.string()
@@ -30,7 +31,7 @@ interface Message {
   text: string;
   timestamp: number;
   isUser: boolean;
-  exists?: boolean; // Added exists property
+  exists?: boolean;
 }
 
 export function GuessForm() {
@@ -50,12 +51,16 @@ export function GuessForm() {
 
       for (let i = 0; i < count; i++) {
         const [text, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
-        // Safely convert timestamp to number, handling both BigNumber and regular number cases
         const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp 
           ? timestamp.toNumber() 
           : Number(timestamp);
 
-        responses.push({ text, timestamp: timestampNum, exists });
+        responses.push({ 
+          text, 
+          timestamp: timestampNum, 
+          exists,
+          isUser: true 
+        });
       }
 
       setMessages(responses.reverse());
@@ -63,13 +68,13 @@ export function GuessForm() {
 
     loadResponses();
 
-    // Listen for new responses
     const filter = contract.filters.GuessSubmitted(address);
     contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
       setMessages(prev => [{
         text: response,
-        timestamp: Date.now() / 1000, // Convert to Unix timestamp (seconds)
-        isUser: true
+        timestamp: Date.now() / 1000,
+        isUser: true,
+        exists: true
       }, ...prev]);
     });
 
@@ -103,14 +108,13 @@ export function GuessForm() {
         value: requiredAmount
       });
 
-      // Add user message immediately
-      setMessages(prev => [...prev, {
+      const userMessage: Message = {
         text: data.response,
-        timestamp: Date.now() / 1000, // Convert to Unix timestamp (seconds)
+        timestamp: Date.now() / 1000,
         isUser: true
-      }]);
+      };
+      setMessages(prev => [userMessage, ...prev]);
 
-      // Set initial transaction state
       setTransaction({
         hash: tx.hash,
         status: 'pending',
@@ -122,20 +126,23 @@ export function GuessForm() {
         description: "Please wait for the transaction to be confirmed."
       });
 
-      // Wait for transaction confirmation
       const receipt = await tx.wait();
 
-      // Update transaction state based on receipt
       setTransaction(prev => prev ? {
         ...prev,
         status: receipt.status === 1 ? 'confirmed' : 'failed'
       } : null);
 
-      // Simulate Agent Trump typing before showing response
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setIsTyping(false);
-
       if (receipt.status === 1) {
+        const trumpResponse = await generateTrumpResponse(data.response);
+
+        const trumpMessage: Message = {
+          text: trumpResponse,
+          timestamp: Date.now() / 1000,
+          isUser: false
+        };
+        setMessages(prev => [trumpMessage, userMessage, ...prev]);
+
         toast({
           title: "Success!",
           description: "Your guess has been submitted.",
@@ -150,7 +157,6 @@ export function GuessForm() {
         });
       }
     } catch (error: any) {
-      setIsTyping(false);
       setTransaction(prev => prev ? {
         ...prev,
         status: 'failed'
@@ -163,6 +169,7 @@ export function GuessForm() {
       });
     } finally {
       setIsSubmitting(false);
+      setIsTyping(false);
     }
   }
 
@@ -170,7 +177,6 @@ export function GuessForm() {
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-2xl shadow-lg">
         <div className="flex flex-col">
-          {/* Avatar and name at the top */}
           <div className="flex flex-col items-center mb-6">
             <Avatar className="h-16 w-16 mb-2">
               <AvatarImage 
@@ -183,7 +189,6 @@ export function GuessForm() {
             <span className="font-semibold text-lg">Agent Trump</span>
           </div>
 
-          {/* Messages container */}
           <div className="flex flex-col h-[400px]">
             <ScrollArea className="flex-1 px-4">
               <div className="space-y-4">
