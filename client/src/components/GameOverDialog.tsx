@@ -17,42 +17,42 @@ export function GameOverDialog() {
     lastBlock: ""
   });
 
+  // Check game over status periodically
   useEffect(() => {
-    const fetchGameOverInfo = async () => {
-      if (!contract) return;
+    if (!contract) return;
 
+    const checkGameStatus = async () => {
       try {
-        const [lastPlayer, winner] = await Promise.all([
-          contract.lastPlayer(),
-          contract.winner()
-        ]);
+        const gameOver = await isGameOver();
 
-        // Get the provider directly from ethers
-        const provider = contract.provider;
-        const block = await provider.getBlock('latest');
+        if (gameOver) {
+          // Fetch game over info when game is detected as over
+          const [lastPlayer, winner] = await Promise.all([
+            contract.lastPlayer(),
+            contract.winner()
+          ]);
 
-        setGameInfo({
-          lastGuessAddress: lastPlayer,
-          winnerAddress: winner || "No Winner",
-          lastBlock: block ? block.number.toString() : "Unknown"
-        });
+          const provider = contract.provider;
+          const block = await provider.getBlock('latest');
 
-        // Only open dialog when we have the information
-        setOpen(true);
+          setGameInfo({
+            lastGuessAddress: lastPlayer || "No last player",
+            winnerAddress: winner || "No Winner",
+            lastBlock: block ? block.number.toString() : "Unknown"
+          });
+
+          setOpen(true);
+        }
       } catch (error) {
-        console.error("Error fetching game over info:", error);
+        console.error("Error checking game status:", error);
       }
     };
 
-    // Check if game is over and fetch info
-    const checkGameOver = async () => {
-      const gameOver = await isGameOver();
-      if (gameOver) {
-        fetchGameOverInfo();
-      }
-    };
+    // Check immediately and then every 10 seconds
+    checkGameStatus();
+    const interval = setInterval(checkGameStatus, 10000);
 
-    checkGameOver();
+    return () => clearInterval(interval);
   }, [contract, isGameOver]);
 
   return (

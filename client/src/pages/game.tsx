@@ -26,13 +26,22 @@ export default function Game() {
   const { isGameOver } = useWeb3Store();
   const [gameOver, setGameOver] = useState(false);
 
+  // Check game over status periodically
   useEffect(() => {
     const checkGameOver = async () => {
-      const isOver = await isGameOver();
-      setGameOver(isOver);
+      try {
+        const isOver = await isGameOver();
+        setGameOver(isOver);
+      } catch (error) {
+        console.error("Error checking game over status:", error);
+      }
     };
 
+    // Check immediately and then every 10 seconds
     checkGameOver();
+    const interval = setInterval(checkGameOver, 10000);
+
+    return () => clearInterval(interval);
   }, [isGameOver]);
 
   const guessPrice = 0.0009;
