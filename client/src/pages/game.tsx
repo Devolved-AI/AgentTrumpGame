@@ -6,6 +6,9 @@ import { SiX, SiTelegram, SiEthereum } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersuasionScore } from "@/components/PersuasionScore";
 import { useQuery } from "@tanstack/react-query";
+import { GameOverDialog } from "@/components/GameOverDialog";
+import { useWeb3Store } from "@/lib/web3";
+import { useState, useEffect } from 'react';
 
 const fetchEthPrice = async () => {
   const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
@@ -20,6 +23,18 @@ export default function Game() {
     refetchInterval: 60000, // Refresh every minute
   });
 
+  const { isGameOver } = useWeb3Store();
+  const [gameOver, setGameOver] = useState(false);
+
+  useEffect(() => {
+    const checkGameOver = async () => {
+      const isOver = await isGameOver();
+      setGameOver(isOver);
+    };
+
+    checkGameOver();
+  }, [isGameOver]);
+
   const guessPrice = 0.0009;
   const guessPriceUsd = (guessPrice * ethPrice).toLocaleString('en-US', {
     style: 'currency',
@@ -27,7 +42,8 @@ export default function Game() {
   });
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
+    <div className={`min-h-screen ${gameOver ? 'bg-black' : 'bg-white dark:bg-black'}`}>
+      <GameOverDialog />
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-start mb-8">
           <div className="w-full flex flex-col gap-6">
