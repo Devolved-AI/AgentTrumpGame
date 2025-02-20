@@ -78,20 +78,6 @@ export function GameStatus() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Last Guess Address
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm font-mono break-all">
-            {status.lastPlayer || "No guesses yet"}
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className="border-green-500">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-500">
@@ -104,13 +90,27 @@ export function GameStatus() {
             <div className="text-2xl font-bold text-green-500 flex items-center gap-2">
               <SiEthereum className="h-5 w-5" /> {status.totalBalance}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground font-bold">
               {usdValue}
             </div>
           </div>
           {status.won && (
             <div className="text-green-500 mt-2">Game Won!</div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Last Guess Address
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm font-mono break-all">
+            {status.lastPlayer || "No guesses yet"}
+          </div>
         </CardContent>
       </Card>
     </div>
