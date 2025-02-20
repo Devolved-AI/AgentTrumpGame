@@ -6,7 +6,6 @@ import { Globe } from "lucide-react";
 import { SiX, SiTelegram } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersuasionScore } from "@/components/PersuasionScore";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Game() {
   return (
@@ -14,37 +13,40 @@ export default function Game() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-start mb-8">
           <div className="w-full flex flex-col gap-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-8">
-                <div className="flex items-center gap-6">
-                  <a 
-                    href="https://www.devolvedai.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-black dark:text-white hover:opacity-80"
-                  >
-                    <Globe className="h-6 w-6" />
-                  </a>
-                  <a 
-                    href="https://x.com/devolvedai" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-black dark:text-white hover:opacity-80"
-                  >
-                    <SiX className="h-6 w-6" />
-                  </a>
-                  <a 
-                    href="https://t.me/devolvedai" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-black dark:text-white hover:opacity-80"
-                  >
-                    <SiTelegram className="h-6 w-6" />
-                  </a>
-                  <ThemeToggle />
-                </div>
-                <WalletButton />
+            <div className="flex justify-between items-center w-full">
+              <h1 className="text-2xl font-bold text-black dark:text-white">
+                Agent Trump Game
+              </h1>
+
+              <div className="flex items-center gap-6">
+                <a 
+                  href="https://www.devolvedai.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-black dark:text-white hover:opacity-80"
+                >
+                  <Globe className="h-6 w-6" />
+                </a>
+                <a 
+                  href="https://x.com/devolvedai" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-black dark:text-white hover:opacity-80"
+                >
+                  <SiX className="h-6 w-6" />
+                </a>
+                <a 
+                  href="https://t.me/devolvedai" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-black dark:text-white hover:opacity-80"
+                >
+                  <SiTelegram className="h-6 w-6" />
+                </a>
+                <ThemeToggle />
               </div>
+
+              <WalletButton />
             </div>
 
             <div className="flex gap-8 items-start">
