@@ -34,7 +34,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     refetchInterval: 60000, // Refresh every minute
   });
 
-  // Initial time setup
+  // Initial time setup - only runs once when contract is available
   useEffect(() => {
     if (!contract) return;
 
@@ -50,7 +50,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     initializeTime();
   }, [contract]); // Only run when contract changes
 
-  // Contract data updates
+  // Contract data updates - separate from display time
   useEffect(() => {
     if (!contract) return;
 
@@ -74,23 +74,17 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           totalBalance: formatEther(balance),
           won
         });
-
-        // Only update display time if there's a large discrepancy (>10 seconds)
-        const timeDiff = Math.abs(Number(timeRemaining) - displayTime);
-        if (timeDiff > 10) {
-          setDisplayTime(Number(timeRemaining));
-        }
       } catch (error) {
         console.error("Error fetching game status:", error);
       }
     };
 
     updateStatus();
-    const interval = setInterval(updateStatus, 5000); // Check contract every 5 seconds
+    const interval = setInterval(updateStatus, 5000);
     return () => clearInterval(interval);
-  }, [contract]); // Remove displayTime dependency
+  }, [contract]);
 
-  // Countdown timer
+  // Independent countdown timer
   useEffect(() => {
     const timer = setInterval(() => {
       setDisplayTime(prev => {
