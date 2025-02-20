@@ -153,6 +153,13 @@ export const useWeb3Store = create<Web3State>((set) => ({
       window.ethereum.removeAllListeners('accountsChanged');
     }
     set({ provider: null, signer: null, contract: null, address: null, balance: null });
+
+    // Clear messages when disconnecting
+    set((state) => {
+      state.clearMessages();
+      return state;
+    });
+
     toast({
       title: "Wallet Disconnected",
       description: "Successfully disconnected wallet",
@@ -167,7 +174,7 @@ export const useWeb3Store = create<Web3State>((set) => ({
   },
 
   clearMessages: () => {
-    // This is just a trigger action that components can listen to
+    // Force a state update to trigger message clearing in components
     set((state) => ({ ...state }));
   }
 }));

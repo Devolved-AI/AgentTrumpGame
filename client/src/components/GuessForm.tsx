@@ -43,37 +43,35 @@ interface Message {
 }
 
 export function GuessForm() {
-  const { contract, address, clearMessages } = useWeb3Store();
+  const { contract, address } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
 
-  // Listen to wallet changes and clear messages
+  // Reset messages when wallet changes
   useEffect(() => {
-    // Reset messages when address changes (connect/disconnect)
+    // Always reset to just the welcome message when wallet changes
     setMessages([WELCOME_MESSAGE]);
 
-    // If no wallet is connected, don't try to load history
+    // Don't try to load history if no wallet is connected
     if (!contract || !address) {
       return;
     }
 
-    // Load historical responses for the connected wallet
+    // Load historical responses only if wallet is connected
     const loadResponses = async () => {
       try {
         const count = await contract.getPlayerResponseCount(address);
-        const responses: Message[] = [];
+        const responses = [];
 
         for (let i = 0; i < count; i++) {
           const [response, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
-          // Parse the response to extract only the user's message
           let text = response;
           try {
             const parsed = JSON.parse(response);
-            text = parsed.response; // Only use the actual message text
+            text = parsed.response;
           } catch (e) {
-            // If parsing fails, use the response as-is
             console.log("Response parsing failed, using raw text");
           }
 
@@ -89,7 +87,8 @@ export function GuessForm() {
           });
         }
 
-        if (responses.length > 0) {
+        // Only append responses if we're still connected
+        if (contract && address) {
           setMessages(prev => [WELCOME_MESSAGE, ...responses]);
         }
       } catch (error) {
@@ -104,11 +103,11 @@ export function GuessForm() {
 
     loadResponses();
 
-    // Clean up function
     return () => {
+      // Reset to welcome message when cleaning up
       setMessages([WELCOME_MESSAGE]);
     };
-  }, [contract, address, clearMessages]); // Re-run when wallet or contract changes
+  }, [contract, address]); // Only depend on contract and address changes
 
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
