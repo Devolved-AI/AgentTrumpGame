@@ -1,7 +1,6 @@
 import { WalletButton } from "@/components/WalletButton";
 import { GameStatus } from "@/components/GameStatus";
 import { GuessForm } from "@/components/GuessForm";
-import { PlayerHistory } from "@/components/PlayerHistory";
 import { Globe } from "lucide-react";
 import { SiX, SiTelegram } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -73,13 +72,8 @@ export default function Game() {
             <GameStatus showLastGuessOnly={true} />
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div className="space-y-4 lg:col-span-2">
-              <GuessForm />
-            </div>
-            <div className="lg:col-span-2">
-              <PlayerHistory />
-            </div>
+          <div className="space-y-4">
+            <GuessForm />
           </div>
 
           <div className="mt-12 bg-white dark:bg-black rounded-lg p-6 border border-black dark:border-white">

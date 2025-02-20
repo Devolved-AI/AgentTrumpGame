@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,12 +26,58 @@ interface TransactionState {
   value?: string;
 }
 
+interface Message {
+  text: string;
+  timestamp: number;
+  isUser: boolean;
+}
+
 export function GuessForm() {
-  const { contract } = useWeb3Store();
+  const { contract, address } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [transaction, setTransaction] = useState<TransactionState | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    if (!contract || !address) return;
+
+    const loadResponses = async () => {
+      const count = await contract.getPlayerResponseCount(address);
+      const responses = [];
+
+      for (let i = 0; i < count; i++) {
+        const [text, timestamp, exists] = await contract.getPlayerResponseByIndex(address, i);
+        const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp 
+          ? timestamp.toNumber() 
+          : Number(timestamp);
+
+        responses.push({ 
+          text, 
+          timestamp: timestampNum,
+          isUser: true 
+        });
+      }
+
+      setMessages(responses.reverse());
+    };
+
+    loadResponses();
+
+    const filter = contract.filters.GuessSubmitted(address);
+    contract.on(filter, (player, amount, multiplier, response) => {
+      setMessages(prev => [{
+        text: response,
+        timestamp: Date.now() / 1000,
+        isUser: true
+      }, ...prev]);
+    });
+
+    return () => {
+      contract.removeAllListeners(filter);
+    };
+  }, [contract, address]);
 
   const currentTime = formatInTimeZone(
     new Date(),
@@ -57,6 +103,13 @@ export function GuessForm() {
       const tx = await contract.submitGuess(data.response, {
         value: requiredAmount
       });
+
+      // Add user message immediately
+      setMessages(prev => [...prev, {
+        text: data.response,
+        timestamp: Date.now() / 1000,
+        isUser: true
+      }]);
 
       // Set initial transaction state
       setTransaction({
@@ -139,6 +192,33 @@ export function GuessForm() {
                   <p className="text-sm">Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!</p>
                   <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{currentTime}</p>
                 </div>
+
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div 
+                      className={`max-w-[70%] p-3 rounded-2xl ${
+                        message.isUser 
+                          ? 'bg-blue-500 text-white rounded-tr-sm' 
+                          : 'bg-gray-300 dark:bg-gray-700 rounded-tl-sm'
+                      }`}
+                    >
+                      <p className="text-sm">{message.text}</p>
+                      <p className={`text-[10px] ${
+                        message.isUser ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                      } mt-1`}>
+                        {formatInTimeZone(
+                          message.timestamp * 1000,
+                          'America/Los_Angeles',
+                          'h:mma MM/dd/yyyy'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
                 {transaction && <TransactionVisualization {...transaction} />}
                 {isTyping && <TypingIndicator />}
               </div>
