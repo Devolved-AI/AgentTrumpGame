@@ -133,8 +133,9 @@ export function GuessForm() {
       const tx = await contract.submitGuess(
         JSON.stringify({
           response: data.response,
-          sentimentScore: sentiment.score,
-          sentimentType: sentiment.type
+          scoreAdjustment: sentiment.score, // Changed to explicitly show this is an adjustment
+          sentimentType: sentiment.type,
+          isAdjustment: true // Flag to indicate this should adjust the current score
         }),
         {
           value: requiredAmount
