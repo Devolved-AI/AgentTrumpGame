@@ -57,7 +57,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     initializeTime();
   }, [contract]);
 
-  // Contract data updates
+  // Contract data updates - every 5 seconds
   useEffect(() => {
     if (!contract) return;
 
@@ -81,20 +81,19 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         const time = Number(timeRemaining);
 
-        setStatus({
+        setStatus(prev => ({
           timeRemaining: time,
           lastPlayer,
           totalBalance: formatEther(balance),
           won,
           isEscalation: escalationActive,
           requiredAmount: formatEther(requiredAmount)
-        });
+        }));
 
-        // Update display time during escalation
-        if (escalationActive) {
-          setDisplayTime(300); // Reset to 5 minutes
-        } else {
-          setDisplayTime(time);
+        // Only update display time if it's significantly different from current display time
+        // or when entering/exiting escalation mode
+        if (Math.abs(time - displayTime) > 5 || escalationActive !== status.isEscalation) {
+          setDisplayTime(escalationActive ? 300 : time);
         }
       } catch (error) {
         console.error("Error fetching game status:", error);
@@ -104,19 +103,26 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     updateStatus();
     const interval = setInterval(updateStatus, 5000);
     return () => clearInterval(interval);
-  }, [contract]);
+  }, [contract, displayTime, status.isEscalation]);
 
-  // Independent countdown timer
+  // Independent countdown timer - updates every second
   useEffect(() => {
     const timer = setInterval(() => {
       setDisplayTime(prev => {
+        // Don't go below zero
         if (prev <= 0) return 0;
+
+        // If in escalation mode, cycle between 300 and 0
+        if (status.isEscalation && prev <= 1) {
+          return 300;
+        }
+
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [status.isEscalation]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
@@ -167,9 +173,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           <div className={`text-2xl font-bold ${textColorClass}`}>
             {minutes}:{seconds.toString().padStart(2, '0')}
           </div>
-          <Progress 
-            value={(displayTime / (status.isEscalation ? 300 : 3600)) * 100} 
-            className={`mt-2 ${status.isEscalation || isNearEnd ? 'bg-red-200' : ''}`} 
+          <Progress
+            value={(displayTime / (status.isEscalation ? 300 : 3600)) * 100}
+            className={`mt-2 ${status.isEscalation || isNearEnd ? 'bg-red-200' : ''}`}
           />
           {(status.isEscalation || isNearEnd) && (
             <div className="mt-2 text-sm text-red-500">
