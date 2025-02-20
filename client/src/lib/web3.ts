@@ -16,6 +16,7 @@ const BASE_SEPOLIA_CONFIG = {
 };
 
 const CONTRACT_ABI = [
+  "function getPlayerPersuasionScore(address player) view returns (uint256)",
   "function gameEndBlock() view returns (uint256)",
   "function escalationStartBlock() view returns (uint256)",
   "function lastGuessBlock() view returns (uint256)",

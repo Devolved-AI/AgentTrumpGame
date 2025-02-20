@@ -5,6 +5,7 @@ import { PlayerHistory } from "@/components/PlayerHistory";
 import { Globe } from "lucide-react";
 import { SiX, SiTelegram } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PersuasionScore } from "@/components/PersuasionScore";
 
 export default function Game() {
   return (
@@ -66,6 +67,7 @@ export default function Game() {
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold text-black dark:text-white">Stump Agent Trump</h2>
               <GuessForm />
+              <PersuasionScore />
             </div>
 
             <PlayerHistory />
