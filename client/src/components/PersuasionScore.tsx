@@ -37,8 +37,7 @@ export function PersuasionScore() {
         <div className="text-2xl font-bold mb-2">{score}/100</div>
         <Progress 
           value={score} 
-          className="h-2"
-          className={score >= 100 ? "bg-green-500" : undefined}
+          className={`h-2 ${score >= 100 ? "bg-green-500" : ""}`}
         />
         {score >= 100 && (
           <p className="text-green-500 text-sm mt-2">

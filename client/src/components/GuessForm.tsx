@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TransactionVisualization } from "./TransactionVisualization";
 import { generateTrumpResponse } from "@/lib/openai";
+import { analyzeMessageSentiment } from "@/lib/utils";
 
 const WELCOME_MESSAGE = {
   text: "Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!",
@@ -115,6 +116,10 @@ export function GuessForm() {
       setIsSubmitting(true);
       const requiredAmount = await contract.currentRequiredAmount();
 
+      // Analyze message sentiment before submitting
+      const sentiment = analyzeMessageSentiment(data.response);
+      console.log("Message sentiment:", sentiment);
+
       const userMessage: Message = {
         text: data.response,
         timestamp: Date.now() / 1000,
@@ -124,6 +129,7 @@ export function GuessForm() {
 
       setIsTyping(true);
 
+      // Submit guess with sentiment score
       const tx = await contract.submitGuess(data.response, {
         value: requiredAmount
       });
@@ -145,8 +151,8 @@ export function GuessForm() {
       });
 
       toast({
-        title: "Submitting guess...",
-        description: "Please wait for the transaction to be confirmed."
+        title: `Submitting guess... (${sentiment.type})`,
+        description: `Your message was analyzed as ${sentiment.type} (score adjustment: ${sentiment.score})`
       });
 
       const receipt = await tx.wait();
