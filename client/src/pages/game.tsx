@@ -86,7 +86,7 @@ export default function Game() {
             </div>
           </div>
 
-          <footer className="mt-12 text-center border-t border-black pt-8">
+          <footer className="mt-12 text-center pt-8">
             <p className="text-black mb-4">Copyright 2025 Devolved AI. All rights reserved.</p>
             <div className="flex justify-center items-center gap-6">
               <a 
