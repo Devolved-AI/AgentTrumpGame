@@ -68,14 +68,19 @@ export function GuessForm() {
 
     loadResponses();
 
+    // We'll only listen for events to handle Trump's responses
     const filter = contract.filters.GuessSubmitted(address);
-    contract.on(filter, (player, amount, multiplier, response, blockNumber) => {
-      setMessages(prev => [{
-        text: response,
-        timestamp: Date.now() / 1000,
-        isUser: true,
-        exists: true
-      }, ...prev]);
+    contract.on(filter, async (player, amount, multiplier, response, blockNumber) => {
+      const trumpResponse = await generateTrumpResponse(response);
+
+      setMessages(prev => [
+        {
+          text: trumpResponse,
+          timestamp: Date.now() / 1000,
+          isUser: false
+        },
+        ...prev
+      ]);
     });
 
     return () => {
@@ -104,16 +109,18 @@ export function GuessForm() {
       setIsTyping(true);
 
       const requiredAmount = await contract.currentRequiredAmount();
-      const tx = await contract.submitGuess(data.response, {
-        value: requiredAmount
-      });
 
+      // Add user message immediately
       const userMessage: Message = {
         text: data.response,
         timestamp: Date.now() / 1000,
         isUser: true
       };
       setMessages(prev => [userMessage, ...prev]);
+
+      const tx = await contract.submitGuess(data.response, {
+        value: requiredAmount
+      });
 
       setTransaction({
         hash: tx.hash,
@@ -134,15 +141,6 @@ export function GuessForm() {
       } : null);
 
       if (receipt.status === 1) {
-        const trumpResponse = await generateTrumpResponse(data.response);
-
-        const trumpMessage: Message = {
-          text: trumpResponse,
-          timestamp: Date.now() / 1000,
-          isUser: false
-        };
-        setMessages(prev => [trumpMessage, userMessage, ...prev]);
-
         toast({
           title: "Success!",
           description: "Your guess has been submitted.",
@@ -180,7 +178,7 @@ export function GuessForm() {
           <div className="flex flex-col items-center mb-6">
             <Avatar className="h-16 w-16 mb-2">
               <AvatarImage 
-                src="/assets/donald-trump-image.jpeg" 
+                src="/donald-trump-image.jpeg" 
                 alt="Agent Trump"
                 className="object-cover object-center" 
               />
