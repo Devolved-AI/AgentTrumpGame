@@ -38,7 +38,7 @@ export function GameOverDialog() {
           ]);
 
           // Get the provider and latest block
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const provider = new ethers.BrowserProvider(window.ethereum);
           const block = await provider.getBlock('latest');
 
           console.log("Setting game over info:", { lastPlayer, winner, blockNumber: block?.number });
