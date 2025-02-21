@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { useWeb3Store } from "@/lib/web3";
 import { Brain } from "lucide-react";
 
-type ResponseType = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'THREATENING';
+type ResponseType = 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING';
 
 interface PlayerResponse {
   response: string;
@@ -20,39 +20,60 @@ export function PersuasionScore() {
 
   // Use refs to maintain state across renders
   const usedMessagesRef = useRef<Set<string>>(new Set());
-  const usedPositiveWordsRef = useRef<Set<string>>(new Set());
+  const usedTacticsRef = useRef<Set<string>>(new Set());
 
-  const POSITIVE_WORDS = ['please', 'thank', 'good', 'appreciate', 'grateful'];
-  const THREAT_WORDS = ['hate', 'murder', 'death', 'kill', 'hurt', 'harm', 'destroy', 'decimate'];
+  // Business-focused evaluation terms
+  const DEAL_TERMS = [
+    'deal', 'investment', 'opportunity', 'profit', 'return', 'money', 'business',
+    'market', 'value', 'billion', 'million', 'success', 'win', 'negotiate'
+  ];
 
-  const extractPositiveWords = (message: string): string[] => {
+  const POWER_TERMS = [
+    'best', 'huge', 'tremendous', 'successful', 'rich', 'smart', 'genius',
+    'winner', 'powerful', 'incredible', 'amazing', 'fantastic'
+  ];
+
+  const THREAT_TERMS = [
+    'sue', 'lawyer', 'court', 'lawsuit', 'legal', 'threat', 'destroy',
+    'bankrupt', 'ruin', 'expose', 'media', 'press'
+  ];
+
+  const evaluateBusinessTactics = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
-    return POSITIVE_WORDS.filter(word => lowerMessage.includes(word));
+    return [...DEAL_TERMS, ...POWER_TERMS].filter(term => 
+      lowerMessage.includes(term) && !usedTacticsRef.current.has(term)
+    );
   };
 
   const classifyResponse = (response: string): ResponseType => {
     const lowerResponse = response.toLowerCase();
 
-    // Check for threatening words first
-    if (THREAT_WORDS.some(word => lowerResponse.includes(word))) {
+    // Check for threatening or legal pressure first
+    if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
       return 'THREATENING';
     }
 
-    // Check for positive words, but only count new ones
-    const positiveWordsInResponse = extractPositiveWords(response);
-    const hasNewPositiveWords = positiveWordsInResponse.some(word => !usedPositiveWordsRef.current.has(word));
+    // Evaluate business tactics
+    const businessTactics = evaluateBusinessTactics(response);
+    const hasNewTactics = businessTactics.length > 0;
 
-    if (hasNewPositiveWords) {
-      // Add the new positive words to the used set
-      positiveWordsInResponse.forEach(word => {
-        usedPositiveWordsRef.current.add(word);
+    if (hasNewTactics) {
+      // Track used tactics
+      businessTactics.forEach(tactic => {
+        usedTacticsRef.current.add(tactic);
       });
-      return 'POSITIVE';
-    } else if (lowerResponse.includes('no') || lowerResponse.includes('bad') || lowerResponse.includes('wrong')) {
-      return 'NEGATIVE';
+
+      // Determine if it's a strong business proposition
+      const dealTermsCount = DEAL_TERMS.filter(term => 
+        lowerResponse.includes(term)).length;
+      const powerTermsCount = POWER_TERMS.filter(term => 
+        lowerResponse.includes(term)).length;
+
+      // If the response includes both deal terms and power terms, it's considered a strong deal maker approach
+      return (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
     }
 
-    return 'NEUTRAL';
+    return 'WEAK_PROPOSITION';
   };
 
   const calculatePersuasionScore = async () => {
@@ -67,7 +88,9 @@ export function PersuasionScore() {
         return 50;
       }
 
-      const validResponses = responses.responses.filter((_, index: number) => responses.exists[index]);
+      const validResponses = responses.responses.filter((response: string, index: number) => 
+        responses.exists[index]
+      );
 
       // Start with base score of 50
       let calculatedScore = 50;
@@ -77,33 +100,41 @@ export function PersuasionScore() {
         // Skip if this exact message has been used before
         if (usedMessagesRef.current.has(response)) {
           console.log("Skipping repeated message:", response);
-          return; // Skip scoring for repeated messages
+          return;
         }
 
         // Add this message to used messages set
         usedMessagesRef.current.add(response);
-        console.log("New message added:", response);
+        console.log("New message evaluated:", response);
 
         const responseType = classifyResponse(response);
         console.log("Response classified as:", responseType);
 
-        // If response is threatening, immediately set score to 0
-        if (responseType === 'THREATENING') {
-          calculatedScore = 0;
-        } else {
-          // For non-threatening responses, apply normal adjustments
-          const adjustment = 
-            responseType === 'POSITIVE' ? 5 :
-            responseType === 'NEGATIVE' ? -5 :
-            0;
-          calculatedScore = Math.max(0, Math.min(100, calculatedScore + adjustment));
+        // Score adjustments based on business negotiation effectiveness
+        switch (responseType) {
+          case 'DEAL_MAKER':
+            // Significant boost for strong business propositions
+            calculatedScore = Math.min(100, calculatedScore + 15);
+            break;
+          case 'BUSINESS_SAVVY':
+            // Moderate increase for business-focused language
+            calculatedScore = Math.min(100, calculatedScore + 8);
+            break;
+          case 'WEAK_PROPOSITION':
+            // Small penalty for weak business arguments
+            calculatedScore = Math.max(0, calculatedScore - 5);
+            break;
+          case 'THREATENING':
+            // Severe penalty for threats or legal pressure
+            calculatedScore = Math.max(0, calculatedScore - 25);
+            break;
         }
       });
 
       return calculatedScore;
     } catch (error) {
       console.error("Error calculating persuasion score:", error);
-      return 50; // Default score on error
+      return 50;
     }
   };
 
@@ -130,7 +161,7 @@ export function PersuasionScore() {
       setError(null);
       // Clear the sets when disconnecting
       usedMessagesRef.current = new Set();
-      usedPositiveWordsRef.current = new Set();
+      usedTacticsRef.current = new Set();
       return;
     }
 
@@ -176,7 +207,7 @@ export function PersuasionScore() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5" />
-          Persuasion Score
+          Business Persuasion Score
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -195,7 +226,7 @@ export function PersuasionScore() {
         )}
         {score >= 100 && (
           <p className="text-green-500 text-sm mt-2">
-            Maximum persuasion achieved!
+            Maximum persuasion achieved! You've made an offer he can't refuse!
           </p>
         )}
       </CardContent>
