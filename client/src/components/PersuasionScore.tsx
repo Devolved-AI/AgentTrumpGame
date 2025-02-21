@@ -28,7 +28,6 @@ export function PersuasionScore() {
     }
 
     // Simple sentiment analysis based on response content
-    // This can be expanded based on more sophisticated criteria
     if (lowerResponse.includes('please') || lowerResponse.includes('thank') || lowerResponse.includes('good')) {
       return 'POSITIVE';
     } else if (lowerResponse.includes('no') || lowerResponse.includes('bad') || lowerResponse.includes('wrong')) {
@@ -36,19 +35,6 @@ export function PersuasionScore() {
     }
 
     return 'NEUTRAL';
-  };
-
-  const calculateScoreAdjustment = (responseType: ResponseType): number => {
-    switch (responseType) {
-      case 'POSITIVE':
-        return 5;
-      case 'NEGATIVE':
-        return -5;
-      case 'THREATENING':
-        return -50; // This will effectively reset score to 0 or close to it
-      default:
-        return 0;
-    }
   };
 
   const calculatePersuasionScore = async () => {
@@ -71,8 +57,18 @@ export function PersuasionScore() {
       // Process each response and adjust score
       validResponses.forEach((response: string) => {
         const responseType = classifyResponse(response);
-        const adjustment = calculateScoreAdjustment(responseType);
-        calculatedScore = Math.max(0, Math.min(100, calculatedScore + adjustment));
+
+        // If response is threatening, immediately set score to 0
+        if (responseType === 'THREATENING') {
+          calculatedScore = 0;
+        } else {
+          // For non-threatening responses, apply normal adjustments
+          const adjustment = 
+            responseType === 'POSITIVE' ? 5 :
+            responseType === 'NEGATIVE' ? -5 :
+            0;
+          calculatedScore = Math.max(0, Math.min(100, calculatedScore + adjustment));
+        }
       });
 
       return calculatedScore;
