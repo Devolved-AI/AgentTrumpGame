@@ -170,7 +170,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   const minutes = Math.floor(displayTime / 60);
   const seconds = displayTime % 60;
   const isNearEnd = !status.isEscalation && displayTime <= 300;
-  const textColorClass = status.isEscalation || isNearEnd ? 'text-red-500' : 'text-black dark:text-white';
+  const textColorClass = status.isGameOver ? 'text-red-500' : (status.isEscalation || isNearEnd ? 'text-red-500' : 'text-black dark:text-white');
 
   if (showPrizePoolOnly) {
     return (
@@ -234,7 +234,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             </>
           ) : (
             <div className="text-2xl font-bold text-red-500">
-              Game Over
+              GAME OVER
             </div>
           )}
         </CardContent>
@@ -264,16 +264,24 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     <div className="grid gap-4 md:grid-cols-3">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={`flex items-center gap-2 ${textColorClass}`}>
             <Clock className="h-5 w-5" />
-            Time Remaining
+            {status.isGameOver ? 'GAME OVER' : 'Time Remaining'}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
-            {minutes}:{seconds.toString().padStart(2, '0')}
-          </div>
-          <Progress value={(displayTime / 3600) * 100} className="mt-2" />
+          {!status.isGameOver ? (
+            <>
+              <div className={`text-2xl font-bold ${textColorClass}`}>
+                {minutes}:{seconds.toString().padStart(2, '0')}
+              </div>
+              <Progress value={(displayTime / 3600) * 100} className="mt-2" />
+            </>
+          ) : (
+            <div className="text-2xl font-bold text-red-500">
+              GAME OVER
+            </div>
+          )}
         </CardContent>
       </Card>
 
