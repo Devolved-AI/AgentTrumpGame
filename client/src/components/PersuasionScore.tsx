@@ -40,26 +40,23 @@ export function PersuasionScore() {
     'bankrupt', 'ruin', 'expose', 'media', 'press'
   ];
 
-  // Fetch initial score from server
-  const { data: serverScore, isFetching } = useQuery({
+  // Background sync with server
+  useQuery({
     queryKey: ['persuasionScore', address],
     queryFn: async () => {
       if (!address) return null;
       const response = await fetch(`/api/persuasion/${address}`);
       if (!response.ok) throw new Error('Failed to fetch score');
       const data = await response.json();
+      if (data.score !== score) {
+        setScore(data.score);
+      }
       return data.score;
     },
     enabled: !!address,
-    refetchInterval: 500 // Poll every 500ms for updates
+    refetchInterval: 1000,
+    retry: false
   });
-
-  // Update score immediately when server score changes
-  useEffect(() => {
-    if (serverScore !== undefined && serverScore !== null) {
-      setScore(serverScore);
-    }
-  }, [serverScore]);
 
   const evaluateBusinessTactics = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
@@ -125,6 +122,7 @@ export function PersuasionScore() {
       );
 
       let calculatedScore = 50;
+      let lastResponse = null;
 
       validResponses.forEach((response: string) => {
         try {
@@ -141,6 +139,7 @@ export function PersuasionScore() {
           }
 
           usedMessagesRef.current.add(text);
+          lastResponse = text;
 
           const responseType = classifyResponse(text);
           switch (responseType) {
@@ -157,7 +156,6 @@ export function PersuasionScore() {
               calculatedScore = Math.max(0, calculatedScore - 25);
               break;
           }
-          setLastProcessedResponse(text);
         } catch (error) {
           console.error("Error processing response:", error);
         }
@@ -165,8 +163,11 @@ export function PersuasionScore() {
 
       // Update UI immediately
       setScore(calculatedScore);
+      if (lastResponse) {
+        setLastProcessedResponse(lastResponse);
+      }
 
-      // Then update server
+      // Then update server in background
       await fetch(`/api/persuasion/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -182,12 +183,7 @@ export function PersuasionScore() {
   // Update score when contract or address changes
   useEffect(() => {
     if (!contract || !address) return;
-
-    const updateScore = async () => {
-      await calculateAndUpdateScore();
-    };
-
-    updateScore();
+    calculateAndUpdateScore();
   }, [contract, address, updateCounter]);
 
   // Listen for new guesses
@@ -201,9 +197,19 @@ export function PersuasionScore() {
 
       setIsUpdating(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Process the new response immediately
+        let text = response;
+        try {
+          const parsed = JSON.parse(response);
+          text = parsed.response;
+        } catch (e) {
+          // Response is not JSON, using raw text
+        }
+
+        setLastProcessedResponse(text);
+
         await resetCaches();
-        setUpdateCounter(prev => prev + 1);
+        await calculateAndUpdateScore();
       } catch (error) {
         console.error("Error updating score after guess:", error);
         setError("Failed to update score");
@@ -236,7 +242,6 @@ export function PersuasionScore() {
         <div className="text-2xl font-bold mb-2">
           {score}/100
           {isUpdating && <span className="text-sm text-gray-500 ml-2">(updating...)</span>}
-          {isFetching && <span className="text-sm text-gray-500 ml-2">(fetching...)</span>}
         </div>
         <Progress
           value={score}
