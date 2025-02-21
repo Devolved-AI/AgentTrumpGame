@@ -206,10 +206,7 @@ export function PersuasionScore() {
   useEffect(() => {
     if (!contract || !address) return;
 
-    try {
-      const filter = contract.filters.GuessSubmitted(address);
-
-      const handler = async (player: string, amount: any, multiplier: any, response: string, blockNumber: any) => {
+    const handler = async (player: string, amount: any, multiplier: any, response: string, blockNumber: any) => {
         console.log("GuessSubmitted event received:", { player, amount, multiplier, response, blockNumber });
 
         if (player.toLowerCase() !== address.toLowerCase()) {
@@ -219,9 +216,13 @@ export function PersuasionScore() {
 
         setIsUpdating(true);
         try {
-          // Wait for the block to be mined
-          await contract.provider.waitForBlock(blockNumber);
-          console.log("Transaction confirmed in block:", blockNumber);
+          // Wait for the transaction to be confirmed
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Give blockchain time to update
+
+          console.log("Updating score after transaction confirmation");
+          // Clear the cache to force a fresh calculation
+          usedMessagesRef.current = new Set();
+          usedTacticsRef.current = new Set();
 
           // Fetch and update the score
           await fetchScore();
@@ -233,16 +234,18 @@ export function PersuasionScore() {
         }
       };
 
-      contract.on(filter, handler);
-      console.log("Listening for GuessSubmitted events");
+      try {
+        const filter = contract.filters.GuessSubmitted(address);
+        contract.on(filter, handler);
+        console.log("Listening for GuessSubmitted events");
 
-      return () => {
-        contract.off(filter, handler);
-        console.log("Stopped listening for GuessSubmitted events");
-      };
-    } catch (error) {
-      console.error("Error setting up event listener:", error);
-    }
+        return () => {
+          contract.off(filter, handler);
+          console.log("Stopped listening for GuessSubmitted events");
+        };
+      } catch (error) {
+        console.error("Error setting up event listener:", error);
+      }
   }, [contract, address]);
 
   return (
