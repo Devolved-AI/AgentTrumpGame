@@ -34,9 +34,8 @@ const CONTRACT_ABI = [
   "function getPlayerResponseByIndex(address player, uint256 index) view returns (string memory response, uint256 timestamp, bool exists)",
   "function getContractBalance() view returns (uint256)",
   "function winner() view returns (address)",
-  "function gameOver() view returns (bool)",
   "function startEscalation()",
-  "function currentCost() view returns (uint256)", // Changed from getEscalationPrice to currentCost
+  "function currentCost() view returns (uint256)", // Current cost for submitting a guess
   "event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex)"
 ];
 
@@ -51,7 +50,6 @@ interface Web3State {
   reset: () => void;
   clearMessages: () => void;
   getEscalationPrice: () => Promise<string>;
-  isGameOver: () => Promise<boolean>;
 }
 
 export const useWeb3Store = create<Web3State>((set, get) => ({
@@ -61,33 +59,15 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   address: null,
   balance: null,
 
-  isGameOver: async () => {
-    const { contract } = get();
-    if (!contract) return false;
-    try {
-      // Try checking if game is won or if time has run out
-      const [gameWon, timeRemaining] = await Promise.all([
-        contract.gameWon(),
-        contract.getTimeRemaining()
-      ]);
-      return gameWon || timeRemaining.toNumber() <= 0;
-    } catch (error) {
-      console.error("Error checking game over state:", error);
-      return false;
-    }
-  },
-
   getEscalationPrice: async () => {
     const { contract } = get();
     if (!contract) return "0";
     try {
-      // Try currentCost first
       const price = await contract.currentCost();
       return ethers.formatEther(price);
     } catch (error) {
       console.error("Error getting current cost:", error);
       try {
-        // Fallback: Try getting the current required amount
         const amount = await contract.currentRequiredAmount();
         return ethers.formatEther(amount);
       } catch (fallbackError) {

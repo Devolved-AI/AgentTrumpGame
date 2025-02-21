@@ -26,17 +26,22 @@ export default function Game() {
   const { contract, address } = useWeb3Store();
   const [gameOver, setGameOver] = useState(false);
 
-  // Check game over status
+  // Check game state
   useEffect(() => {
     if (!contract || !address) return;
 
     const checkGameOver = async () => {
       try {
-        const isOver = await contract.isGameOver();
-        console.log("Game page - Game over status:", isOver);
+        const [gameWon, timeRemaining] = await Promise.all([
+          contract.gameWon(),
+          contract.getTimeRemaining()
+        ]);
+
+        const isOver = gameWon || timeRemaining.toNumber() <= 0;
+        console.log("Game state:", { gameWon, timeRemaining: timeRemaining.toString(), isOver });
         setGameOver(isOver);
       } catch (error) {
-        console.error("Error checking game over status:", error);
+        console.error("Error checking game state:", error);
       }
     };
 

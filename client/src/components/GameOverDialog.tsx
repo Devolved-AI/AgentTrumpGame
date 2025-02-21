@@ -18,13 +18,12 @@ export function GameOverDialog() {
     lastBlock: ""
   });
 
-  // Check game over status when timer reaches zero
   useEffect(() => {
     if (!contract || !address) return;
 
     const checkGameStatus = async () => {
       try {
-        // Check if game is actually over by checking if game is won or time has run out
+        // Get game state information
         const [gameWon, timeRemaining] = await Promise.all([
           contract.gameWon(),
           contract.getTimeRemaining()
@@ -65,7 +64,7 @@ export function GameOverDialog() {
     const interval = setInterval(checkGameStatus, 5000);
 
     return () => clearInterval(interval);
-  }, [contract, address]); // Dependencies include contract and address
+  }, [contract, address]);
 
   return (
     <Dialog open={open} onOpenChange={() => {}} modal>
