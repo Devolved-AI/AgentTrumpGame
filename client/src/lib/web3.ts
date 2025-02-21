@@ -65,22 +65,15 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     const { contract } = get();
     if (!contract) return false;
     try {
-      // Try the gameOver function
-      const isOver = await contract.gameOver();
-      return isOver;
+      // Try checking if game is won or if time has run out
+      const [gameWon, timeRemaining] = await Promise.all([
+        contract.gameWon(),
+        contract.getTimeRemaining()
+      ]);
+      return gameWon || timeRemaining.toNumber() <= 0;
     } catch (error) {
       console.error("Error checking game over state:", error);
-      try {
-        // Fallback: Check if game is won or if time has run out
-        const [gameWon, timeRemaining] = await Promise.all([
-          contract.gameWon(),
-          contract.getTimeRemaining()
-        ]);
-        return gameWon || timeRemaining.toNumber() <= 0;
-      } catch (fallbackError) {
-        console.error("Fallback game over check failed:", fallbackError);
-        return false;
-      }
+      return false;
     }
   },
 

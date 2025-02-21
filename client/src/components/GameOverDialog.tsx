@@ -24,8 +24,13 @@ export function GameOverDialog() {
 
     const checkGameStatus = async () => {
       try {
-        // Check if game is actually over using the contract method
-        const isOver = await contract.isGameOver();
+        // Check if game is actually over by checking if game is won or time has run out
+        const [gameWon, timeRemaining] = await Promise.all([
+          contract.gameWon(),
+          contract.getTimeRemaining()
+        ]);
+
+        const isOver = gameWon || timeRemaining.toNumber() <= 0;
         console.log("Game over status:", isOver);
 
         if (isOver) {
