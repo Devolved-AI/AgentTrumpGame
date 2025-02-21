@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { useWeb3Store } from "@/lib/web3";
-import { Brain } from "lucide-react";
+import { Brain, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 type ResponseType = 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING';
@@ -163,6 +164,20 @@ export function PersuasionScore() {
     }
   };
 
+  const handleRefresh = async () => {
+    if (!contract || !address || isUpdating) return;
+
+    setIsUpdating(true);
+    setError(null);
+    try {
+      await resetCaches();
+      await calculateAndUpdateScore();
+    } catch (error) {
+      console.error("Error refreshing score:", error);
+      setError("Failed to refresh score");
+    }
+  };
+
   // Initialize score when component mounts or address changes
   useEffect(() => {
     if (!contract || !address) return;
@@ -231,9 +246,21 @@ export function PersuasionScore() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold mb-2">
-          {score}/100
-          {isUpdating && <span className="text-sm text-gray-500 ml-2">(updating...)</span>}
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-2xl font-bold">
+            {score}/100
+            {isUpdating && <span className="text-sm text-gray-500 ml-2">(updating...)</span>}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isUpdating || !address}
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
         <Progress
           value={score}
