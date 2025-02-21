@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 
-const CONTRACT_ADDRESS = "0x5952926C3Ad5C9E1bdc83DedDd0d337ad65d9C60"; // Updated Agent Trump Contract
+const CONTRACT_ADDRESS = "0xe0Dc3B18854ceC02f842F122f14A7bcB0f6FA266"; // Updated Agent Trump Contract
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -16,27 +16,42 @@ const BASE_SEPOLIA_CONFIG = {
   blockExplorerUrls: ["https://sepolia.basescan.org"],
 };
 
-// Updated ABI with explicit return types and error handling
+// Updated ABI with new contract interface
 const CONTRACT_ABI = [
-  "function getPlayerPersuasionScore(address player) view returns (uint256)",
-  "function gameEndBlock() view returns (uint256)",
-  "function escalationStartBlock() view returns (uint256)",
-  "function lastGuessBlock() view returns (uint256)",
-  "function currentMultiplier() view returns (uint256)",
-  "function totalCollected() view returns (uint256)",
-  "function currentRequiredAmount() view returns (uint256)",
+  "function buttonPushed(address winner)",
+  "function deposit() payable",
+  "function emergencyWithdraw()",
+  "function endGame()",
+  "function pause()",
+  "function unpause()",
+  "function submitGuess(string calldata response) payable",
+  "function getTimeRemaining() view returns (uint256)",
   "function lastPlayer() view returns (address)",
   "function gameWon() view returns (bool)",
   "function escalationActive() view returns (bool)",
-  "function getTimeRemaining() view returns (uint256)",
-  "function submitGuess(string calldata response) payable",
+  "function getContractBalance() view returns (uint256)",
+  "function currentRequiredAmount() view returns (uint256)",
+  "function currentMultiplier() view returns (uint256)",
+  "function winner() view returns (address)",
+  "function BASE_MULTIPLIER() view returns (uint256)",
+  "function BLOCKS_PER_MINUTE() view returns (uint256)",
+  "function ESCALATION_PERIOD() view returns (uint256)",
+  "function escalationStartBlock() view returns (uint256)",
+  "function gameEndBlock() view returns (uint256)",
+  "function shouldExtendGame() view returns (bool)",
+  "function shouldStartEscalation() view returns (bool)",
+  "function totalCollected() view returns (uint256)",
   "function getPlayerResponseCount(address player) view returns (uint256)",
   "function getPlayerResponseByIndex(address player, uint256 index) view returns (string memory response, uint256 timestamp, bool exists)",
-  "function getContractBalance() view returns (uint256)",
-  "function winner() view returns (address)",
-  "function startEscalation()",
-  "function currentCost() view returns (uint256)", // Current cost for submitting a guess
-  "event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex)"
+  "function getAllPlayerResponses(address player) view returns (string[] memory responses, uint256[] memory timestamps, bool[] memory exists)",
+  "event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex)",
+  "event GameWon(address indexed winner, uint256 reward)",
+  "event GameEnded(address indexed lastPlayer, uint256 lastPlayerReward, uint256 ownerReward)",
+  "event EscalationStarted(uint256 startBlock)",
+  "event GameExtended(uint256 newEndBlock, uint256 newMultiplier)",
+  "event Deposited(address indexed owner, uint256 amount)",
+  "event Withdrawn(address indexed owner, uint256 amount)",
+  "event EmergencyWithdrawn(address indexed owner, uint256 amount)"
 ];
 
 interface Web3State {
@@ -50,6 +65,7 @@ interface Web3State {
   reset: () => void;
   clearMessages: () => void;
   getEscalationPrice: () => Promise<string>;
+  isGameOver: () => Promise<boolean>;
 }
 
 export const useWeb3Store = create<Web3State>((set, get) => ({
@@ -63,17 +79,26 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     const { contract } = get();
     if (!contract) return "0";
     try {
-      const price = await contract.currentCost();
-      return ethers.formatEther(price);
+      const amount = await contract.currentRequiredAmount();
+      return ethers.formatEther(amount);
     } catch (error) {
-      console.error("Error getting current cost:", error);
-      try {
-        const amount = await contract.currentRequiredAmount();
-        return ethers.formatEther(amount);
-      } catch (fallbackError) {
-        console.error("Error getting escalation price:", fallbackError);
-        return "0";
-      }
+      console.error("Error getting escalation price:", error);
+      return "0";
+    }
+  },
+
+  isGameOver: async () => {
+    const { contract } = get();
+    if (!contract) return false;
+    try {
+      const [gameWon, timeRemaining] = await Promise.all([
+        contract.gameWon(),
+        contract.getTimeRemaining()
+      ]);
+      return gameWon || timeRemaining.toNumber() <= 0;
+    } catch (error) {
+      console.error("Error checking game over status:", error);
+      return false;
     }
   },
 
