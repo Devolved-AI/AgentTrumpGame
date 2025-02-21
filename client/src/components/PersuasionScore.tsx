@@ -18,6 +18,7 @@ export function PersuasionScore() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
+  const [updateCounter, setUpdateCounter] = useState(0); // Add counter for forcing updates
 
   // Use refs to maintain state across renders
   const usedMessagesRef = useRef<Set<string>>(new Set());
@@ -52,39 +53,36 @@ export function PersuasionScore() {
     console.log("Classifying response:", response);
     const lowerResponse = response.toLowerCase();
 
-    // Check for threatening or legal pressure first
     if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
       console.log("Response classified as THREATENING");
       return 'THREATENING';
     }
 
-    // Evaluate business tactics
     const businessTactics = evaluateBusinessTactics(response);
     const hasNewTactics = businessTactics.length > 0;
 
     if (hasNewTactics) {
-      // Track used tactics
       businessTactics.forEach(tactic => {
         usedTacticsRef.current.add(tactic);
       });
 
-      // Determine if it's a strong business proposition
       const dealTermsCount = DEAL_TERMS.filter(term => 
         lowerResponse.includes(term)).length;
       const powerTermsCount = POWER_TERMS.filter(term => 
         lowerResponse.includes(term)).length;
 
-      console.log("Deal terms count:", dealTermsCount);
-      console.log("Power terms count:", powerTermsCount);
-
-      // If the response includes both deal terms and power terms, it's considered a strong deal maker approach
       const responseType = (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
       console.log("Response classified as:", responseType);
       return responseType;
     }
 
-    console.log("Response classified as WEAK_PROPOSITION");
     return 'WEAK_PROPOSITION';
+  };
+
+  const resetCaches = () => {
+    usedMessagesRef.current.clear();
+    usedTacticsRef.current.clear();
+    setLastProcessedResponse(null);
   };
 
   const calculatePersuasionScore = async () => {
@@ -108,13 +106,10 @@ export function PersuasionScore() {
 
       console.log("Valid responses:", validResponses);
 
-      // Start with base score of 50
       let calculatedScore = 50;
 
-      // Process each response and adjust score
       validResponses.forEach((response: string) => {
         try {
-          // Try to parse the response if it's JSON
           let text = response;
           try {
             const parsed = JSON.parse(response);
@@ -123,40 +118,33 @@ export function PersuasionScore() {
             console.log("Response is not JSON, using raw text");
           }
 
-          // Skip if this exact message has been used before
           if (usedMessagesRef.current.has(text)) {
             console.log("Skipping repeated message:", text);
             return;
           }
 
-          // Add this message to used messages set
           usedMessagesRef.current.add(text);
           console.log("New message evaluated:", text);
 
           const responseType = classifyResponse(text);
           console.log("Response classified as:", responseType);
 
-          // Score adjustments based on business negotiation effectiveness
           const previousScore = calculatedScore;
           switch (responseType) {
             case 'DEAL_MAKER':
-              // Significant boost for strong business propositions
               calculatedScore = Math.min(100, calculatedScore + 15);
               break;
             case 'BUSINESS_SAVVY':
-              // Moderate increase for business-focused language
               calculatedScore = Math.min(100, calculatedScore + 8);
               break;
             case 'WEAK_PROPOSITION':
-              // Small penalty for weak business arguments
               calculatedScore = Math.max(0, calculatedScore - 5);
               break;
             case 'THREATENING':
-              // Severe penalty for threats or legal pressure
               calculatedScore = Math.max(0, calculatedScore - 25);
               break;
           }
-          console.log(`Score adjusted from ${previousScore} to ${calculatedScore} based on response type ${responseType}`);
+          console.log(`Score adjusted from ${previousScore} to ${calculatedScore}`);
           setLastProcessedResponse(text);
         } catch (error) {
           console.error("Error processing response:", error);
@@ -192,60 +180,55 @@ export function PersuasionScore() {
     if (!contract || !address) {
       setScore(50);
       setError(null);
-      // Clear the sets when disconnecting
-      usedMessagesRef.current = new Set();
-      usedTacticsRef.current = new Set();
-      setLastProcessedResponse(null);
+      resetCaches();
       return;
     }
 
     fetchScore();
-  }, [contract, address]);
+  }, [contract, address, updateCounter]); // Add updateCounter to dependencies
 
   // Listen for GuessSubmitted events and update score
   useEffect(() => {
     if (!contract || !address) return;
 
     const handler = async (player: string, amount: any, multiplier: any, response: string, blockNumber: any) => {
-        console.log("GuessSubmitted event received:", { player, amount, multiplier, response, blockNumber });
+      console.log("GuessSubmitted event received:", { player, amount, multiplier, response, blockNumber });
 
-        if (player.toLowerCase() !== address.toLowerCase()) {
-          console.log("Event is for a different player, ignoring");
-          return;
-        }
-
-        setIsUpdating(true);
-        try {
-          // Wait for the transaction to be confirmed
-          await new Promise(resolve => setTimeout(resolve, 2000)); // Give blockchain time to update
-
-          console.log("Updating score after transaction confirmation");
-          // Clear the cache to force a fresh calculation
-          usedMessagesRef.current = new Set();
-          usedTacticsRef.current = new Set();
-
-          // Fetch and update the score
-          await fetchScore();
-        } catch (error) {
-          console.error("Error updating score after guess:", error);
-          setError("Failed to update score");
-        } finally {
-          setIsUpdating(false);
-        }
-      };
-
-      try {
-        const filter = contract.filters.GuessSubmitted(address);
-        contract.on(filter, handler);
-        console.log("Listening for GuessSubmitted events");
-
-        return () => {
-          contract.off(filter, handler);
-          console.log("Stopped listening for GuessSubmitted events");
-        };
-      } catch (error) {
-        console.error("Error setting up event listener:", error);
+      if (player.toLowerCase() !== address.toLowerCase()) {
+        console.log("Event is for a different player, ignoring");
+        return;
       }
+
+      setIsUpdating(true);
+      try {
+        // Wait for the transaction to be confirmed
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        console.log("Updating score after transaction confirmation");
+        // Reset caches and force a fresh calculation
+        resetCaches();
+        // Increment counter to force a refresh
+        setUpdateCounter(prev => prev + 1);
+      } catch (error) {
+        console.error("Error updating score after guess:", error);
+        setError("Failed to update score");
+      } finally {
+        setIsUpdating(false);
+      }
+    };
+
+    try {
+      const filter = contract.filters.GuessSubmitted(address);
+      contract.on(filter, handler);
+      console.log("Listening for GuessSubmitted events");
+
+      return () => {
+        contract.off(filter, handler);
+        console.log("Stopped listening for GuessSubmitted events");
+      };
+    } catch (error) {
+      console.error("Error setting up event listener:", error);
+    }
   }, [contract, address]);
 
   return (
