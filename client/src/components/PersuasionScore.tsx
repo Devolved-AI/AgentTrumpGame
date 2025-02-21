@@ -17,6 +17,7 @@ export function PersuasionScore() {
   const [score, setScore] = useState<number>(50);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
 
   // Use refs to maintain state across renders
   const usedMessagesRef = useRef<Set<string>>(new Set());
@@ -40,16 +41,20 @@ export function PersuasionScore() {
 
   const evaluateBusinessTactics = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
-    return [...DEAL_TERMS, ...POWER_TERMS].filter(term => 
+    const tactics = [...DEAL_TERMS, ...POWER_TERMS].filter(term => 
       lowerMessage.includes(term) && !usedTacticsRef.current.has(term)
     );
+    console.log("Found business tactics:", tactics);
+    return tactics;
   };
 
   const classifyResponse = (response: string): ResponseType => {
+    console.log("Classifying response:", response);
     const lowerResponse = response.toLowerCase();
 
     // Check for threatening or legal pressure first
     if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
+      console.log("Response classified as THREATENING");
       return 'THREATENING';
     }
 
@@ -69,10 +74,16 @@ export function PersuasionScore() {
       const powerTermsCount = POWER_TERMS.filter(term => 
         lowerResponse.includes(term)).length;
 
+      console.log("Deal terms count:", dealTermsCount);
+      console.log("Power terms count:", powerTermsCount);
+
       // If the response includes both deal terms and power terms, it's considered a strong deal maker approach
-      return (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
+      const responseType = (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
+      console.log("Response classified as:", responseType);
+      return responseType;
     }
 
+    console.log("Response classified as WEAK_PROPOSITION");
     return 'WEAK_PROPOSITION';
   };
 
@@ -84,7 +95,10 @@ export function PersuasionScore() {
 
     try {
       const responses = await contract.getAllPlayerResponses(address);
+      console.log("Got responses from contract:", responses);
+
       if (!responses || !responses.responses || responses.responses.length === 0) {
+        console.log("No responses found");
         return 50;
       }
 
@@ -92,42 +106,60 @@ export function PersuasionScore() {
         responses.exists[index]
       );
 
+      console.log("Valid responses:", validResponses);
+
       // Start with base score of 50
       let calculatedScore = 50;
 
       // Process each response and adjust score
       validResponses.forEach((response: string) => {
-        // Skip if this exact message has been used before
-        if (usedMessagesRef.current.has(response)) {
-          console.log("Skipping repeated message:", response);
-          return;
-        }
+        try {
+          // Try to parse the response if it's JSON
+          let text = response;
+          try {
+            const parsed = JSON.parse(response);
+            text = parsed.response;
+          } catch (e) {
+            console.log("Response is not JSON, using raw text");
+          }
 
-        // Add this message to used messages set
-        usedMessagesRef.current.add(response);
-        console.log("New message evaluated:", response);
+          // Skip if this exact message has been used before
+          if (usedMessagesRef.current.has(text)) {
+            console.log("Skipping repeated message:", text);
+            return;
+          }
 
-        const responseType = classifyResponse(response);
-        console.log("Response classified as:", responseType);
+          // Add this message to used messages set
+          usedMessagesRef.current.add(text);
+          console.log("New message evaluated:", text);
 
-        // Score adjustments based on business negotiation effectiveness
-        switch (responseType) {
-          case 'DEAL_MAKER':
-            // Significant boost for strong business propositions
-            calculatedScore = Math.min(100, calculatedScore + 15);
-            break;
-          case 'BUSINESS_SAVVY':
-            // Moderate increase for business-focused language
-            calculatedScore = Math.min(100, calculatedScore + 8);
-            break;
-          case 'WEAK_PROPOSITION':
-            // Small penalty for weak business arguments
-            calculatedScore = Math.max(0, calculatedScore - 5);
-            break;
-          case 'THREATENING':
-            // Severe penalty for threats or legal pressure
-            calculatedScore = Math.max(0, calculatedScore - 25);
-            break;
+          const responseType = classifyResponse(text);
+          console.log("Response classified as:", responseType);
+
+          // Score adjustments based on business negotiation effectiveness
+          const previousScore = calculatedScore;
+          switch (responseType) {
+            case 'DEAL_MAKER':
+              // Significant boost for strong business propositions
+              calculatedScore = Math.min(100, calculatedScore + 15);
+              break;
+            case 'BUSINESS_SAVVY':
+              // Moderate increase for business-focused language
+              calculatedScore = Math.min(100, calculatedScore + 8);
+              break;
+            case 'WEAK_PROPOSITION':
+              // Small penalty for weak business arguments
+              calculatedScore = Math.max(0, calculatedScore - 5);
+              break;
+            case 'THREATENING':
+              // Severe penalty for threats or legal pressure
+              calculatedScore = Math.max(0, calculatedScore - 25);
+              break;
+          }
+          console.log(`Score adjusted from ${previousScore} to ${calculatedScore} based on response type ${responseType}`);
+          setLastProcessedResponse(text);
+        } catch (error) {
+          console.error("Error processing response:", error);
         }
       });
 
@@ -147,7 +179,7 @@ export function PersuasionScore() {
     try {
       setError(null);
       const newScore = await calculatePersuasionScore();
-      console.log("Calculated persuasion score:", newScore);
+      console.log("Calculated new persuasion score:", newScore);
       setScore(newScore);
     } catch (error) {
       console.error("Error fetching persuasion score:", error);
@@ -155,6 +187,7 @@ export function PersuasionScore() {
     }
   };
 
+  // Reset when wallet changes
   useEffect(() => {
     if (!contract || !address) {
       setScore(50);
@@ -162,17 +195,11 @@ export function PersuasionScore() {
       // Clear the sets when disconnecting
       usedMessagesRef.current = new Set();
       usedTacticsRef.current = new Set();
+      setLastProcessedResponse(null);
       return;
     }
 
     fetchScore();
-    const interval = setInterval(fetchScore, 2000);
-
-    return () => {
-      clearInterval(interval);
-      setScore(50);
-      setError(null);
-    };
   }, [contract, address]);
 
   // Listen for GuessSubmitted events
@@ -181,10 +208,12 @@ export function PersuasionScore() {
 
     try {
       const filter = contract.filters.GuessSubmitted(address);
-      const handler = async () => {
+      const handler = async (...args: any[]) => {
+        console.log("GuessSubmitted event received:", args);
         setIsUpdating(true);
         try {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Small delay to allow the transaction to be processed
+          await new Promise(resolve => setTimeout(resolve, 2000));
           await fetchScore();
         } catch (error) {
           console.error("Error updating score after guess:", error);
@@ -194,8 +223,11 @@ export function PersuasionScore() {
       };
 
       contract.on(filter, handler);
+      console.log("Listening for GuessSubmitted events");
+
       return () => {
         contract.off(filter, handler);
+        console.log("Stopped listening for GuessSubmitted events");
       };
     } catch (error) {
       console.error("Error setting up event listener:", error);
@@ -222,6 +254,11 @@ export function PersuasionScore() {
         {error && (
           <p className="text-red-500 text-sm mt-2">
             {error}
+          </p>
+        )}
+        {lastProcessedResponse && (
+          <p className="text-sm text-gray-500 mt-2">
+            Last processed: "{lastProcessedResponse.slice(0, 50)}..."
           </p>
         )}
         {score >= 100 && (
