@@ -64,6 +64,50 @@ interface Web3State {
   isGameOver: () => Promise<boolean>;
 }
 
+const checkNetwork = async (ethereum: any) => {
+  try {
+    const chainId = await ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== CHAIN_ID) {
+      try {
+        await ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: CHAIN_ID }],
+        });
+        return true;
+      } catch (switchError: any) {
+        if (switchError.code === 4902) {
+          try {
+            await ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [BASE_SEPOLIA_CONFIG],
+            });
+            return true;
+          } catch (addError) {
+            console.error("Failed to add network:", addError);
+            toast({
+              title: "Network Error",
+              description: "Failed to add Base Sepolia network. Please add it manually in MetaMask.",
+              variant: "destructive",
+            });
+            return false;
+          }
+        }
+        console.error("Failed to switch network:", switchError);
+        toast({
+          title: "Network Error",
+          description: "Please switch to Base Sepolia network manually in MetaMask.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error("Error checking network:", error);
+    return false;
+  }
+};
+
 export const useWeb3Store = create<Web3State>((set, get) => ({
   provider: null,
   signer: null,
@@ -115,72 +159,82 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         return state;
       });
 
-      try {
-        await window.ethereum.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: CHAIN_ID }],
-        });
-      } catch (switchError: any) {
-        if (switchError.code === 4902) {
-          try {
-            await window.ethereum.request({
-              method: "wallet_addEthereumChain",
-              params: [BASE_SEPOLIA_CONFIG],
-            });
-          } catch (addError) {
-            toast({
-              title: "Network Error",
-              description: "Failed to add Base Sepolia network",
-              variant: "destructive",
-            });
-            return;
-          }
-        } else {
-          toast({
-            title: "Network Error",
-            description: "Please switch to Base Sepolia network",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
-      const address = accounts[0];
-      const signer = await provider.getSigner(address);
-      const balance = ethers.formatEther(await provider.getBalance(address));
-
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-      try {
-        await contract.gameWon();
-      } catch (error: any) {
-        console.error("Contract connection error:", error);
+      // Check if MetaMask is unlocked
+      const isUnlocked = await window.ethereum._metamask?.isUnlocked();
+      if (!isUnlocked) {
         toast({
-          title: "Contract Error",
-          description: "Failed to connect to game contract. Please try again later.",
+          title: "Wallet Locked",
+          description: "Please unlock your MetaMask wallet to connect",
           variant: "destructive",
         });
         return;
       }
 
-      set({ provider, signer, contract, address, balance, isInitialized: true });
+      // Verify network and switch if needed
+      const networkValid = await checkNetwork(window.ethereum);
+      if (!networkValid) return;
 
-      toast({
-        title: "Wallet Connected",
-        description: "Successfully connected to Base Sepolia network",
-      });
+      const provider = new ethers.BrowserProvider(window.ethereum);
 
-      window.ethereum.on('accountsChanged', async (accounts: string[]) => {
-        if (accounts.length === 0) {
-          set({ provider: null, signer: null, contract: null, address: null, balance: null, isInitialized: false });
-        } else {
-          const newAddress = accounts[0];
-          const newBalance = ethers.formatEther(await provider.getBalance(newAddress));
-          set((state) => ({ ...state, address: newAddress, balance: newBalance }));
+      try {
+        const accounts = await provider.send("eth_requestAccounts", []);
+        if (!accounts || accounts.length === 0) {
+          toast({
+            title: "Connection Error",
+            description: "No accounts found. Please check MetaMask and try again.",
+            variant: "destructive",
+          });
+          return;
         }
-      });
+
+        const address = accounts[0];
+        const signer = await provider.getSigner(address);
+        const balance = ethers.formatEther(await provider.getBalance(address));
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+        // Verify contract connection
+        try {
+          await contract.gameWon();
+        } catch (error: any) {
+          console.error("Contract connection error:", error);
+          toast({
+            title: "Contract Error",
+            description: "Failed to connect to game contract. Please try again later.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        set({ provider, signer, contract, address, balance, isInitialized: true });
+
+        toast({
+          title: "Wallet Connected",
+          description: "Successfully connected to Base Sepolia network",
+        });
+
+        // Setup event listeners
+        window.ethereum.on('accountsChanged', async (accounts: string[]) => {
+          if (accounts.length === 0) {
+            set({ provider: null, signer: null, contract: null, address: null, balance: null, isInitialized: false });
+          } else {
+            const newAddress = accounts[0];
+            const newBalance = ethers.formatEther(await provider.getBalance(newAddress));
+            set((state) => ({ ...state, address: newAddress, balance: newBalance }));
+          }
+        });
+
+        window.ethereum.on('chainChanged', () => {
+          window.location.reload();
+        });
+
+      } catch (error: any) {
+        console.error("Account access error:", error);
+        toast({
+          title: "Connection Error",
+          description: "Failed to access account. Please check MetaMask permissions.",
+          variant: "destructive",
+        });
+      }
 
     } catch (error: any) {
       console.error("Failed to connect:", error);
@@ -196,11 +250,11 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     if (window.ethereum) {
       window.ethereum.removeAllListeners('accountsChanged');
     }
-    set({ 
-      provider: null, 
-      signer: null, 
-      contract: null, 
-      address: null, 
+    set({
+      provider: null,
+      signer: null,
+      contract: null,
+      address: null,
       balance: null,
       isInitialized: false
     });
@@ -218,11 +272,11 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     if (window.ethereum) {
       window.ethereum.removeAllListeners('accountsChanged');
     }
-    set({ 
-      provider: null, 
-      signer: null, 
-      contract: null, 
-      address: null, 
+    set({
+      provider: null,
+      signer: null,
+      contract: null,
+      address: null,
       balance: null,
       isInitialized: false
     });

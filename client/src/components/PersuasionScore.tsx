@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useWeb3Store } from "@/lib/web3";
 import { Brain } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 type ResponseType = 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING';
 
@@ -12,6 +13,44 @@ interface PlayerResponse {
   timestamp: bigint;
 }
 
+// Local storage helper functions
+const getLocalScore = (address: string): number | null => {
+  const score = localStorage.getItem(`persuasion:${address}`);
+  return score ? parseFloat(score) : null;
+};
+
+const setLocalScore = (address: string, score: number) => {
+  localStorage.setItem(`persuasion:${address}`, score.toString());
+};
+
+const clearLocalScore = (address: string) => {
+  localStorage.removeItem(`persuasion:${address}`);
+};
+
+const updatePersuasionScore = async (address: string, score: number) => {
+  setLocalScore(address, score); // Update local storage first for immediate feedback
+  const response = await fetch(`/api/persuasion/${address}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ score })
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update persuasion score');
+  }
+  return response.json();
+};
+
+const clearPersuasionScore = async (address: string) => {
+  clearLocalScore(address); // Clear local storage first
+  const response = await fetch(`/api/persuasion/${address}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to clear persuasion score');
+  }
+  return response.json();
+};
+
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
   const [score, setScore] = useState<number>(50);
@@ -20,7 +59,6 @@ export function PersuasionScore() {
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
   const [updateCounter, setUpdateCounter] = useState(0);
 
-  // Use refs to maintain state across renders
   const usedMessagesRef = useRef<Set<string>>(new Set());
   const usedTacticsRef = useRef<Set<string>>(new Set());
   const lastFetchTimeRef = useRef<number>(0);
@@ -41,21 +79,54 @@ export function PersuasionScore() {
     'bankrupt', 'ruin', 'expose', 'media', 'press'
   ];
 
+  // Use React Query to fetch the score from server and sync with localStorage
+  const { data: serverScore, isFetching } = useQuery({
+    queryKey: ['persuasionScore', address],
+    queryFn: async () => {
+      if (!address) return null;
+      // First check localStorage
+      const localScore = getLocalScore(address);
+      if (localScore !== null) {
+        return localScore;
+      }
+      // If not in localStorage, fetch from server
+      const response = await fetch(`/api/persuasion/${address}`);
+      if (!response.ok) throw new Error('Failed to fetch score');
+      const data = await response.json();
+      // Update localStorage with server data
+      if (data.score) {
+        setLocalScore(address, data.score);
+      }
+      return data.score;
+    },
+    enabled: !!address,
+    refetchInterval: 1000
+  });
+
+  useEffect(() => {
+    if (serverScore !== undefined && serverScore !== null) {
+      setScore(serverScore);
+    } else if (address) {
+      // If no server score, check localStorage
+      const localScore = getLocalScore(address);
+      if (localScore !== null) {
+        setScore(localScore);
+      }
+    }
+  }, [serverScore, address]);
+
   const evaluateBusinessTactics = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
-    const tactics = [...DEAL_TERMS, ...POWER_TERMS].filter(term => 
+    const tactics = [...DEAL_TERMS, ...POWER_TERMS].filter(term =>
       lowerMessage.includes(term) && !usedTacticsRef.current.has(term)
     );
-    console.log("Found business tactics:", tactics);
     return tactics;
   };
 
   const classifyResponse = (response: string): ResponseType => {
-    console.log("Classifying response:", response);
     const lowerResponse = response.toLowerCase();
 
     if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
-      console.log("Response classified as THREATENING");
       return 'THREATENING';
     }
 
@@ -67,48 +138,43 @@ export function PersuasionScore() {
         usedTacticsRef.current.add(tactic);
       });
 
-      const dealTermsCount = DEAL_TERMS.filter(term => 
+      const dealTermsCount = DEAL_TERMS.filter(term =>
         lowerResponse.includes(term)).length;
-      const powerTermsCount = POWER_TERMS.filter(term => 
+      const powerTermsCount = POWER_TERMS.filter(term =>
         lowerResponse.includes(term)).length;
 
-      const responseType = (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
-      console.log("Response classified as:", responseType);
-      return responseType;
+      return (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
     }
 
     return 'WEAK_PROPOSITION';
   };
 
-  const resetCaches = () => {
-    console.log("Resetting all caches and state");
+  const resetCaches = async () => {
     usedMessagesRef.current.clear();
     usedTacticsRef.current.clear();
     setLastProcessedResponse(null);
     lastFetchTimeRef.current = 0;
+    if (address) {
+      await clearPersuasionScore(address);
+    }
   };
 
   const calculatePersuasionScore = async () => {
     if (!contract || !address) {
-      console.log("Contract or address not available");
       return 50;
     }
 
     try {
-      console.log("Fetching player responses from contract");
       const responses = await contract.getAllPlayerResponses(address);
-      console.log("Got responses from contract:", responses);
 
       if (!responses || !responses.responses || responses.responses.length === 0) {
-        console.log("No responses found");
+        await updatePersuasionScore(address, 50);
         return 50;
       }
 
-      const validResponses = responses.responses.filter((response: string, index: number) => 
+      const validResponses = responses.responses.filter((response: string, index: number) =>
         responses.exists[index]
       );
-
-      console.log("Valid responses:", validResponses);
 
       let calculatedScore = 50;
 
@@ -119,21 +185,16 @@ export function PersuasionScore() {
             const parsed = JSON.parse(response);
             text = parsed.response;
           } catch (e) {
-            console.log("Response is not JSON, using raw text");
+            // Response is not JSON, using raw text
           }
 
           if (usedMessagesRef.current.has(text)) {
-            console.log("Skipping repeated message:", text);
             return;
           }
 
           usedMessagesRef.current.add(text);
-          console.log("New message evaluated:", text);
 
           const responseType = classifyResponse(text);
-          console.log("Response classified as:", responseType);
-
-          const previousScore = calculatedScore;
           switch (responseType) {
             case 'DEAL_MAKER':
               calculatedScore = Math.min(100, calculatedScore + 15);
@@ -148,13 +209,14 @@ export function PersuasionScore() {
               calculatedScore = Math.max(0, calculatedScore - 25);
               break;
           }
-          console.log(`Score adjusted from ${previousScore} to ${calculatedScore}`);
           setLastProcessedResponse(text);
         } catch (error) {
           console.error("Error processing response:", error);
         }
       });
 
+      // Update both localStorage and server
+      await updatePersuasionScore(address, calculatedScore);
       return calculatedScore;
     } catch (error) {
       console.error("Error calculating persuasion score:", error);
@@ -162,7 +224,6 @@ export function PersuasionScore() {
     }
   };
 
-  // Update score every second
   useEffect(() => {
     if (!contract || !address) return;
 
@@ -170,7 +231,6 @@ export function PersuasionScore() {
       try {
         const newScore = await calculatePersuasionScore();
         if (newScore !== score) {
-          console.log("Updating score from", score, "to", newScore);
           setScore(newScore);
         }
       } catch (error) {
@@ -178,38 +238,21 @@ export function PersuasionScore() {
       }
     };
 
-    console.log("Setting up periodic score updates");
     updateScore();
-
-    const interval = setInterval(updateScore, 1000);
-
-    return () => {
-      console.log("Cleaning up periodic updates");
-      clearInterval(interval);
-    };
   }, [contract, address, updateCounter]);
 
-  // Listen for GuessSubmitted events
   useEffect(() => {
     if (!contract || !address) return;
 
-    const handler = async (player: string, amount: any, multiplier: any, response: string, blockNumber: any) => {
-      console.log("GuessSubmitted event received:", { player, amount, multiplier, response, blockNumber });
-
+    const handler = async (player: string, amount: any, multiplier: any, response: string) => {
       if (player.toLowerCase() !== address.toLowerCase()) {
-        console.log("Event is for a different player, ignoring");
         return;
       }
 
       setIsUpdating(true);
       try {
-        // Wait for the transaction to be confirmed
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        console.log("Updating score after transaction confirmation");
-        // Reset caches and force a fresh calculation
-        resetCaches();
-        // Increment counter to force a refresh
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await resetCaches();
         setUpdateCounter(prev => prev + 1);
       } catch (error) {
         console.error("Error updating score after guess:", error);
@@ -222,11 +265,9 @@ export function PersuasionScore() {
     try {
       const filter = contract.filters.GuessSubmitted(address);
       contract.on(filter, handler);
-      console.log("Listening for GuessSubmitted events");
 
       return () => {
         contract.off(filter, handler);
-        console.log("Stopped listening for GuessSubmitted events");
       };
     } catch (error) {
       console.error("Error setting up event listener:", error);
@@ -243,11 +284,12 @@ export function PersuasionScore() {
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold mb-2">
-          {score}/100 
+          {score}/100
           {isUpdating && <span className="text-sm text-gray-500 ml-2">(updating...)</span>}
+          {isFetching && <span className="text-sm text-gray-500 ml-2">(fetching...)</span>}
         </div>
-        <Progress 
-          value={score} 
+        <Progress
+          value={score}
           className={`h-2 ${score >= 100 ? "bg-green-500" : ""}`}
         />
         {error && (
