@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 
-const CONTRACT_ADDRESS = "0xa5692d747617b43469Cd2fa957bFA5641B708390"; // Updated Contract Address
+const CONTRACT_ADDRESS = "0x1fB1Fd56Ca11c69aC305Ff492712B6E03952F226";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -18,12 +18,6 @@ const BASE_SEPOLIA_CONFIG = {
 
 // Updated ABI based on new contract interface
 const CONTRACT_ABI = [
-  "function buttonPushed(address winner)",
-  "function deposit() payable",
-  "function emergencyWithdraw()",
-  "function endGame()",
-  "function pause()",
-  "function unpause()",
   "function submitGuess(string calldata response) payable",
   "function getTimeRemaining() view returns (uint256)",
   "function lastPlayer() view returns (address)",
@@ -32,12 +26,10 @@ const CONTRACT_ABI = [
   "function getContractBalance() view returns (uint256)",
   "function currentRequiredAmount() view returns (uint256)",
   "function currentMultiplier() view returns (uint256)",
-  "function winner() view returns (address)",
   "function BASE_MULTIPLIER() view returns (uint256)",
   "function BLOCKS_PER_MINUTE() view returns (uint256)",
   "function ESCALATION_PERIOD() view returns (uint256)",
   "function escalationStartBlock() view returns (uint256)",
-  "function escalationActive() view returns (bool)",
   "function gameEndBlock() view returns (uint256)",
   "function shouldExtendGame() view returns (bool)",
   "function shouldStartEscalation() view returns (bool)",
