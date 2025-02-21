@@ -19,7 +19,6 @@ export function PersuasionScore() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
-  const [updateCounter, setUpdateCounter] = useState(0);
 
   const usedMessagesRef = useRef<Set<string>>(new Set());
   const usedTacticsRef = useRef<Set<string>>(new Set());
@@ -39,24 +38,6 @@ export function PersuasionScore() {
     'sue', 'lawyer', 'court', 'lawsuit', 'legal', 'threat', 'destroy',
     'bankrupt', 'ruin', 'expose', 'media', 'press'
   ];
-
-  // Background sync with server
-  useQuery({
-    queryKey: ['persuasionScore', address],
-    queryFn: async () => {
-      if (!address) return null;
-      const response = await fetch(`/api/persuasion/${address}`);
-      if (!response.ok) throw new Error('Failed to fetch score');
-      const data = await response.json();
-      if (data.score !== score) {
-        setScore(data.score);
-      }
-      return data.score;
-    },
-    enabled: !!address,
-    refetchInterval: 1000,
-    retry: false
-  });
 
   const evaluateBusinessTactics = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
@@ -124,7 +105,7 @@ export function PersuasionScore() {
       let calculatedScore = 50;
       let lastResponse = null;
 
-      validResponses.forEach((response: string) => {
+      for (const response of validResponses) {
         try {
           let text = response;
           try {
@@ -135,7 +116,7 @@ export function PersuasionScore() {
           }
 
           if (usedMessagesRef.current.has(text)) {
-            return;
+            continue;
           }
 
           usedMessagesRef.current.add(text);
@@ -159,7 +140,7 @@ export function PersuasionScore() {
         } catch (error) {
           console.error("Error processing response:", error);
         }
-      });
+      }
 
       // Update UI immediately
       setScore(calculatedScore);
@@ -167,7 +148,7 @@ export function PersuasionScore() {
         setLastProcessedResponse(lastResponse);
       }
 
-      // Then update server in background
+      // Update server in background
       await fetch(`/api/persuasion/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,27 +158,35 @@ export function PersuasionScore() {
     } catch (error) {
       console.error("Error calculating score:", error);
       setError("Failed to calculate score");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  // Update score when contract or address changes
+  // Initialize score when component mounts or address changes
   useEffect(() => {
     if (!contract || !address) return;
-    calculateAndUpdateScore();
-  }, [contract, address, updateCounter]);
+
+    const initializeScore = async () => {
+      setIsUpdating(true);
+      await resetCaches();
+      await calculateAndUpdateScore();
+    };
+
+    initializeScore();
+  }, [contract, address]);
 
   // Listen for new guesses
   useEffect(() => {
     if (!contract || !address) return;
 
-    const handler = async (player: string, amount: any, multiplier: any, response: string) => {
+    const handleGuessSubmitted = async (player: string, amount: any, multiplier: any, response: string) => {
       if (player.toLowerCase() !== address.toLowerCase()) {
         return;
       }
 
       setIsUpdating(true);
       try {
-        // Process the new response immediately
         let text = response;
         try {
           const parsed = JSON.parse(response);
@@ -206,24 +195,27 @@ export function PersuasionScore() {
           // Response is not JSON, using raw text
         }
 
+        // Update the last processed response immediately
         setLastProcessedResponse(text);
 
+        // Small delay to ensure blockchain state is updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Reset and recalculate score
         await resetCaches();
         await calculateAndUpdateScore();
       } catch (error) {
         console.error("Error updating score after guess:", error);
         setError("Failed to update score");
-      } finally {
-        setIsUpdating(false);
       }
     };
 
     try {
       const filter = contract.filters.GuessSubmitted(address);
-      contract.on(filter, handler);
+      contract.on(filter, handleGuessSubmitted);
 
       return () => {
-        contract.off(filter, handler);
+        contract.off(filter, handleGuessSubmitted);
       };
     } catch (error) {
       console.error("Error setting up event listener:", error);
