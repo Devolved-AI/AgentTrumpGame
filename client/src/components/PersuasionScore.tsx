@@ -13,44 +13,6 @@ interface PlayerResponse {
   timestamp: bigint;
 }
 
-// Local storage helper functions
-const getLocalScore = (address: string): number | null => {
-  const score = localStorage.getItem(`persuasion:${address}`);
-  return score ? parseFloat(score) : null;
-};
-
-const setLocalScore = (address: string, score: number) => {
-  localStorage.setItem(`persuasion:${address}`, score.toString());
-};
-
-const clearLocalScore = (address: string) => {
-  localStorage.removeItem(`persuasion:${address}`);
-};
-
-const updatePersuasionScore = async (address: string, score: number) => {
-  setLocalScore(address, score); // Update local storage first for immediate feedback
-  const response = await fetch(`/api/persuasion/${address}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ score })
-  });
-  if (!response.ok) {
-    throw new Error('Failed to update persuasion score');
-  }
-  return response.json();
-};
-
-const clearPersuasionScore = async (address: string) => {
-  clearLocalScore(address); // Clear local storage first
-  const response = await fetch(`/api/persuasion/${address}`, {
-    method: 'DELETE'
-  });
-  if (!response.ok) {
-    throw new Error('Failed to clear persuasion score');
-  }
-  return response.json();
-};
-
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
   const [score, setScore] = useState<number>(50);
@@ -61,7 +23,6 @@ export function PersuasionScore() {
 
   const usedMessagesRef = useRef<Set<string>>(new Set());
   const usedTacticsRef = useRef<Set<string>>(new Set());
-  const lastFetchTimeRef = useRef<number>(0);
 
   // Business-focused evaluation terms
   const DEAL_TERMS = [
@@ -79,41 +40,26 @@ export function PersuasionScore() {
     'bankrupt', 'ruin', 'expose', 'media', 'press'
   ];
 
-  // Use React Query to fetch the score from server and sync with localStorage
+  // Fetch initial score from server
   const { data: serverScore, isFetching } = useQuery({
     queryKey: ['persuasionScore', address],
     queryFn: async () => {
       if (!address) return null;
-      // First check localStorage
-      const localScore = getLocalScore(address);
-      if (localScore !== null) {
-        return localScore;
-      }
-      // If not in localStorage, fetch from server
       const response = await fetch(`/api/persuasion/${address}`);
       if (!response.ok) throw new Error('Failed to fetch score');
       const data = await response.json();
-      // Update localStorage with server data
-      if (data.score) {
-        setLocalScore(address, data.score);
-      }
       return data.score;
     },
     enabled: !!address,
-    refetchInterval: 1000
+    refetchInterval: 500 // Poll every 500ms for updates
   });
 
+  // Update score immediately when server score changes
   useEffect(() => {
     if (serverScore !== undefined && serverScore !== null) {
       setScore(serverScore);
-    } else if (address) {
-      // If no server score, check localStorage
-      const localScore = getLocalScore(address);
-      if (localScore !== null) {
-        setScore(localScore);
-      }
     }
-  }, [serverScore, address]);
+  }, [serverScore]);
 
   const evaluateBusinessTactics = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
@@ -153,23 +99,25 @@ export function PersuasionScore() {
     usedMessagesRef.current.clear();
     usedTacticsRef.current.clear();
     setLastProcessedResponse(null);
-    lastFetchTimeRef.current = 0;
+
     if (address) {
-      await clearPersuasionScore(address);
+      try {
+        await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
+      } catch (error) {
+        console.error("Error clearing score:", error);
+      }
     }
   };
 
-  const calculatePersuasionScore = async () => {
-    if (!contract || !address) {
-      return 50;
-    }
+  const calculateAndUpdateScore = async () => {
+    if (!contract || !address) return;
 
     try {
       const responses = await contract.getAllPlayerResponses(address);
 
       if (!responses || !responses.responses || responses.responses.length === 0) {
-        await updatePersuasionScore(address, 50);
-        return 50;
+        setScore(50);
+        return;
       }
 
       const validResponses = responses.responses.filter((response: string, index: number) =>
@@ -215,32 +163,34 @@ export function PersuasionScore() {
         }
       });
 
-      // Update both localStorage and server
-      await updatePersuasionScore(address, calculatedScore);
-      return calculatedScore;
+      // Update UI immediately
+      setScore(calculatedScore);
+
+      // Then update server
+      await fetch(`/api/persuasion/${address}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score: calculatedScore })
+      });
+
     } catch (error) {
-      console.error("Error calculating persuasion score:", error);
-      return score;
+      console.error("Error calculating score:", error);
+      setError("Failed to calculate score");
     }
   };
 
+  // Update score when contract or address changes
   useEffect(() => {
     if (!contract || !address) return;
 
     const updateScore = async () => {
-      try {
-        const newScore = await calculatePersuasionScore();
-        if (newScore !== score) {
-          setScore(newScore);
-        }
-      } catch (error) {
-        console.error("Error in periodic score update:", error);
-      }
+      await calculateAndUpdateScore();
     };
 
     updateScore();
   }, [contract, address, updateCounter]);
 
+  // Listen for new guesses
   useEffect(() => {
     if (!contract || !address) return;
 
@@ -251,7 +201,7 @@ export function PersuasionScore() {
 
       setIsUpdating(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         await resetCaches();
         setUpdateCounter(prev => prev + 1);
       } catch (error) {
