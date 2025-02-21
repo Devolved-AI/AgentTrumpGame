@@ -148,7 +148,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       if (status.isEscalation) {
         setDisplayTime(prev => {
           if (prev <= 0) {
-            return 300;
+            setStatus(prev => ({ ...prev, isGameOver: true }));
+            if (onTimerEnd) {
+              onTimerEnd();
+            }
+            return 0;
           }
           return prev - 1;
         });
