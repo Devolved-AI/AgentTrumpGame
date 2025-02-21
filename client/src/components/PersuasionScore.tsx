@@ -238,7 +238,7 @@ export function PersuasionScore() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5" />
-          Business Persuasion Score
+          Persuasion Score
         </CardTitle>
       </CardHeader>
       <CardContent>
