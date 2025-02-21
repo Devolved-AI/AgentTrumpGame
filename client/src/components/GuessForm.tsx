@@ -15,6 +15,10 @@ import { TypingIndicator } from "./TypingIndicator";
 import { TransactionVisualization } from "./TransactionVisualization";
 import { generateTrumpResponse } from "@/lib/openai";
 
+interface GuessFormProps {
+  onTimerEnd?: () => void;
+}
+
 const WELCOME_MESSAGE = {
   text: "Hey there! I'm Agent Trump. Try to convince me to give you the money in the prize pool!",
   timestamp: Math.floor(Date.now() / 1000),
@@ -41,7 +45,7 @@ interface Message {
   transaction?: TransactionState;
 }
 
-export function GuessForm() {
+export function GuessForm({ onTimerEnd }: GuessFormProps) {
   const { contract, address } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,6 +114,31 @@ export function GuessForm() {
     };
   }, [contract, address]);
 
+  useEffect(() => {
+    if (!contract) return;
+
+    const checkGameState = async () => {
+      try {
+        const [gameWon, timeRemaining] = await Promise.all([
+          contract.gameWon(),
+          contract.getTimeRemaining()
+        ]);
+        const isOver = gameWon || Number(timeRemaining.toString()) <= 0;
+        setIsGameOver(isOver);
+        if (isOver && onTimerEnd) {
+          onTimerEnd();
+        }
+      } catch (error) {
+        console.error("Error checking game state:", error);
+      }
+    };
+
+    checkGameState();
+    const interval = setInterval(checkGameState, 5000);
+
+    return () => clearInterval(interval);
+  }, [contract, onTimerEnd]);
+
   const form = useForm<z.infer<typeof guessSchema>>({
     resolver: zodResolver(guessSchema),
     defaultValues: {
@@ -118,7 +147,7 @@ export function GuessForm() {
   });
 
   const onSubmit = async (data: z.infer<typeof guessSchema>) => {
-    if (!contract) return;
+    if (!contract || isGameOver) return;
 
     try {
       // Check game state directly from contract methods
@@ -130,6 +159,10 @@ export function GuessForm() {
       const isOver = gameWon || Number(timeRemaining.toString()) <= 0;
 
       if (isOver) {
+        setIsGameOver(true);
+        if (onTimerEnd) {
+          onTimerEnd();
+        }
         toast({
           title: "Game Over",
           description: "The game has ended. No more guesses can be submitted.",
@@ -247,27 +280,6 @@ export function GuessForm() {
       setIsTyping(false);
     }
   };
-
-  useEffect(() => {
-    if (!contract) return;
-
-    const checkGameState = async () => {
-      try {
-        const [gameWon, timeRemaining] = await Promise.all([
-          contract.gameWon(),
-          contract.getTimeRemaining()
-        ]);
-        setIsGameOver(gameWon || Number(timeRemaining.toString()) <= 0);
-      } catch (error) {
-        console.error("Error checking game state:", error);
-      }
-    };
-
-    checkGameState();
-    const interval = setInterval(checkGameState, 5000);
-
-    return () => clearInterval(interval);
-  }, [contract]);
 
   return (
     <div className="w-full max-w-4xl mx-auto">
