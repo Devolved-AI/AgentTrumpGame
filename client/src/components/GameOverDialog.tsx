@@ -1,11 +1,9 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useWeb3Store } from "@/lib/web3";
 import { useEffect, useState } from "react";
-import { ethers } from "ethers";
 
 interface GameOverInfo {
   lastGuessAddress: string;
-  winnerAddress: string;
   lastBlock: string;
 }
 
@@ -14,7 +12,6 @@ export function GameOverDialog() {
   const [open, setOpen] = useState(false);
   const [gameInfo, setGameInfo] = useState<GameOverInfo>({
     lastGuessAddress: "",
-    winnerAddress: "",
     lastBlock: ""
   });
 
@@ -35,21 +32,14 @@ export function GameOverDialog() {
         if (isOver) {
           console.log("Game is over, fetching final info");
           // Fetch game over info
-          const [lastPlayer, winner] = await Promise.all([
-            contract.lastPlayer(),
-            contract.winner()
-          ]);
+          const lastPlayer = await contract.lastPlayer();
+          const block = await contract.lastGuessBlock();
 
-          // Get the provider and latest block
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          const block = await provider.getBlock('latest');
-
-          console.log("Setting game over info:", { lastPlayer, winner, blockNumber: block?.number });
+          console.log("Setting game over info:", { lastPlayer, blockNumber: block });
 
           setGameInfo({
             lastGuessAddress: lastPlayer || "No last player",
-            winnerAddress: winner || "No Winner",
-            lastBlock: block ? block.number.toString() : "Unknown"
+            lastBlock: block ? block.toString() : "Unknown"
           });
 
           setOpen(true);
@@ -81,11 +71,6 @@ export function GameOverDialog() {
             <div>
               <p className="font-semibold mb-1">Last Guess Wallet Address:</p>
               <p className="font-mono break-all">{gameInfo.lastGuessAddress}</p>
-            </div>
-
-            <div>
-              <p className="font-semibold mb-1">Winner Wallet Address:</p>
-              <p className="font-mono break-all">{gameInfo.winnerAddress}</p>
             </div>
 
             <div>
