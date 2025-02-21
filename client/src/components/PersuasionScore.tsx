@@ -4,11 +4,52 @@ import { Progress } from "@/components/ui/progress";
 import { useWeb3Store } from "@/lib/web3";
 import { Brain } from "lucide-react";
 
+type ResponseType = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'THREATENING';
+
+interface PlayerResponse {
+  response: string;
+  exists: boolean;
+  timestamp: bigint;
+}
+
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
   const [score, setScore] = useState<number>(50);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const classifyResponse = (response: string): ResponseType => {
+    const threatWords = ['hate', 'murder', 'death', 'kill', 'hurt', 'harm', 'destroy', 'decimate'];
+    const lowerResponse = response.toLowerCase();
+
+    // Check for threatening words first
+    if (threatWords.some(word => lowerResponse.includes(word))) {
+      return 'THREATENING';
+    }
+
+    // Simple sentiment analysis based on response content
+    // This can be expanded based on more sophisticated criteria
+    if (lowerResponse.includes('please') || lowerResponse.includes('thank') || lowerResponse.includes('good')) {
+      return 'POSITIVE';
+    } else if (lowerResponse.includes('no') || lowerResponse.includes('bad') || lowerResponse.includes('wrong')) {
+      return 'NEGATIVE';
+    }
+
+    return 'NEUTRAL';
+  };
+
+  const calculateScoreAdjustment = (responseType: ResponseType): number => {
+    switch (responseType) {
+      case 'POSITIVE':
+        return 5;
+      case 'NEGATIVE':
+        return -5;
+      case 'THREATENING':
+        return -50; // This will effectively reset score to 0 or close to it
+      default:
+        return 0;
+    }
+  };
 
   const calculatePersuasionScore = async () => {
     if (!contract || !address) {
@@ -17,36 +58,22 @@ export function PersuasionScore() {
     }
 
     try {
-      // Get all player responses and calculate score based on response count and timing
       const responses = await contract.getAllPlayerResponses(address);
       if (!responses || !responses.responses || responses.responses.length === 0) {
         return 50;
       }
 
-      const validResponses = responses.responses.filter((_, index) => responses.exists[index]);
-      const responseCount = validResponses.length;
+      const validResponses = responses.responses.filter((_, index: number) => responses.exists[index]);
 
-      // Base score calculation
-      let calculatedScore = Math.min(50 + (responseCount * 10), 100);
+      // Start with base score of 50
+      let calculatedScore = 50;
 
-      // If there are timestamps, factor in response frequency
-      if (responses.timestamps && responses.timestamps.length > 0) {
-        const validTimestamps = responses.timestamps
-          .filter((_, index) => responses.exists[index])
-          .map(ts => Number(ts));
-
-        if (validTimestamps.length > 1) {
-          // Calculate average time between responses
-          const avgTimeBetweenResponses = validTimestamps
-            .slice(1)
-            .reduce((acc, curr, idx) => 
-              acc + (curr - validTimestamps[idx]), 0) / (validTimestamps.length - 1);
-
-          // Bonus points for consistent responses (lower average time)
-          const timeBonus = Math.min(10, Math.floor(300 / avgTimeBetweenResponses));
-          calculatedScore = Math.min(calculatedScore + timeBonus, 100);
-        }
-      }
+      // Process each response and adjust score
+      validResponses.forEach((response: string) => {
+        const responseType = classifyResponse(response);
+        const adjustment = calculateScoreAdjustment(responseType);
+        calculatedScore = Math.max(0, Math.min(100, calculatedScore + adjustment));
+      });
 
       return calculatedScore;
     } catch (error) {
