@@ -208,12 +208,22 @@ export function PersuasionScore() {
 
     try {
       const filter = contract.filters.GuessSubmitted(address);
-      const handler = async (...args: any[]) => {
-        console.log("GuessSubmitted event received:", args);
+
+      const handler = async (player: string, amount: any, multiplier: any, response: string, blockNumber: any) => {
+        console.log("GuessSubmitted event received:", { player, amount, multiplier, response, blockNumber });
+
+        if (player.toLowerCase() !== address.toLowerCase()) {
+          console.log("Event is for a different player, ignoring");
+          return;
+        }
+
         setIsUpdating(true);
         try {
-          // Small delay to allow the transaction to be processed
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Wait for the block to be confirmed
+          const provider = contract.provider;
+          await provider.waitForBlock(blockNumber.toString());
+
+          console.log("Transaction confirmed, updating score");
           await fetchScore();
         } catch (error) {
           console.error("Error updating score after guess:", error);
