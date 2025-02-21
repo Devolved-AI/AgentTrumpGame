@@ -16,9 +16,10 @@ interface GameStatusProps {
   showPrizePoolOnly?: boolean;
   showTimeRemainingOnly?: boolean;
   showLastGuessOnly?: boolean;
+  onTimerEnd?: () => void;
 }
 
-export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastGuessOnly }: GameStatusProps) {
+export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastGuessOnly, onTimerEnd }: GameStatusProps) {
   const { contract, getEscalationPrice, isGameOver } = useWeb3Store();
   const [status, setStatus] = useState({
     timeRemaining: 0,
@@ -154,15 +155,23 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     const timer = setInterval(() => {
       if (status.isEscalation) {
-        setDisplayTime(prev => Math.max(0, prev - 1));
+        const newTime = Math.max(0, displayTime - 1);
+        setDisplayTime(newTime);
+        if (newTime === 0 && onTimerEnd) {
+          onTimerEnd();
+        }
       } else {
-        setDisplayTime(prev => Math.max(0, baseTime - 1));
-        setBaseTime(prev => Math.max(0, prev - 1));
+        const newBaseTime = Math.max(0, baseTime - 1);
+        setDisplayTime(newBaseTime);
+        setBaseTime(newBaseTime);
+        if (newBaseTime === 0 && onTimerEnd) {
+          onTimerEnd();
+        }
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [status.isEscalation, status.isGameOver, baseTime]);
+  }, [status.isEscalation, status.isGameOver, baseTime, displayTime, onTimerEnd]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',

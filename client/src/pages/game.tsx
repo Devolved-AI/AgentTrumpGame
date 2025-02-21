@@ -53,6 +53,10 @@ export default function Game() {
     currency: 'USD'
   });
 
+  const handleTimerEnd = () => {
+    setGameOver(true);
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       <GameOverDialog />
@@ -115,12 +119,12 @@ export default function Game() {
         <div className="space-y-8">
           <div className="grid grid-cols-3 gap-4">
             <PersuasionScore />
-            <GameStatus showTimeRemainingOnly={true} />
+            <GameStatus showTimeRemainingOnly={true} onTimerEnd={handleTimerEnd} />
             <GameStatus showLastGuessOnly={true} />
           </div>
 
           <div className="space-y-4">
-            <GuessForm />
+            <GuessForm onTimerEnd={handleTimerEnd}/>
           </div>
 
           <div className="mt-12 bg-white dark:bg-black rounded-lg p-6 border border-black dark:border-white">
@@ -180,5 +184,4 @@ export default function Game() {
       </div>
     </div>
   );
-
 }
