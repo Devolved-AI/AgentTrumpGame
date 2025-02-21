@@ -40,7 +40,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     refetchInterval: 60000,
   });
 
-  // Initialize the timer
   useEffect(() => {
     if (!contract) return;
 
@@ -51,7 +50,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           contract.escalationActive()
         ]);
 
-        // Convert BigInt to number safely
         const time = Number(timeRemaining.toString());
         setBaseTime(time);
         setStatus(prev => ({
@@ -67,7 +65,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     initializeTime();
   }, [contract]);
 
-  // Update game status periodically
   useEffect(() => {
     if (!contract) return;
 
@@ -91,10 +88,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           getEscalationPrice()
         ]);
 
-        // Convert BigInt to number safely
         const time = Number(timeRemaining.toString());
 
-        // Update base time only in normal mode
         if (!escalationActive) {
           setBaseTime(time);
         }
@@ -116,21 +111,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     };
 
     const statusInterval = setInterval(updateStatus, 15000);
-    updateStatus(); // Initial update
+    updateStatus();
 
     return () => clearInterval(statusInterval);
   }, [contract]);
 
-  // Listen for GuessSubmitted events and handle timer reset
   useEffect(() => {
     if (!contract) return;
 
     const handleGuessSubmitted = async (player: string, amount: any, multiplier: any, response: string) => {
       if (status.isEscalation) {
-        // Reset timer to 5 minutes only when a new guess is confirmed
         setDisplayTime(300);
 
-        // Update the required amount (doubles after each guess)
         const newAmount = await getEscalationPrice();
         setStatus(prev => ({
           ...prev,
@@ -149,23 +141,27 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     };
   }, [contract, status.isEscalation]);
 
-  // Continuous countdown timer
   useEffect(() => {
     if (status.isGameOver) return;
 
     const timer = setInterval(() => {
       if (status.isEscalation) {
-        const newTime = Math.max(0, displayTime - 1);
-        setDisplayTime(newTime);
-        if (newTime === 0 && onTimerEnd) {
-          onTimerEnd();
-        }
+        setDisplayTime(prev => {
+          if (prev <= 0) {
+            return 300;
+          }
+          return prev - 1;
+        });
       } else {
         const newBaseTime = Math.max(0, baseTime - 1);
         setDisplayTime(newBaseTime);
         setBaseTime(newBaseTime);
-        if (newBaseTime === 0 && onTimerEnd) {
-          onTimerEnd();
+        if (newBaseTime === 0) {
+          setStatus(prev => ({ ...prev, isEscalation: true }));
+          setDisplayTime(300);
+          if (onTimerEnd) {
+            onTimerEnd();
+          }
         }
       }
     }, 1000);
@@ -228,20 +224,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                 value={(displayTime / (status.isEscalation ? 300 : 3600)) * 100}
                 className={`mt-2 ${status.isEscalation || isNearEnd ? 'bg-red-200' : ''}`}
               />
-              {(status.isEscalation || isNearEnd) && (
+              {status.isEscalation ? (
                 <div className="mt-2 text-sm text-red-500">
-                  {status.isEscalation ? (
-                    <>
-                      Escalation Period Active
-                      <div className="mt-1">
-                        Cost per guess: {parseFloat(status.requiredAmount).toFixed(4)} ETH
-                      </div>
-                    </>
-                  ) : (
-                    "Approaching Escalation Period"
-                  )}
+                  Escalation Period Active
+                  <div className="mt-1">
+                    Cost per guess: {parseFloat(status.requiredAmount).toFixed(4)} ETH
+                  </div>
                 </div>
-              )}
+              ) : isNearEnd ? (
+                <div className="mt-2 text-sm text-red-500">
+                  Approaching Escalation Period
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="text-2xl font-bold text-red-500">
