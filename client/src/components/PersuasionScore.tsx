@@ -17,18 +17,32 @@ export function PersuasionScore() {
   const [score, setScore] = useState<number>(50);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usedMessages, setUsedMessages] = useState<Set<string>>(new Set());
+  const [usedPositiveWords, setUsedPositiveWords] = useState<Set<string>>(new Set());
+
+  const POSITIVE_WORDS = ['please', 'thank', 'good', 'appreciate', 'grateful'];
+  const THREAT_WORDS = ['hate', 'murder', 'death', 'kill', 'hurt', 'harm', 'destroy', 'decimate'];
+
+  const extractPositiveWords = (message: string): string[] => {
+    const lowerMessage = message.toLowerCase();
+    return POSITIVE_WORDS.filter(word => lowerMessage.includes(word));
+  };
 
   const classifyResponse = (response: string): ResponseType => {
-    const threatWords = ['hate', 'murder', 'death', 'kill', 'hurt', 'harm', 'destroy', 'decimate'];
     const lowerResponse = response.toLowerCase();
 
     // Check for threatening words first
-    if (threatWords.some(word => lowerResponse.includes(word))) {
+    if (THREAT_WORDS.some(word => lowerResponse.includes(word))) {
       return 'THREATENING';
     }
 
-    // Simple sentiment analysis based on response content
-    if (lowerResponse.includes('please') || lowerResponse.includes('thank') || lowerResponse.includes('good')) {
+    // Check for positive words, but only count new ones
+    const positiveWordsInResponse = extractPositiveWords(response);
+    const hasNewPositiveWords = positiveWordsInResponse.some(word => !usedPositiveWords.has(word));
+
+    if (hasNewPositiveWords) {
+      // Add the new positive words to the used set
+      positiveWordsInResponse.forEach(word => setUsedPositiveWords(prev => new Set([...prev, word])));
       return 'POSITIVE';
     } else if (lowerResponse.includes('no') || lowerResponse.includes('bad') || lowerResponse.includes('wrong')) {
       return 'NEGATIVE';
@@ -56,6 +70,14 @@ export function PersuasionScore() {
 
       // Process each response and adjust score
       validResponses.forEach((response: string) => {
+        // Skip if this exact message has been used before
+        if (usedMessages.has(response)) {
+          return; // Skip scoring for repeated messages
+        }
+
+        // Add this message to used messages set
+        setUsedMessages(prev => new Set([...prev, response]));
+
         const responseType = classifyResponse(response);
 
         // If response is threatening, immediately set score to 0
