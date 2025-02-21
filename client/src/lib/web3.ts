@@ -16,7 +16,7 @@ const BASE_SEPOLIA_CONFIG = {
   blockExplorerUrls: ["https://sepolia.basescan.org"],
 };
 
-// Updated ABI with fallback options and proper return types
+// Updated ABI with explicit return types and error handling
 const CONTRACT_ABI = [
   "function getPlayerPersuasionScore(address player) view returns (uint256)",
   "function gameEndBlock() view returns (uint256)",
@@ -33,11 +33,14 @@ const CONTRACT_ABI = [
   "function getPlayerResponseCount(address player) view returns (uint256)",
   "function getPlayerResponseByIndex(address player, uint256 index) view returns (string memory response, uint256 timestamp, bool exists)",
   "function getContractBalance() view returns (uint256)",
-  "function isGameOver() view returns (bool)",
+  "function winner() view returns (address)",
+  "function gameOver() view returns (bool)",
   "function startEscalation()",
   "function getEscalationPrice() view returns (uint256)",
   "event GuessSubmitted(address indexed player, uint256 amount, uint256 multiplier, string response, uint256 blockNumber, uint256 responseIndex)"
 ];
+
+// Rest of the web3.ts implementation remains unchanged until isGameOver function
 
 interface Web3State {
   provider: ethers.BrowserProvider | null;
@@ -60,6 +63,29 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   address: null,
   balance: null,
 
+  // Previous functions remain unchanged until isGameOver
+
+  isGameOver: async () => {
+    const { contract } = get();
+    if (!contract) return false;
+    try {
+      // Try the new gameOver function first
+      return await contract.gameOver();
+    } catch (error) {
+      console.error("Error checking game over state:", error);
+      try {
+        // Fallback: Check if game is won or if time has run out
+        const [gameWon, timeRemaining] = await Promise.all([
+          contract.gameWon(),
+          contract.getTimeRemaining()
+        ]);
+        return gameWon || timeRemaining.toNumber() <= 0;
+      } catch (fallbackError) {
+        console.error("Fallback game over check failed:", fallbackError);
+        return false;
+      }
+    }
+  },
   connect: async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
       toast({
@@ -205,17 +231,6 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         variant: "destructive",
       });
       return "0";
-    }
-  },
-
-  isGameOver: async () => {
-    const { contract } = get();
-    if (!contract) return false;
-    try {
-      return await contract.isGameOver();
-    } catch (error) {
-      console.error("Error checking game over state:", error);
-      return false;
     }
   },
 }));
