@@ -95,7 +95,8 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         contract.gameWon(),
         contract.getTimeRemaining()
       ]);
-      return gameWon || timeRemaining.toNumber() <= 0;
+      // Convert timeRemaining to a number and check if it's <= 0
+      return gameWon || Number(timeRemaining.toString()) <= 0;
     } catch (error) {
       console.error("Error checking game over status:", error);
       return false;

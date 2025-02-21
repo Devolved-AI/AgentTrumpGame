@@ -121,7 +121,14 @@ export function GuessForm() {
     if (!contract) return;
 
     try {
-      const isOver = await contract.isGameOver();
+      // Check game state directly from contract methods
+      const [gameWon, timeRemaining] = await Promise.all([
+        contract.gameWon(),
+        contract.getTimeRemaining()
+      ]);
+
+      const isOver = gameWon || Number(timeRemaining.toString()) <= 0;
+
       if (isOver) {
         toast({
           title: "Game Over",
@@ -246,8 +253,11 @@ export function GuessForm() {
 
     const checkGameState = async () => {
       try {
-        const isOver = await contract.isGameOver();
-        setIsGameOver(isOver);
+        const [gameWon, timeRemaining] = await Promise.all([
+          contract.gameWon(),
+          contract.getTimeRemaining()
+        ]);
+        setIsGameOver(gameWon || Number(timeRemaining.toString()) <= 0);
       } catch (error) {
         console.error("Error checking game state:", error);
       }
