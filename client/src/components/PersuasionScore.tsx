@@ -81,9 +81,11 @@ export function PersuasionScore() {
   };
 
   const resetCaches = () => {
+    console.log("Resetting all caches and state");
     usedMessagesRef.current.clear();
     usedTacticsRef.current.clear();
     setLastProcessedResponse(null);
+    lastFetchTimeRef.current = 0;
   };
 
   const calculatePersuasionScore = async () => {
@@ -92,14 +94,8 @@ export function PersuasionScore() {
       return 50;
     }
 
-    // Add debouncing to prevent too frequent blockchain calls
-    const now = Date.now();
-    if (now - lastFetchTimeRef.current < 1000) { // Minimum 1 second between blockchain calls
-      return score; // Return current score if called too frequently
-    }
-    lastFetchTimeRef.current = now;
-
     try {
+      console.log("Fetching player responses from contract");
       const responses = await contract.getAllPlayerResponses(address);
       console.log("Got responses from contract:", responses);
 
@@ -162,7 +158,7 @@ export function PersuasionScore() {
       return calculatedScore;
     } catch (error) {
       console.error("Error calculating persuasion score:", error);
-      return score; // Return current score on error
+      return score;
     }
   };
 
@@ -174,6 +170,7 @@ export function PersuasionScore() {
       try {
         const newScore = await calculatePersuasionScore();
         if (newScore !== score) {
+          console.log("Updating score from", score, "to", newScore);
           setScore(newScore);
         }
       } catch (error) {
@@ -181,14 +178,16 @@ export function PersuasionScore() {
       }
     };
 
-    // Initial update
+    console.log("Setting up periodic score updates");
     updateScore();
 
-    // Set up interval for updates
     const interval = setInterval(updateScore, 1000);
 
-    return () => clearInterval(interval);
-  }, [contract, address, updateCounter]); // Include updateCounter to handle forced updates
+    return () => {
+      console.log("Cleaning up periodic updates");
+      clearInterval(interval);
+    };
+  }, [contract, address, updateCounter]);
 
   // Listen for GuessSubmitted events
   useEffect(() => {
