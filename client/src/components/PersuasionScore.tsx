@@ -138,17 +138,6 @@ export function PersuasionScore() {
               calculatedScore = Math.max(0, calculatedScore - 25);
               break;
           }
-
-          // Check if score reached 100 and end game
-          if (calculatedScore >= 100) {
-            try {
-              // Call the contract to set game as won
-              await contract.setGameWon();
-              console.log("Game won! Score reached 100");
-            } catch (error) {
-              console.error("Error setting game as won:", error);
-            }
-          }
         } catch (error) {
           console.error("Error processing response:", error);
         }

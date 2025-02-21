@@ -27,7 +27,7 @@ export function GameOverDialog() {
         ]);
 
         const isOver = gameWon || timeRemaining.toNumber() <= 0;
-        console.log("Game over status:", isOver, "Game won:", gameWon);
+        console.log("Game over status:", isOver);
 
         if (isOver) {
           console.log("Game is over, fetching final info");
@@ -38,7 +38,7 @@ export function GameOverDialog() {
           console.log("Setting game over info:", { lastPlayer, blockNumber: block });
 
           setGameInfo({
-            lastGuessAddress: lastPlayer || (gameWon ? address : "No last player"),
+            lastGuessAddress: lastPlayer || "No last player",
             lastBlock: block ? block.toString() : "Unknown"
           });
 
@@ -49,9 +49,9 @@ export function GameOverDialog() {
       }
     };
 
-    // Check immediately and then every 2 seconds
+    // Check immediately and then every 5 seconds
     checkGameStatus();
-    const interval = setInterval(checkGameStatus, 2000);
+    const interval = setInterval(checkGameStatus, 5000);
 
     return () => clearInterval(interval);
   }, [contract, address]);
@@ -65,13 +65,11 @@ export function GameOverDialog() {
       >
         <div className="flex flex-col items-center space-y-6 p-6 text-center">
           <h2 className="text-4xl font-bold mb-4">Game Over</h2>
-          <p className="text-xl mb-8">
-            {gameInfo.lastGuessAddress === address ? "Congratulations! You've won!" : "Thanks for Playing"}
-          </p>
+          <p className="text-xl mb-8">Thanks for Playing</p>
 
           <div className="space-y-4 w-full text-left">
             <div>
-              <p className="font-semibold mb-1">Winner Address:</p>
+              <p className="font-semibold mb-1">Last Guess Wallet Address:</p>
               <p className="font-mono break-all">{gameInfo.lastGuessAddress}</p>
             </div>
 

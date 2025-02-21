@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -52,18 +52,6 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isGameOver, setIsGameOver] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
-      const scrollElement = scrollAreaRef.current;
-      scrollElement.scrollTop = scrollElement.scrollHeight;
-    }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
 
   useEffect(() => {
     setMessages([WELCOME_MESSAGE]);
@@ -81,6 +69,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           contract.getTimeRemaining()
         ]);
 
+        // Set initial game over state
         const isOver = gameWon || Number(timeRemaining.toString()) <= 0;
         setIsGameOver(isOver);
         if (isOver && onTimerEnd) {
@@ -116,7 +105,6 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
         if (mounted) {
           setMessages([WELCOME_MESSAGE, ...responses]);
-          setTimeout(scrollToBottom, 100);
         }
       } catch (error) {
         console.error("Error loading responses:", error);
@@ -182,6 +170,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     }
 
     try {
+      // Double check game state before submitting
       const [gameWon, timeRemaining] = await Promise.all([
         contract.gameWon(),
         contract.getTimeRemaining()
@@ -330,7 +319,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           </div>
 
           <div className="flex flex-col h-[400px]">
-            <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
+            <ScrollArea className="flex-1 px-4">
               <div className="space-y-4">
                 {messages.map((message, index) => (
                   <div
@@ -400,8 +389,8 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                     type="submit"
                     disabled={isSubmitting || isGameOver}
                     className={`rounded-full p-3 text-white ${
-                      isGameOver
-                        ? 'bg-gray-400 cursor-not-allowed'
+                      isGameOver 
+                        ? 'bg-gray-400 cursor-not-allowed' 
                         : 'bg-blue-500 hover:bg-blue-600'
                     }`}
                     size="icon"
