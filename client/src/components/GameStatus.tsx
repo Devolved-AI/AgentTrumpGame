@@ -234,7 +234,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             </>
           ) : (
             <div className="text-2xl font-bold text-red-500">
-              Game has ended
+              Game Over
             </div>
           )}
         </CardContent>
