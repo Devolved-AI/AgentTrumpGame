@@ -47,6 +47,7 @@ export function GuessForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const [isGameOver, setIsGameOver] = useState(false);
 
   useEffect(() => {
     setMessages([WELCOME_MESSAGE]);
@@ -74,15 +75,15 @@ export function GuessForm() {
             console.log("Response parsing failed, using raw text");
           }
 
-          const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp 
-            ? timestamp.toNumber() 
+          const timestampNum = typeof timestamp === 'object' && 'toNumber' in timestamp
+            ? timestamp.toNumber()
             : Number(timestamp);
 
-          responses.push({ 
-            text, 
+          responses.push({
+            text,
             timestamp: timestampNum,
             exists,
-            isUser: true 
+            isUser: true
           });
         }
 
@@ -120,6 +121,16 @@ export function GuessForm() {
     if (!contract) return;
 
     try {
+      const isOver = await contract.isGameOver();
+      if (isOver) {
+        toast({
+          title: "Game Over",
+          description: "The game has ended. No more guesses can be submitted.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setIsSubmitting(true);
       setIsTyping(true);
       const requiredAmount = await contract.currentRequiredAmount();
@@ -230,16 +241,34 @@ export function GuessForm() {
     }
   };
 
+  useEffect(() => {
+    if (!contract) return;
+
+    const checkGameState = async () => {
+      try {
+        const isOver = await contract.isGameOver();
+        setIsGameOver(isOver);
+      } catch (error) {
+        console.error("Error checking game state:", error);
+      }
+    };
+
+    checkGameState();
+    const interval = setInterval(checkGameState, 5000);
+
+    return () => clearInterval(interval);
+  }, [contract]);
+
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-2xl shadow-lg">
         <div className="flex flex-col">
           <div className="flex flex-col items-center mb-6">
             <Avatar className="h-16 w-16 mb-2">
-              <AvatarImage 
-                src="/donald-trump-image.jpeg" 
+              <AvatarImage
+                src="/donald-trump-image.jpeg"
                 alt="Agent Trump"
-                className="object-cover object-center" 
+                className="object-cover object-center"
               />
               <AvatarFallback>AT</AvatarFallback>
             </Avatar>
@@ -254,10 +283,10 @@ export function GuessForm() {
                     key={index}
                     className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div 
+                    <div
                       className={`max-w-[70%] p-3 rounded-2xl ${
-                        message.isUser 
-                          ? 'bg-blue-500 text-white rounded-tr-sm' 
+                        message.isUser
+                          ? 'bg-blue-500 text-white rounded-tr-sm'
                           : 'bg-gray-300 dark:bg-gray-700 rounded-tl-sm'
                       }`}
                     >
@@ -300,8 +329,9 @@ export function GuessForm() {
                       <FormItem className="flex-1">
                         <FormControl>
                           <Input
-                            placeholder="iMessage"
+                            placeholder={isGameOver ? "Game has ended" : "iMessage"}
                             className="rounded-full bg-white dark:bg-gray-800 pl-4 pr-12 py-6 text-base border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
+                            disabled={isGameOver}
                             {...field}
                           />
                         </FormControl>
@@ -310,9 +340,9 @@ export function GuessForm() {
                     )}
                   />
 
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || isGameOver}
                     className="rounded-full p-3 bg-blue-500 hover:bg-blue-600 text-white"
                     size="icon"
                   >
@@ -324,6 +354,11 @@ export function GuessForm() {
                   </Button>
                 </form>
               </Form>
+              {isGameOver && (
+                <p className="text-red-500 mt-2 text-sm">
+                  Game has ended. No more guesses can be submitted.
+                </p>
+              )}
             </div>
           </div>
         </div>
