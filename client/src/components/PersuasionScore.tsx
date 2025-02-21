@@ -202,7 +202,7 @@ export function PersuasionScore() {
     fetchScore();
   }, [contract, address]);
 
-  // Listen for GuessSubmitted events
+  // Listen for GuessSubmitted events and update score
   useEffect(() => {
     if (!contract || !address) return;
 
@@ -219,14 +219,15 @@ export function PersuasionScore() {
 
         setIsUpdating(true);
         try {
-          // Wait for the block to be confirmed
-          const provider = contract.provider;
-          await provider.waitForBlock(blockNumber.toString());
+          // Wait for the block to be mined
+          await contract.provider.waitForBlock(blockNumber);
+          console.log("Transaction confirmed in block:", blockNumber);
 
-          console.log("Transaction confirmed, updating score");
+          // Fetch and update the score
           await fetchScore();
         } catch (error) {
           console.error("Error updating score after guess:", error);
+          setError("Failed to update score");
         } finally {
           setIsUpdating(false);
         }
