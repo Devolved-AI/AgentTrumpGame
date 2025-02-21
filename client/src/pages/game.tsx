@@ -8,7 +8,7 @@ import { PersuasionScore } from "@/components/PersuasionScore";
 import { useQuery } from "@tanstack/react-query";
 import { GameOverDialog } from "@/components/GameOverDialog";
 import { useWeb3Store } from "@/lib/web3";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const fetchEthPrice = async () => {
   const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
@@ -23,7 +23,7 @@ export default function Game() {
     refetchInterval: 60000,
   });
 
-  const { contract, address } = useWeb3Store();
+  const { address, isInitialized } = useWeb3Store();
   const [gameOver, setGameOver] = useState(false);
 
   const guessPrice = 0.0009;
@@ -74,7 +74,7 @@ export default function Game() {
               <WalletButton />
             </div>
 
-            {address && (
+            {address && isInitialized && (
               <div className="flex gap-8 items-start">
                 <video 
                   autoPlay 
@@ -93,7 +93,7 @@ export default function Game() {
           </div>
         </div>
 
-        {address ? (
+        {address && isInitialized ? (
           <div className="space-y-8">
             <div className="grid grid-cols-3 gap-4">
               <PersuasionScore />

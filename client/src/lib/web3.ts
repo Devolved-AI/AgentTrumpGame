@@ -16,7 +16,6 @@ const BASE_SEPOLIA_CONFIG = {
   blockExplorerUrls: ["https://sepolia.basescan.org"],
 };
 
-// Updated ABI based on new contract interface
 const CONTRACT_ABI = [
   "function submitGuess(string calldata response) payable",
   "function getTimeRemaining() view returns (uint256)",
@@ -56,6 +55,7 @@ interface Web3State {
   contract: ethers.Contract | null;
   address: string | null;
   balance: string | null;
+  isInitialized: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
   reset: () => void;
@@ -70,6 +70,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   contract: null,
   address: null,
   balance: null,
+  isInitialized: false,
 
   getEscalationPrice: async () => {
     const { contract } = get();
@@ -91,7 +92,6 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         contract.gameWon(),
         contract.getTimeRemaining()
       ]);
-      // Convert timeRemaining to a number and check if it's <= 0
       return gameWon || Number(timeRemaining.toString()) <= 0;
     } catch (error) {
       console.error("Error checking game over status:", error);
@@ -165,7 +165,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         return;
       }
 
-      set({ provider, signer, contract, address, balance });
+      set({ provider, signer, contract, address, balance, isInitialized: true });
 
       toast({
         title: "Wallet Connected",
@@ -174,7 +174,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
 
       window.ethereum.on('accountsChanged', async (accounts: string[]) => {
         if (accounts.length === 0) {
-          set({ provider: null, signer: null, contract: null, address: null, balance: null });
+          set({ provider: null, signer: null, contract: null, address: null, balance: null, isInitialized: false });
         } else {
           const newAddress = accounts[0];
           const newBalance = ethers.formatEther(await provider.getBalance(newAddress));
@@ -201,7 +201,8 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       signer: null, 
       contract: null, 
       address: null, 
-      balance: null 
+      balance: null,
+      isInitialized: false
     });
     set((state) => {
       state.clearMessages();
@@ -222,7 +223,8 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       signer: null, 
       contract: null, 
       address: null, 
-      balance: null 
+      balance: null,
+      isInitialized: false
     });
   },
 
