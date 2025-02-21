@@ -54,7 +54,7 @@ export default function Game() {
   });
 
   return (
-    <div className={`min-h-screen ${gameOver ? 'bg-black' : 'bg-white dark:bg-black'}`}>
+    <div className="min-h-screen bg-white dark:bg-black">
       <GameOverDialog />
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-start mb-8">
@@ -180,4 +180,5 @@ export default function Game() {
       </div>
     </div>
   );
+
 }
