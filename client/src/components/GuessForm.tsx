@@ -64,6 +64,18 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     const loadResponses = async () => {
       try {
+        const [gameWon, timeRemaining] = await Promise.all([
+          contract.gameWon(),
+          contract.getTimeRemaining()
+        ]);
+
+        // Set initial game over state
+        const isOver = gameWon || Number(timeRemaining.toString()) <= 0;
+        setIsGameOver(isOver);
+        if (isOver && onTimerEnd) {
+          onTimerEnd();
+        }
+
         const count = await contract.getPlayerResponseCount(address);
         const responses: Message[] = [];
 
@@ -123,7 +135,8 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           contract.gameWon(),
           contract.getTimeRemaining()
         ]);
-        const isOver = gameWon || Number(timeRemaining.toString()) <= 0;
+        const time = Number(timeRemaining.toString());
+        const isOver = gameWon || time <= 0;
         setIsGameOver(isOver);
         if (isOver && onTimerEnd) {
           onTimerEnd();
@@ -147,16 +160,24 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
   });
 
   const onSubmit = async (data: z.infer<typeof guessSchema>) => {
-    if (!contract || isGameOver) return;
+    if (!contract || isGameOver) {
+      toast({
+        title: "Game Over",
+        description: "The game has ended. No more guesses can be submitted.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
-      // Check game state directly from contract methods
+      // Double check game state before submitting
       const [gameWon, timeRemaining] = await Promise.all([
         contract.gameWon(),
         contract.getTimeRemaining()
       ]);
 
-      const isOver = gameWon || Number(timeRemaining.toString()) <= 0;
+      const time = Number(timeRemaining.toString());
+      const isOver = gameWon || time <= 0;
 
       if (isOver) {
         setIsGameOver(true);
@@ -319,7 +340,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                         {formatInTimeZone(
                           message.timestamp * 1000,
                           'America/Los_Angeles',
-                          'h:mma MM/dd/yyyy'
+                          'h:mmaaa MM/dd/yyyy'
                         )}
                       </p>
                       {message.transaction && (
@@ -352,8 +373,10 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                         <FormControl>
                           <Input
                             placeholder={isGameOver ? "Game has ended" : "iMessage"}
-                            className="rounded-full bg-white dark:bg-gray-800 pl-4 pr-12 py-6 text-base border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500"
-                            disabled={isGameOver}
+                            className={`rounded-full bg-white dark:bg-gray-800 pl-4 pr-12 py-6 text-base border-0 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                              isGameOver ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            disabled={isGameOver || isSubmitting}
                             {...field}
                           />
                         </FormControl>
@@ -365,7 +388,11 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                   <Button
                     type="submit"
                     disabled={isSubmitting || isGameOver}
-                    className="rounded-full p-3 bg-blue-500 hover:bg-blue-600 text-white"
+                    className={`rounded-full p-3 text-white ${
+                      isGameOver 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-blue-500 hover:bg-blue-600'
+                    }`}
                     size="icon"
                   >
                     {isSubmitting ? (
@@ -377,7 +404,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                 </form>
               </Form>
               {isGameOver && (
-                <p className="text-red-500 mt-2 text-sm">
+                <p className="text-red-500 mt-2 text-sm text-center">
                   Game has ended. No more guesses can be submitted.
                 </p>
               )}
