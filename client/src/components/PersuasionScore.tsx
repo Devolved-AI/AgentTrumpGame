@@ -18,11 +18,12 @@ export function PersuasionScore() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
-  const [updateCounter, setUpdateCounter] = useState(0); // Add counter for forcing updates
+  const [updateCounter, setUpdateCounter] = useState(0);
 
   // Use refs to maintain state across renders
   const usedMessagesRef = useRef<Set<string>>(new Set());
   const usedTacticsRef = useRef<Set<string>>(new Set());
+  const lastFetchTimeRef = useRef<number>(0);
 
   // Business-focused evaluation terms
   const DEAL_TERMS = [
@@ -91,6 +92,13 @@ export function PersuasionScore() {
       return 50;
     }
 
+    // Add debouncing to prevent too frequent blockchain calls
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < 1000) { // Minimum 1 second between blockchain calls
+      return score; // Return current score if called too frequently
+    }
+    lastFetchTimeRef.current = now;
+
     try {
       const responses = await contract.getAllPlayerResponses(address);
       console.log("Got responses from contract:", responses);
@@ -154,40 +162,35 @@ export function PersuasionScore() {
       return calculatedScore;
     } catch (error) {
       console.error("Error calculating persuasion score:", error);
-      return 50;
+      return score; // Return current score on error
     }
   };
 
-  const fetchScore = async () => {
-    if (!contract || !address) {
-      setScore(50);
-      return;
-    }
-
-    try {
-      setError(null);
-      const newScore = await calculatePersuasionScore();
-      console.log("Calculated new persuasion score:", newScore);
-      setScore(newScore);
-    } catch (error) {
-      console.error("Error fetching persuasion score:", error);
-      setError("Could not calculate score");
-    }
-  };
-
-  // Reset when wallet changes
+  // Update score every second
   useEffect(() => {
-    if (!contract || !address) {
-      setScore(50);
-      setError(null);
-      resetCaches();
-      return;
-    }
+    if (!contract || !address) return;
 
-    fetchScore();
-  }, [contract, address, updateCounter]); // Add updateCounter to dependencies
+    const updateScore = async () => {
+      try {
+        const newScore = await calculatePersuasionScore();
+        if (newScore !== score) {
+          setScore(newScore);
+        }
+      } catch (error) {
+        console.error("Error in periodic score update:", error);
+      }
+    };
 
-  // Listen for GuessSubmitted events and update score
+    // Initial update
+    updateScore();
+
+    // Set up interval for updates
+    const interval = setInterval(updateScore, 1000);
+
+    return () => clearInterval(interval);
+  }, [contract, address, updateCounter]); // Include updateCounter to handle forced updates
+
+  // Listen for GuessSubmitted events
   useEffect(() => {
     if (!contract || !address) return;
 
