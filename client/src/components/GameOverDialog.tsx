@@ -24,14 +24,13 @@ export function GameOverDialog() {
 
     const checkGameStatus = async () => {
       try {
-        // Get the time remaining
-        const timeRemaining = await contract.getTimeRemaining();
-        console.log("Time remaining:", timeRemaining.toString());
+        // Check if game is actually over using the contract method
+        const isOver = await contract.isGameOver();
+        console.log("Game over status:", isOver);
 
-        // Only proceed if time has actually run out
-        if (timeRemaining.toNumber() <= 0) {
-          console.log("Timer expired, fetching game over info");
-          // Fetch game over info when timer has reached zero
+        if (isOver) {
+          console.log("Game is over, fetching final info");
+          // Fetch game over info
           const [lastPlayer, winner] = await Promise.all([
             contract.lastPlayer(),
             contract.winner()
