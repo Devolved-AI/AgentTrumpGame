@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 
-const CONTRACT_ADDRESS = "0xbe7978798a31d8175407041bca6e8e352DAf6965"; // Updated Agent Trump Contract
+const CONTRACT_ADDRESS = "0x182401297e6592fdFA9C692fECD42bd43bb5408f"; // Updated Contract Address
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -16,7 +16,7 @@ const BASE_SEPOLIA_CONFIG = {
   blockExplorerUrls: ["https://sepolia.basescan.org"],
 };
 
-// Updated ABI with new contract interface
+// Updated ABI based on new contract interface
 const CONTRACT_ABI = [
   "function buttonPushed(address winner)",
   "function deposit() payable",
@@ -37,6 +37,7 @@ const CONTRACT_ABI = [
   "function BLOCKS_PER_MINUTE() view returns (uint256)",
   "function ESCALATION_PERIOD() view returns (uint256)",
   "function escalationStartBlock() view returns (uint256)",
+  "function escalationActive() view returns (bool)",
   "function gameEndBlock() view returns (uint256)",
   "function shouldExtendGame() view returns (bool)",
   "function shouldStartEscalation() view returns (bool)",
@@ -51,7 +52,10 @@ const CONTRACT_ABI = [
   "event GameExtended(uint256 newEndBlock, uint256 newMultiplier)",
   "event Deposited(address indexed owner, uint256 amount)",
   "event Withdrawn(address indexed owner, uint256 amount)",
-  "event EmergencyWithdrawn(address indexed owner, uint256 amount)"
+  "event EmergencyWithdrawn(address indexed owner, uint256 amount)",
+  "event Paused(address account)",
+  "event Unpaused(address account)",
+  "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
 ];
 
 interface Web3State {
