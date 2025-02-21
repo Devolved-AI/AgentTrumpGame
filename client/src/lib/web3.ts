@@ -199,7 +199,12 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       return formatEther(price);
     } catch (error) {
       console.error("Error getting escalation price:", error);
-      return "0.0018"; 
+      toast({
+        title: "Error",
+        description: "Failed to get current escalation price",
+        variant: "destructive",
+      });
+      return "0";
     }
   },
 
