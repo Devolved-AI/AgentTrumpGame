@@ -171,7 +171,7 @@ export default function Game() {
                 <ul className="list-disc list-inside space-y-1">
                   <li>Available on Uniswap, Base Network</li>
                   <li>Can be purchased with wAGC or ETH</li>
-                  <li className="break-all">Agent Trump Contract Address: 0x0803D65B93621C0D89F2081D6980c0A6E1cE2E98</li>
+                  <li className="break-all">Agent Trump Contract Address: 0xbe7978798a31d8175407041bca6e8e352DAf6965</li>
                 </ul>
               </div>
             </div>
