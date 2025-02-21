@@ -50,7 +50,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           contract.escalationActive()
         ]);
 
-        const time = Number(timeRemaining);
+        // Convert BigInt to number safely
+        const time = Number(timeRemaining.toString());
         setBaseTime(time);
         setStatus(prev => ({
           ...prev,
@@ -89,7 +90,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           getEscalationPrice()
         ]);
 
-        const time = Number(timeRemaining);
+        // Convert BigInt to number safely
+        const time = Number(timeRemaining.toString());
 
         // Update base time only in normal mode
         if (!escalationActive) {

@@ -1,0 +1,132 @@
+getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+    at GuessForm.tsx:256:5
+    at commitHookEffectListMount (chunk-RPCDYKBN.js?v=5c0f3f6c:16915:34)
+    at commitPassiveMountOnFiber (chunk-RPCDYKBN.js?v=5c0f3f6c:18156:19)
+    at commitPassiveMountEffects_complete (chunk-RPCDYKBN.js?v=5c0f3f6c:18129:17)
+    at commitPassiveMountEffects_begin (chunk-RPCDYKBN.js?v=5c0f3f6c:18119:15)
+    at commitPassiveMountEffects (chunk-RPCDYKBN.js?v=5c0f3f6c:18109:11)
+    at flushPassiveEffectsImpl (chunk-RPCDYKBN.js?v=5c0f3f6c:19490:11)
+    at flushPassiveEffects (chunk-RPCDYKBN.js?v=5c0f3f6c:19447:22)
+    at commitRootImpl (chunk-RPCDYKBN.js?v=5c0f3f6c:19416:13)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+3web3.ts:100 Error checking game over status: TypeError: timeRemaining.toNumber is not a function
+    at isGameOver (web3.ts:98:39)
+    at async Promise.all (/index 5)
+    at async updateStatus (GameStatus.tsx:82:13)
+isGameOver @ web3.ts:100Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)
+checkGameOver @ game.tsx:44Understand this errorAI
+2PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)
+checkGameOver @ game.tsx:44Understand this errorAI
+PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:223 Submission error: TypeError: contract.isGameOver is not a function
+    at onSubmit (GuessForm.tsx:124:37)
+    at chunk-YABUFNLM.js?v=5c0f3f6c:1675:15
+onSubmit @ GuessForm.tsx:223Understand this errorAI
+2PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)
+checkGameOver @ game.tsx:44Understand this errorAI
+2PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+3web3.ts:100 Error checking game over status: TypeError: timeRemaining.toNumber is not a function
+    at isGameOver (web3.ts:98:39)
+    at async Promise.all (/index 5)
+    at async updateStatus (GameStatus.tsx:82:13)
+isGameOver @ web3.ts:100
+await in isGameOver
+updateStatus @ GameStatus.tsx:88Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)
+checkGameOver @ game.tsx:44Understand this errorAI
+3PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)
+checkGameOver @ game.tsx:44Understand this errorAI
+2PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)
+checkGameOver @ game.tsx:44Understand this errorAI
+3PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+3web3.ts:100 Error checking game over status: TypeError: timeRemaining.toNumber is not a function
+    at isGameOver (web3.ts:98:39)
+    at async Promise.all (/index 5)
+    at async updateStatus (GameStatus.tsx:82:13)
+isGameOver @ web3.ts:100
+await in isGameOver
+updateStatus @ GameStatus.tsx:88Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)
+checkGameOver @ game.tsx:44Understand this errorAI
+2PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)
+checkGameOver @ game.tsx:44Understand this errorAI
+3PersuasionScore.tsx:23 getPlayerPersuasionScore method not found on contract
+fetchScore @ PersuasionScore.tsx:23Understand this errorAI
+GuessForm.tsx:252 Error checking game state: TypeError: contract.isGameOver is not a function
+    at checkGameState (GuessForm.tsx:249:39)
+checkGameState @ GuessForm.tsx:252Understand this errorAI
+GameOverDialog.tsx:58 Error checking game status: TypeError: timeRemaining.toNumber is not a function
+    at checkGameStatus (GameOverDialog.tsx:32:49)
+checkGameStatus @ GameOverDialog.tsx:58Understand this errorAI
+game.tsx:44 Error checking game state: TypeError: timeRemaining.toNumber is not a function
+    at checkGameOver (game.tsx:40:49)

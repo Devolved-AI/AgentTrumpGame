@@ -20,25 +20,20 @@ export default function Game() {
   const { data: ethPrice = 0 } = useQuery({
     queryKey: ['ethPrice'],
     queryFn: fetchEthPrice,
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
   });
 
-  const { contract, address } = useWeb3Store();
+  const { contract, address, isGameOver: checkGameOver } = useWeb3Store();
   const [gameOver, setGameOver] = useState(false);
 
   // Check game state
   useEffect(() => {
     if (!contract || !address) return;
 
-    const checkGameOver = async () => {
+    const checkGameState = async () => {
       try {
-        const [gameWon, timeRemaining] = await Promise.all([
-          contract.gameWon(),
-          contract.getTimeRemaining()
-        ]);
-
-        const isOver = gameWon || timeRemaining.toNumber() <= 0;
-        console.log("Game state:", { gameWon, timeRemaining: timeRemaining.toString(), isOver });
+        const isOver = await checkGameOver();
+        console.log("Game state:", { isOver });
         setGameOver(isOver);
       } catch (error) {
         console.error("Error checking game state:", error);
@@ -46,11 +41,11 @@ export default function Game() {
     };
 
     // Check immediately and then every 5 seconds
-    checkGameOver();
-    const interval = setInterval(checkGameOver, 5000);
+    checkGameState();
+    const interval = setInterval(checkGameState, 5000);
 
     return () => clearInterval(interval);
-  }, [contract, address]);
+  }, [contract, address, checkGameOver]);
 
   const guessPrice = 0.0009;
   const guessPriceUsd = (guessPrice * ethPrice).toLocaleString('en-US', {

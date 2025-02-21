@@ -10,80 +10,81 @@ export function PersuasionScore() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchScore = async () => {
+  const calculatePersuasionScore = async () => {
     if (!contract || !address) {
       console.log("Contract or address not available");
+      return 50;
+    }
+
+    try {
+      // Get all player responses and calculate score based on response count and timing
+      const responses = await contract.getAllPlayerResponses(address);
+      if (!responses || !responses.responses || responses.responses.length === 0) {
+        return 50;
+      }
+
+      const validResponses = responses.responses.filter((_, index) => responses.exists[index]);
+      const responseCount = validResponses.length;
+
+      // Base score calculation
+      let calculatedScore = Math.min(50 + (responseCount * 10), 100);
+
+      // If there are timestamps, factor in response frequency
+      if (responses.timestamps && responses.timestamps.length > 0) {
+        const validTimestamps = responses.timestamps
+          .filter((_, index) => responses.exists[index])
+          .map(ts => Number(ts));
+
+        if (validTimestamps.length > 1) {
+          // Calculate average time between responses
+          const avgTimeBetweenResponses = validTimestamps
+            .slice(1)
+            .reduce((acc, curr, idx) => 
+              acc + (curr - validTimestamps[idx]), 0) / (validTimestamps.length - 1);
+
+          // Bonus points for consistent responses (lower average time)
+          const timeBonus = Math.min(10, Math.floor(300 / avgTimeBetweenResponses));
+          calculatedScore = Math.min(calculatedScore + timeBonus, 100);
+        }
+      }
+
+      return calculatedScore;
+    } catch (error) {
+      console.error("Error calculating persuasion score:", error);
+      return 50; // Default score on error
+    }
+  };
+
+  const fetchScore = async () => {
+    if (!contract || !address) {
+      setScore(50);
       return;
     }
 
     try {
       setError(null);
-      // First check if the method exists on the contract
-      if (typeof contract.getPlayerPersuasionScore !== 'function') {
-        console.error("getPlayerPersuasionScore method not found on contract");
-        setError("Contract method not available");
-        return;
-      }
-
-      const newScore = await contract.getPlayerPersuasionScore(address);
-      console.log("Raw score from contract:", newScore);
-
-      // Handle the case where the score might be undefined, null, or empty
-      if (newScore === undefined || newScore === null || newScore === "0x") {
-        console.log("No score found, using default");
-        setScore(50);
-        return;
-      }
-
-      // Properly handle BigNumber conversion with more detailed error logging
-      let scoreValue: number;
-      try {
-        if (typeof newScore === 'object' && 'toNumber' in newScore) {
-          scoreValue = newScore.toNumber();
-          console.log("Converted BigNumber score:", scoreValue);
-        } else {
-          scoreValue = Number(newScore);
-          console.log("Converted number score:", scoreValue);
-        }
-
-        // Validate the converted score
-        if (isNaN(scoreValue)) {
-          console.log("Invalid score value, using default");
-          scoreValue = 50;
-        }
-
-        // Ensure score is within valid range
-        scoreValue = Math.max(0, Math.min(100, scoreValue));
-      } catch (conversionError) {
-        console.error("Score conversion error:", conversionError);
-        scoreValue = 50;
-      }
-
-      console.log("Final persuasion score:", scoreValue);
-      setScore(scoreValue);
-    } catch (error: any) {
+      const newScore = await calculatePersuasionScore();
+      console.log("Calculated persuasion score:", newScore);
+      setScore(newScore);
+    } catch (error) {
       console.error("Error fetching persuasion score:", error);
-      setError("Could not fetch score");
-      // Keep the current score instead of resetting
+      setError("Could not calculate score");
     }
   };
 
   useEffect(() => {
     if (!contract || !address) {
-      setScore(50); // Reset to default when disconnected
+      setScore(50);
       setError(null);
       return;
     }
 
-    // Initial fetch
     fetchScore();
-
-    // Poll every 2 seconds instead of 500ms to reduce load
     const interval = setInterval(fetchScore, 2000);
 
     return () => {
       clearInterval(interval);
-      setScore(50); // Reset on cleanup
+      setScore(50);
       setError(null);
     };
   }, [contract, address]);
@@ -97,7 +98,6 @@ export function PersuasionScore() {
       const handler = async () => {
         setIsUpdating(true);
         try {
-          // Add a small delay to ensure the contract state is updated
           await new Promise(resolve => setTimeout(resolve, 1000));
           await fetchScore();
         } catch (error) {
