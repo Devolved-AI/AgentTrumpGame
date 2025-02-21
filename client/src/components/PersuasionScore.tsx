@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useWeb3Store } from "@/lib/web3";
@@ -17,8 +17,10 @@ export function PersuasionScore() {
   const [score, setScore] = useState<number>(50);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usedMessages, setUsedMessages] = useState<Set<string>>(new Set());
-  const [usedPositiveWords, setUsedPositiveWords] = useState<Set<string>>(new Set());
+
+  // Use refs to maintain state across renders
+  const usedMessagesRef = useRef<Set<string>>(new Set());
+  const usedPositiveWordsRef = useRef<Set<string>>(new Set());
 
   const POSITIVE_WORDS = ['please', 'thank', 'good', 'appreciate', 'grateful'];
   const THREAT_WORDS = ['hate', 'murder', 'death', 'kill', 'hurt', 'harm', 'destroy', 'decimate'];
@@ -38,11 +40,13 @@ export function PersuasionScore() {
 
     // Check for positive words, but only count new ones
     const positiveWordsInResponse = extractPositiveWords(response);
-    const hasNewPositiveWords = positiveWordsInResponse.some(word => !usedPositiveWords.has(word));
+    const hasNewPositiveWords = positiveWordsInResponse.some(word => !usedPositiveWordsRef.current.has(word));
 
     if (hasNewPositiveWords) {
       // Add the new positive words to the used set
-      positiveWordsInResponse.forEach(word => setUsedPositiveWords(prev => new Set([...prev, word])));
+      positiveWordsInResponse.forEach(word => {
+        usedPositiveWordsRef.current.add(word);
+      });
       return 'POSITIVE';
     } else if (lowerResponse.includes('no') || lowerResponse.includes('bad') || lowerResponse.includes('wrong')) {
       return 'NEGATIVE';
@@ -71,14 +75,17 @@ export function PersuasionScore() {
       // Process each response and adjust score
       validResponses.forEach((response: string) => {
         // Skip if this exact message has been used before
-        if (usedMessages.has(response)) {
+        if (usedMessagesRef.current.has(response)) {
+          console.log("Skipping repeated message:", response);
           return; // Skip scoring for repeated messages
         }
 
         // Add this message to used messages set
-        setUsedMessages(prev => new Set([...prev, response]));
+        usedMessagesRef.current.add(response);
+        console.log("New message added:", response);
 
         const responseType = classifyResponse(response);
+        console.log("Response classified as:", responseType);
 
         // If response is threatening, immediately set score to 0
         if (responseType === 'THREATENING') {
@@ -121,6 +128,9 @@ export function PersuasionScore() {
     if (!contract || !address) {
       setScore(50);
       setError(null);
+      // Clear the sets when disconnecting
+      usedMessagesRef.current = new Set();
+      usedPositiveWordsRef.current = new Set();
       return;
     }
 
