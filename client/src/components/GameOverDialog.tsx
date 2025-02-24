@@ -26,8 +26,15 @@ export function GameOverDialog() {
           contract.getTimeRemaining()
         ]);
 
-        const isOver = gameWon || timeRemaining.toNumber() <= 0;
-        console.log("Game over status:", isOver);
+        const time = Number(timeRemaining.toString());
+        const isOver = gameWon || time <= 0;
+
+        // Add debug logging
+        console.log("GameOverDialog - Game State:", {
+          gameWon,
+          timeRemaining: time,
+          isOver
+        });
 
         if (isOver) {
           console.log("Game is over, fetching final info");
@@ -35,7 +42,10 @@ export function GameOverDialog() {
           const lastPlayer = await contract.lastPlayer();
           const block = await contract.lastGuessBlock();
 
-          console.log("Setting game over info:", { lastPlayer, blockNumber: block });
+          console.log("Final game info:", {
+            lastPlayer,
+            block: block.toString()
+          });
 
           setGameInfo({
             lastGuessAddress: lastPlayer || "No last player",

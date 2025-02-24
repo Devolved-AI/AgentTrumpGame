@@ -90,6 +90,16 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         const time = Number(timeRemaining.toString());
 
+        // Add debug logging
+        console.log("GameStatus - Contract State:", {
+          timeRemaining: time,
+          won,
+          escalationActive,
+          gameOver,
+          lastPlayer,
+          balance: formatEther(balance)
+        });
+
         if (!escalationActive) {
           setBaseTime(time);
         }
