@@ -119,7 +119,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   useEffect(() => {
     if (!contract) return;
 
-    const handleGuessSubmitted = async (player: string, amount: any, multiplier: any, response: string) => {
+    const handleGuessSubmitted = async (
+      player: string,
+      amount: any,
+      multiplier: any,
+      response: string,
+      blockNumber: any,
+      responseIndex: any
+    ) => {
       if (status.isEscalation) {
         setDisplayTime(300);
 
@@ -133,12 +140,26 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       }
     };
 
-    const filter = contract.filters.GuessSubmitted();
-    contract.on(filter, handleGuessSubmitted);
+    try {
+      // Use contract.on with the event name directly
+      contract.on(
+        contract.getEvent("GuessSubmitted"),
+        handleGuessSubmitted
+      );
 
-    return () => {
-      contract.off(filter, handleGuessSubmitted);
-    };
+      return () => {
+        try {
+          contract.removeListener(
+            contract.getEvent("GuessSubmitted"),
+            handleGuessSubmitted
+          );
+        } catch (error) {
+          console.error("Error removing event listener:", error);
+        }
+      };
+    } catch (error) {
+      console.error("Error setting up event listener:", error);
+    }
   }, [contract, status.isEscalation]);
 
   useEffect(() => {
