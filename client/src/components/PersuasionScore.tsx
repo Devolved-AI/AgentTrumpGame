@@ -195,7 +195,14 @@ export function PersuasionScore() {
   useEffect(() => {
     if (!contract || !address) return;
 
-    const handleGuessSubmitted = async (player: string, amount: any, multiplier: any, response: string) => {
+    const handleGuessSubmitted = async (
+      player: string,
+      amount: any,
+      multiplier: any,
+      response: string,
+      blockNumber: any,
+      responseIndex: any
+    ) => {
       if (player.toLowerCase() !== address.toLowerCase()) {
         return;
       }
@@ -226,11 +233,11 @@ export function PersuasionScore() {
     };
 
     try {
-      const filter = contract.filters.GuessSubmitted(address);
-      contract.on(filter, handleGuessSubmitted);
+      // Listen for GuessSubmitted events
+      contract.on('GuessSubmitted', handleGuessSubmitted);
 
       return () => {
-        contract.off(filter, handleGuessSubmitted);
+        contract.off('GuessSubmitted', handleGuessSubmitted);
       };
     } catch (error) {
       console.error("Error setting up event listener:", error);
