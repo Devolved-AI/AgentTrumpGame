@@ -191,53 +191,62 @@ export function PersuasionScore() {
     initializeScore();
   }, [contract, address]);
 
-  // Listen for new guesses
+  const handleGuessSubmitted = async (
+    player: string,
+    amount: any,
+    multiplier: any,
+    response: string,
+    blockNumber: any,
+    responseIndex: any
+  ) => {
+    if (player.toLowerCase() !== address.toLowerCase()) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      let text = response;
+      try {
+        const parsed = JSON.parse(response);
+        text = parsed.response;
+      } catch (e) {
+        // Response is not JSON, using raw text
+      }
+
+      // Update the last processed response immediately
+      setLastProcessedResponse(text);
+
+      // Small delay to ensure blockchain state is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Reset and recalculate score
+      await resetCaches();
+      await calculateAndUpdateScore();
+    } catch (error) {
+      console.error("Error updating score after guess:", error);
+      setError("Failed to update score");
+    }
+  };
+
   useEffect(() => {
     if (!contract || !address) return;
 
-    const handleGuessSubmitted = async (
-      player: string,
-      amount: any,
-      multiplier: any,
-      response: string,
-      blockNumber: any,
-      responseIndex: any
-    ) => {
-      if (player.toLowerCase() !== address.toLowerCase()) {
-        return;
-      }
-
-      setIsUpdating(true);
-      try {
-        let text = response;
-        try {
-          const parsed = JSON.parse(response);
-          text = parsed.response;
-        } catch (e) {
-          // Response is not JSON, using raw text
-        }
-
-        // Update the last processed response immediately
-        setLastProcessedResponse(text);
-
-        // Small delay to ensure blockchain state is updated
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Reset and recalculate score
-        await resetCaches();
-        await calculateAndUpdateScore();
-      } catch (error) {
-        console.error("Error updating score after guess:", error);
-        setError("Failed to update score");
-      }
-    };
-
     try {
-      // Listen for GuessSubmitted events
-      contract.on('GuessSubmitted', handleGuessSubmitted);
+      // Define event handler
+      contract.on(
+        contract.getEvent("GuessSubmitted"),
+        handleGuessSubmitted
+      );
 
       return () => {
-        contract.off('GuessSubmitted', handleGuessSubmitted);
+        try {
+          contract.removeListener(
+            contract.getEvent("GuessSubmitted"),
+            handleGuessSubmitted
+          );
+        } catch (error) {
+          console.error("Error removing event listener:", error);
+        }
       };
     } catch (error) {
       console.error("Error setting up event listener:", error);
