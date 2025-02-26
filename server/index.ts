@@ -54,7 +54,18 @@ app.use((req, res, next) => {
   }
 
   const PORT = Number(process.env.PORT) || 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
+  server.listen(PORT, "0.0.0.0")
+    .on('error', (e: any) => {
+      if (e.code === 'EADDRINUSE') {
+        log(`Port ${PORT} is busy, trying ${PORT + 1}`);
+        server.listen(PORT + 1, "0.0.0.0");
+      } else {
+        throw e;
+      }
+    })
+    .on('listening', () => {
+      const address = server.address();
+      const port = typeof address === 'object' ? address?.port : PORT;
+      log(`serving on port ${port}`);
+    });
 })();
