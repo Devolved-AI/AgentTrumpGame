@@ -850,16 +850,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         return state;
       });
 
-      // Check if MetaMask is unlocked
-      const isUnlocked = await window.ethereum._metamask?.isUnlocked();
-      if (!isUnlocked) {
-        toast({
-          title: "Wallet Locked",
-          description: "Please unlock your MetaMask wallet to connect",
-          variant: "destructive",
-        });
-        return;
-      }
+      
 
       // Verify network and switch if needed
       const networkValid = await checkNetwork(window.ethereum);
