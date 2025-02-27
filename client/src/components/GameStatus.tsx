@@ -179,10 +179,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       if (status.isEscalation) {
         setDisplayTime(prev => {
           if (prev <= 0) {
+            // Immediately set game over and trigger callback
             setStatus(prev => ({ ...prev, isGameOver: true }));
             if (onTimerEnd) {
               onTimerEnd();
             }
+            clearInterval(timer);
             return 0;
           }
           return prev - 1;
@@ -192,6 +194,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         setDisplayTime(newBaseTime);
         setBaseTime(newBaseTime);
         if (newBaseTime === 0) {
+          // Immediately set escalation and potentially game over
           setStatus(prev => ({ ...prev, isEscalation: true }));
           setDisplayTime(300);
           if (onTimerEnd) {

@@ -29,29 +29,19 @@ export function GameOverDialog() {
         const time = Number(timeRemaining.toString());
         const isOver = gameWon || time <= 0;
 
-        // Add debug logging
-        console.log("GameOverDialog - Game State:", {
-          gameWon,
-          timeRemaining: time,
-          isOver
-        });
-
         if (isOver) {
-          console.log("Game is over, fetching final info");
-          // Fetch game over info
-          const lastPlayer = await contract.lastPlayer();
-          const block = await contract.lastGuessBlock();
-
-          console.log("Final game info:", {
-            lastPlayer,
-            block: block.toString()
-          });
+          // Fetch game over info immediately
+          const [lastPlayer, block] = await Promise.all([
+            contract.lastPlayer(),
+            contract.lastGuessBlock()
+          ]);
 
           setGameInfo({
             lastGuessAddress: lastPlayer || "No last player",
             lastBlock: block ? block.toString() : "Unknown"
           });
 
+          // Force the dialog to show
           setOpen(true);
         }
       } catch (error) {
@@ -59,15 +49,19 @@ export function GameOverDialog() {
       }
     };
 
-    // Check immediately and then every 5 seconds
+    // Check immediately and then every second to ensure we catch the game over state quickly
     checkGameStatus();
-    const interval = setInterval(checkGameStatus, 5000);
+    const interval = setInterval(checkGameStatus, 1000);
 
     return () => clearInterval(interval);
   }, [contract, address]);
 
   return (
-    <Dialog open={open} onOpenChange={() => {}} modal>
+    <Dialog 
+      open={open} 
+      onOpenChange={() => {}}
+      modal={true}
+    >
       <DialogContent 
         className="bg-black text-white border-white" 
         onInteractOutside={(e) => { e.preventDefault(); }}
