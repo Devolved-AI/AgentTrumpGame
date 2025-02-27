@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 
-const CONTRACT_ADDRESS = "0xf4d6635AdC0939b04c18B6Ea971E530A6E157F72";
+const CONTRACT_ADDRESS = "0xA50FF2036D2D5100b1137c47Fd47dC205a346d27";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -850,7 +850,6 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         return state;
       });
 
-      
 
       // Verify network and switch if needed
       const networkValid = await checkNetwork(window.ethereum);
