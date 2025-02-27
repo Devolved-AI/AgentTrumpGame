@@ -4,9 +4,6 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useWeb3Store } from "@/lib/web3";
 import { Brain, RefreshCw } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-
-type ResponseType = 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING';
 
 interface PlayerResponse {
   response: string;
@@ -20,71 +17,38 @@ export function PersuasionScore() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
+  const [trumpMessage, setTrumpMessage] = useState<string | null>(null);
 
   const usedMessagesRef = useRef<Set<string>>(new Set());
-  const usedTacticsRef = useRef<Set<string>>(new Set());
 
-  // Business-focused evaluation terms
-  const DEAL_TERMS = [
-    'deal', 'investment', 'opportunity', 'profit', 'return', 'money', 'business',
-    'market', 'value', 'billion', 'million', 'success', 'win', 'negotiate'
-  ];
+  const processResponse = async (response: string) => {
+    if (!address) return;
 
-  const POWER_TERMS = [
-    'best', 'huge', 'tremendous', 'successful', 'rich', 'smart', 'genius',
-    'winner', 'powerful', 'incredible', 'amazing', 'fantastic'
-  ];
-
-  const THREAT_TERMS = [
-    'sue', 'lawyer', 'court', 'lawsuit', 'legal', 'threat', 'destroy',
-    'bankrupt', 'ruin', 'expose', 'media', 'press'
-  ];
-
-  const evaluateBusinessTactics = (message: string): string[] => {
-    const lowerMessage = message.toLowerCase();
-    const tactics = [...DEAL_TERMS, ...POWER_TERMS].filter(term =>
-      lowerMessage.includes(term) && !usedTacticsRef.current.has(term)
-    );
-    return tactics;
-  };
-
-  const classifyResponse = (response: string): ResponseType => {
-    const lowerResponse = response.toLowerCase();
-
-    if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
-      return 'THREATENING';
-    }
-
-    const businessTactics = evaluateBusinessTactics(response);
-    const hasNewTactics = businessTactics.length > 0;
-
-    if (hasNewTactics) {
-      businessTactics.forEach(tactic => {
-        usedTacticsRef.current.add(tactic);
+    try {
+      const result = await fetch('/api/trump/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: response, address })
       });
 
-      const dealTermsCount = DEAL_TERMS.filter(term =>
-        lowerResponse.includes(term)).length;
-      const powerTermsCount = POWER_TERMS.filter(term =>
-        lowerResponse.includes(term)).length;
-
-      return (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
-    }
-
-    return 'WEAK_PROPOSITION';
-  };
-
-  const resetCaches = async () => {
-    usedMessagesRef.current.clear();
-    usedTacticsRef.current.clear();
-    setLastProcessedResponse(null);
-
-    if (address) {
-      try {
-        await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
-      } catch (error) {
-        console.error("Error clearing score:", error);
+      if (!result.ok) {
+        throw new Error('Failed to process message');
       }
+
+      const data = await result.json();
+      setTrumpMessage(data.response);
+
+      const evaluation = data.evaluation;
+      setScore(evaluation.current_score);
+      setLastProcessedResponse(response);
+
+      if (evaluation.message) {
+        console.log("Trump's evaluation:", evaluation.message);
+      }
+
+    } catch (error) {
+      console.error("Error processing response:", error);
+      setError("Failed to process response");
     }
   };
 
@@ -103,9 +67,6 @@ export function PersuasionScore() {
         responses.exists[index]
       );
 
-      let calculatedScore = 50;
-      let lastResponse = null;
-
       for (const response of validResponses) {
         try {
           let text = response;
@@ -121,46 +82,30 @@ export function PersuasionScore() {
           }
 
           usedMessagesRef.current.add(text);
-          lastResponse = text;
-
-          const responseType = classifyResponse(text);
-          switch (responseType) {
-            case 'DEAL_MAKER':
-              calculatedScore = Math.min(100, calculatedScore + 15);
-              break;
-            case 'BUSINESS_SAVVY':
-              calculatedScore = Math.min(100, calculatedScore + 8);
-              break;
-            case 'WEAK_PROPOSITION':
-              calculatedScore = Math.max(0, calculatedScore - 5);
-              break;
-            case 'THREATENING':
-              calculatedScore = Math.max(0, calculatedScore - 25);
-              break;
-          }
+          await processResponse(text);
         } catch (error) {
           console.error("Error processing response:", error);
         }
       }
-
-      // Update UI immediately
-      setScore(calculatedScore);
-      if (lastResponse) {
-        setLastProcessedResponse(lastResponse);
-      }
-
-      // Update server in background
-      await fetch(`/api/persuasion/${address}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score: calculatedScore })
-      });
 
     } catch (error) {
       console.error("Error calculating score:", error);
       setError("Failed to calculate score");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const resetCaches = async () => {
+    if (!address) return;
+
+    try {
+      await fetch(`/api/trump/reset/${address}`, { method: 'POST' });
+      usedMessagesRef.current.clear();
+      setLastProcessedResponse(null);
+      setTrumpMessage(null);
+    } catch (error) {
+      console.error("Error resetting:", error);
     }
   };
 
@@ -178,7 +123,6 @@ export function PersuasionScore() {
     }
   };
 
-  // Initialize score when component mounts or address changes
   useEffect(() => {
     if (!contract || !address) return;
 
@@ -191,48 +135,39 @@ export function PersuasionScore() {
     initializeScore();
   }, [contract, address]);
 
-  const handleGuessSubmitted = async (
-    player: string,
-    amount: any,
-    multiplier: any,
-    response: string,
-    blockNumber: any,
-    responseIndex: any
-  ) => {
-    if (player.toLowerCase() !== address.toLowerCase()) {
-      return;
-    }
-
-    setIsUpdating(true);
-    try {
-      let text = response;
-      try {
-        const parsed = JSON.parse(response);
-        text = parsed.response;
-      } catch (e) {
-        // Response is not JSON, using raw text
-      }
-
-      // Update the last processed response immediately
-      setLastProcessedResponse(text);
-
-      // Small delay to ensure blockchain state is updated
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Reset and recalculate score
-      await resetCaches();
-      await calculateAndUpdateScore();
-    } catch (error) {
-      console.error("Error updating score after guess:", error);
-      setError("Failed to update score");
-    }
-  };
-
   useEffect(() => {
     if (!contract || !address) return;
 
+    const handleGuessSubmitted = async (
+      player: string,
+      amount: any,
+      multiplier: any,
+      response: string,
+      blockNumber: any,
+      responseIndex: any
+    ) => {
+      if (player.toLowerCase() !== address?.toLowerCase()) return;
+
+      setIsUpdating(true);
+      try {
+        let text = response;
+        try {
+          const parsed = JSON.parse(response);
+          text = parsed.response;
+        } catch (e) {
+          // Response is not JSON, using raw text
+        }
+
+        await processResponse(text);
+      } catch (error) {
+        console.error("Error updating score after guess:", error);
+        setError("Failed to update score");
+      } finally {
+        setIsUpdating(false);
+      }
+    };
+
     try {
-      // Define event handler
       contract.on(
         contract.getEvent("GuessSubmitted"),
         handleGuessSubmitted
@@ -289,7 +224,12 @@ export function PersuasionScore() {
         )}
         {lastProcessedResponse && (
           <p className="text-sm text-gray-500 mt-2">
-            Last processed: "{lastProcessedResponse.slice(0, 50)}..."
+            Your last message: "{lastProcessedResponse.slice(0, 50)}..."
+          </p>
+        )}
+        {trumpMessage && (
+          <p className="text-sm font-medium mt-2 p-2 bg-gray-100 rounded-md">
+            Trump's response: "{trumpMessage}"
           </p>
         )}
         {score >= 100 && (
