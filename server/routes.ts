@@ -62,11 +62,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       newScore = Math.max(0, Math.min(100, newScore)); // Clamp between 0 and 100
       scoreCache.set(address, newScore);
 
+      // Format response to clearly show Python script evaluation
       res.json({
         aiResponse,
-        evaluation: evaluation.message,
-        scoreChange: evaluation.scoreChange,
-        newScore
+        pythonEvaluation: {
+          message: evaluation.message,
+          scoreChange: evaluation.scoreChange,
+        },
+        newScore,
+        source: {
+          response: "OpenAI API",
+          evaluation: "Python Trump Agent"
+        }
       });
     } catch (error) {
       console.error('Error processing message:', error);
