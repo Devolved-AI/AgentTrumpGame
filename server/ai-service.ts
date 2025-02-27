@@ -1,8 +1,12 @@
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import OpenAI from 'openai';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const execAsync = promisify(exec);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface ResponseResult {
   response: string;
@@ -11,12 +15,19 @@ interface ResponseResult {
 }
 
 export class TrumpAIService {
-  private static readonly POSITIVE_KEYWORDS = ['important', 'help', 'critical', 'urgent', 'press', 'essential', 'necessary'];
-  private static readonly NEGATIVE_KEYWORDS = ['waste', 'unnecessary', 'irrelevant', 'frivolous'];
-  
+  private readonly pythonScript: string;
+  private readonly openai: OpenAI;
+
+  constructor() {
+    this.pythonScript = path.join(__dirname, 'trump_agent.py');
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
   async generateResponse(userInput: string): Promise<string> {
     try {
-      const completion = await openai.chat.completions.create({
+      const completion = await this.openai.chat.completions.create({
         model: "gpt-4",
         messages: [
           { role: "system", content: "You are Donald Trump. Respond in a Donald Trump-like manner." },
@@ -25,7 +36,7 @@ export class TrumpAIService {
         temperature: 0.9,
         max_tokens: 1000
       });
-      
+
       return completion.choices[0].message.content || "Believe me, something went wrong with my response!";
     } catch (error) {
       console.error("Error generating AI response:", error);
@@ -33,70 +44,28 @@ export class TrumpAIService {
     }
   }
 
-  evaluatePersuasion(userInput: string): ResponseResult {
-    let scoreChange = 0;
-    const messages: string[] = [];
+  async evaluatePersuasion(userInput: string): Promise<ResponseResult> {
+    try {
+      // Call the Python script with the OpenAI API key and user input
+      const { stdout } = await execAsync(
+        `python3 "${this.pythonScript}" "${process.env.OPENAI_API_KEY}" "${userInput.replace(/"/g, '\\"')}"`
+      );
 
-    // Analyze input length
-    const words = userInput.split(/\s+/);
-    if (words.length < 5) {
-      messages.push("Too short. You've got to put in more effort.");
-      scoreChange -= Math.floor(Math.random() * 6) + 5; // Random 5-10 penalty
-    } else if (words.length > 40) {
-      messages.push("Too much rambling. Get to the point!");
-      scoreChange -= Math.floor(Math.random() * 6) + 3; // Random 3-8 penalty
+      const evaluation = JSON.parse(stdout);
+
+      return {
+        response: evaluation.message,
+        scoreChange: evaluation.score_change,
+        message: evaluation.message
+      };
+    } catch (error) {
+      console.error('Error running Python script:', error);
+      return {
+        response: "Error evaluating message",
+        scoreChange: 0,
+        message: "Error evaluating message"
+      };
     }
-
-    // Check for keywords
-    const inputLower = userInput.toLowerCase();
-    TrumpAIService.POSITIVE_KEYWORDS.forEach(word => {
-      if (inputLower.includes(word)) {
-        scoreChange += Math.floor(Math.random() * 3) + 1;
-      }
-    });
-
-    TrumpAIService.NEGATIVE_KEYWORDS.forEach(word => {
-      if (inputLower.includes(word)) {
-        scoreChange -= Math.floor(Math.random() * 4) + 2;
-      }
-    });
-
-    // Check for contradictions
-    if (inputLower.includes('urgent') && inputLower.includes('not important')) {
-      messages.push("Contradictory statement detected. What are you trying to say?");
-      scoreChange -= 10;
-    }
-
-    // Check for repetitive words
-    const uniqueWords = new Set(words.map(w => w.toLowerCase()));
-    if (uniqueWords.size < words.length * 0.8) {
-      messages.push("Too repetitive. Try saying something more original.");
-      scoreChange -= Math.floor(Math.random() * 6) + 5;
-    }
-
-    // Logical structure bonus
-    if (inputLower.includes('because')) {
-      messages.push("I see you're trying to explain. Let's see if it's convincing...");
-      if (inputLower.includes('and') || inputLower.includes('therefore')) {
-        scoreChange += Math.floor(Math.random() * 5) + 3;
-      } else {
-        messages.push("Your reasoning is weak. You'll need to try harder.");
-        scoreChange -= Math.floor(Math.random() * 6) + 5;
-      }
-    }
-
-    // Random setbacks (15% chance)
-    if (Math.random() < 0.15) {
-      const setback = Math.floor(Math.random() * 16) + 5;
-      messages.push(`Bad luck. You just lost ${setback} points.`);
-      scoreChange -= setback;
-    }
-
-    return {
-      response: messages.join(" "),
-      scoreChange,
-      message: messages.join("\n")
-    };
   }
 }
 

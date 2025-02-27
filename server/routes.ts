@@ -52,8 +52,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentScore = scoreCache.get(address) ?? 50;
 
       // Evaluate persuasion and generate AI response
-      const evaluation = trumpAI.evaluatePersuasion(message);
-      const aiResponse = await trumpAI.generateResponse(message);
+      const [evaluation, aiResponse] = await Promise.all([
+        trumpAI.evaluatePersuasion(message),
+        trumpAI.generateResponse(message)
+      ]);
 
       // Calculate and update new score
       let newScore = currentScore + evaluation.scoreChange;
