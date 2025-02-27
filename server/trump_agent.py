@@ -11,21 +11,6 @@ class AgentTrump:
         self.NEGATIVE_KEYWORDS = ["waste", "unnecessary", "irrelevant", "frivolous"]
         openai.api_key = sys.argv[1]  # API key passed as argument
 
-    async def generate_response(self, user_input: str) -> str:
-        try:
-            response = await openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are Donald Trump. Respond in a Donald Trump-like manner."},
-                    {"role": "user", "content": user_input},
-                ],
-                temperature=0.9,
-                max_tokens=1000
-            )
-            return response['choices'][0]['message']['content'].strip()
-        except Exception as e:
-            return f"Error generating response: {e}"
-
     def evaluate_persuasion(self, user_input: str) -> Dict[str, Any]:
         score_change = 0
         messages = []
@@ -60,6 +45,7 @@ class AgentTrump:
             messages.append("I see you're trying to explain. Let's see if it's convincing...")
             if "and" in input_lower or "therefore" in input_lower:
                 score_change += random.randint(3, 7)
+                messages.append("Strong reasoning there! Keep it up!")
             else:
                 messages.append("Your reasoning is weak. You'll need to try harder.")
                 score_change -= random.randint(5, 10)
@@ -69,6 +55,10 @@ class AgentTrump:
             messages.append(f"Bad luck. You just lost {setback} points.")
             score_change -= setback
 
+        # Always add at least one evaluation message
+        if not messages:
+            messages.append("Keep trying to convince me, folks!")
+
         return {
             "score_change": score_change,
             "messages": messages,
@@ -77,12 +67,21 @@ class AgentTrump:
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python trump_agent.py <api_key> <input_message>")
+        print(json.dumps({
+            "score_change": 0,
+            "messages": ["Error: Invalid arguments"],
+            "message": "Error: Invalid arguments"
+        }))
         sys.exit(1)
 
-    api_key = sys.argv[1]  # OpenAI API key
-    user_input = sys.argv[2]  # User's message
-
-    agent = AgentTrump()
-    evaluation = agent.evaluate_persuasion(user_input)
-    print(json.dumps(evaluation))
+    try:
+        agent = AgentTrump()
+        evaluation = agent.evaluate_persuasion(sys.argv[2])
+        print(json.dumps(evaluation))
+    except Exception as e:
+        print(json.dumps({
+            "score_change": 0,
+            "messages": [f"Error: {str(e)}"],
+            "message": f"Error: {str(e)}"
+        }))
+        sys.exit(1)
