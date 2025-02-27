@@ -43,6 +43,7 @@ interface Message {
   isUser: boolean;
   exists?: boolean;
   transaction?: TransactionState;
+  isEvaluation?: boolean; // Added for styling
 }
 
 export function GuessForm({ onTimerEnd }: GuessFormProps) {
@@ -229,8 +230,21 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       });
 
       let trumpResponse: string | null = null;
+      let pythonEvaluation: { message: string; scoreChange: number } | null = null;
       try {
-        trumpResponse = await generateTrumpResponse(data.response);
+        const response = await fetch('/api/submit-message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: data.response,
+            address: address
+          })
+        });
+        const result = await response.json();
+        trumpResponse = result.aiResponse;
+        pythonEvaluation = result.pythonEvaluation;
       } catch (error) {
         console.error("Error generating response:", error);
       }
@@ -247,6 +261,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       });
 
       if (receipt.status === 1) {
+        // Add Trump's AI response
         if (trumpResponse) {
           setMessages(prev => [
             ...prev,
@@ -256,13 +271,17 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
               isUser: false
             }
           ]);
-        } else {
+        }
+
+        // Add Python evaluation message
+        if (pythonEvaluation && pythonEvaluation.message) {
           setMessages(prev => [
             ...prev,
             {
-              text: "Interesting... Keep trying to convince me! 🤔",
+              text: `🤖 Evaluation: ${pythonEvaluation.message} (Score change: ${pythonEvaluation.scoreChange > 0 ? '+' : ''}${pythonEvaluation.scoreChange})`,
               timestamp: Math.floor(Date.now() / 1000),
-              isUser: false
+              isUser: false,
+              isEvaluation: true
             }
           ]);
         }
@@ -330,12 +349,14 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                       className={`max-w-[70%] p-3 rounded-2xl ${
                         message.isUser
                           ? 'bg-blue-500 text-white rounded-tr-sm'
-                          : 'bg-gray-300 dark:bg-gray-700 rounded-tl-sm'
+                          : message.isEvaluation
+                            ? 'bg-purple-500 text-white rounded-tl-sm'
+                            : 'bg-gray-300 dark:bg-gray-700 rounded-tl-sm'
                       }`}
                     >
                       <p className="text-sm">{message.text}</p>
                       <p className={`text-[10px] ${
-                        message.isUser ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                        message.isUser ? 'text-blue-100' : message.isEvaluation ? 'text-purple-100' : 'text-gray-500 dark:text-gray-400'
                       } mt-1`}>
                         {formatInTimeZone(
                           message.timestamp * 1000,
@@ -389,8 +410,8 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                     type="submit"
                     disabled={isSubmitting || isGameOver}
                     className={`rounded-full p-3 text-white ${
-                      isGameOver 
-                        ? 'bg-gray-400 cursor-not-allowed' 
+                      isGameOver
+                        ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-blue-500 hover:bg-blue-600'
                     }`}
                     size="icon"
