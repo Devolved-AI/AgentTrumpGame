@@ -80,9 +80,9 @@ if __name__ == "__main__":
         print("Usage: python trump_agent.py <api_key> <input_message>")
         sys.exit(1)
 
-    api_key = sys.argv[1]
-    user_input = sys.argv[2]
-    
+    api_key = sys.argv[1]  # OpenAI API key
+    user_input = sys.argv[2]  # User's message
+
     agent = AgentTrump()
     evaluation = agent.evaluate_persuasion(user_input)
     print(json.dumps(evaluation))
