@@ -7,7 +7,6 @@ import { Brain, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 type ResponseType = 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING';
-type DifficultyLevel = 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
 
 interface PlayerResponse {
   response: string;
@@ -21,7 +20,6 @@ export function PersuasionScore() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
-  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>('EASY');
 
   const usedMessagesRef = useRef<Set<string>>(new Set());
   const usedTacticsRef = useRef<Set<string>>(new Set());
@@ -42,24 +40,6 @@ export function PersuasionScore() {
     'bankrupt', 'ruin', 'expose', 'media', 'press'
   ];
 
-  // Calculate required tactics based on current score
-  const getRequiredTactics = (currentScore: number): number => {
-    if (currentScore < 30) return 1;
-    if (currentScore < 50) return 2;
-    if (currentScore < 70) return 3;
-    if (currentScore < 90) return 4;
-    return 5;
-  };
-
-  // Calculate score adjustment based on current score
-  const getScoreAdjustment = (currentScore: number, isPositive: boolean): number => {
-    const baseAdjustment = isPositive ? 8 : 5;
-    const multiplier = isPositive ? 
-      Math.max(0.5, 1 - (currentScore / 150)) : 
-      Math.min(2, 1 + (currentScore / 100));
-    return baseAdjustment * multiplier;
-  };
-
   const evaluateBusinessTactics = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
     const tactics = [...DEAL_TERMS, ...POWER_TERMS].filter(term =>
@@ -68,7 +48,7 @@ export function PersuasionScore() {
     return tactics;
   };
 
-  const classifyResponse = (response: string, currentScore: number): ResponseType => {
+  const classifyResponse = (response: string): ResponseType => {
     const lowerResponse = response.toLowerCase();
 
     if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
@@ -76,8 +56,7 @@ export function PersuasionScore() {
     }
 
     const businessTactics = evaluateBusinessTactics(response);
-    const requiredTactics = getRequiredTactics(currentScore);
-    const hasNewTactics = businessTactics.length >= requiredTactics;
+    const hasNewTactics = businessTactics.length > 0;
 
     if (hasNewTactics) {
       businessTactics.forEach(tactic => {
@@ -89,22 +68,24 @@ export function PersuasionScore() {
       const powerTermsCount = POWER_TERMS.filter(term =>
         lowerResponse.includes(term)).length;
 
-      // Higher requirements for DEAL_MAKER at higher scores
-      const isDealMaker = currentScore < 70 ?
-        (dealTermsCount >= 2 && powerTermsCount >= 1) :
-        (dealTermsCount >= 3 && powerTermsCount >= 2);
-
-      return isDealMaker ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
+      return (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
     }
 
     return 'WEAK_PROPOSITION';
   };
 
-  const updateDifficultyLevel = (currentScore: number) => {
-    if (currentScore < 30) setDifficultyLevel('EASY');
-    else if (currentScore < 60) setDifficultyLevel('MEDIUM');
-    else if (currentScore < 85) setDifficultyLevel('HARD');
-    else setDifficultyLevel('EXPERT');
+  const resetCaches = async () => {
+    usedMessagesRef.current.clear();
+    usedTacticsRef.current.clear();
+    setLastProcessedResponse(null);
+
+    if (address) {
+      try {
+        await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
+      } catch (error) {
+        console.error("Error clearing score:", error);
+      }
+    }
   };
 
   const calculateAndUpdateScore = async () => {
@@ -115,7 +96,6 @@ export function PersuasionScore() {
 
       if (!responses || !responses.responses || responses.responses.length === 0) {
         setScore(50);
-        updateDifficultyLevel(50);
         return;
       }
 
@@ -143,20 +123,19 @@ export function PersuasionScore() {
           usedMessagesRef.current.add(text);
           lastResponse = text;
 
-          const responseType = classifyResponse(text, calculatedScore);
-
+          const responseType = classifyResponse(text);
           switch (responseType) {
             case 'DEAL_MAKER':
-              calculatedScore = Math.min(100, calculatedScore + getScoreAdjustment(calculatedScore, true) * 1.5);
+              calculatedScore = Math.min(100, calculatedScore + 15);
               break;
             case 'BUSINESS_SAVVY':
-              calculatedScore = Math.min(100, calculatedScore + getScoreAdjustment(calculatedScore, true));
+              calculatedScore = Math.min(100, calculatedScore + 8);
               break;
             case 'WEAK_PROPOSITION':
-              calculatedScore = Math.max(0, calculatedScore - getScoreAdjustment(calculatedScore, false));
+              calculatedScore = Math.max(0, calculatedScore - 5);
               break;
             case 'THREATENING':
-              calculatedScore = Math.max(0, calculatedScore - getScoreAdjustment(calculatedScore, false) * 2);
+              calculatedScore = Math.max(0, calculatedScore - 25);
               break;
           }
         } catch (error) {
@@ -164,10 +143,8 @@ export function PersuasionScore() {
         }
       }
 
-      // Update UI and difficulty level
+      // Update UI immediately
       setScore(calculatedScore);
-      updateDifficultyLevel(calculatedScore);
-
       if (lastResponse) {
         setLastProcessedResponse(lastResponse);
       }
@@ -187,20 +164,6 @@ export function PersuasionScore() {
     }
   };
 
-  const resetCaches = async () => {
-    usedMessagesRef.current.clear();
-    usedTacticsRef.current.clear();
-    setLastProcessedResponse(null);
-
-    if (address) {
-      try {
-        await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
-      } catch (error) {
-        console.error("Error clearing score:", error);
-      }
-    }
-  };
-
   const handleRefresh = async () => {
     if (!contract || !address || isUpdating) return;
 
@@ -215,6 +178,7 @@ export function PersuasionScore() {
     }
   };
 
+  // Initialize score when component mounts or address changes
   useEffect(() => {
     if (!contract || !address) return;
 
@@ -235,7 +199,7 @@ export function PersuasionScore() {
     blockNumber: any,
     responseIndex: any
   ) => {
-    if (!address || player.toLowerCase() !== address.toLowerCase()) {
+    if (player.toLowerCase() !== address.toLowerCase()) {
       return;
     }
 
@@ -249,8 +213,13 @@ export function PersuasionScore() {
         // Response is not JSON, using raw text
       }
 
+      // Update the last processed response immediately
       setLastProcessedResponse(text);
+
+      // Small delay to ensure blockchain state is updated
       await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Reset and recalculate score
       await resetCaches();
       await calculateAndUpdateScore();
     } catch (error) {
@@ -263,6 +232,7 @@ export function PersuasionScore() {
     if (!contract || !address) return;
 
     try {
+      // Define event handler
       contract.on(
         contract.getEvent("GuessSubmitted"),
         handleGuessSubmitted
@@ -288,7 +258,7 @@ export function PersuasionScore() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5" />
-          Persuasion Score ({difficultyLevel})
+          Persuasion Score
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -327,13 +297,6 @@ export function PersuasionScore() {
             Maximum persuasion achieved! You've made an offer he can't refuse!
           </p>
         )}
-        <p className="text-sm mt-2">
-          Current Difficulty: {difficultyLevel} - 
-          {difficultyLevel === 'EASY' && "Basic persuasion required"}
-          {difficultyLevel === 'MEDIUM' && "More business terms needed"}
-          {difficultyLevel === 'HARD' && "Advanced negotiation required"}
-          {difficultyLevel === 'EXPERT' && "Master negotiator level"}
-        </p>
       </CardContent>
     </Card>
   );
