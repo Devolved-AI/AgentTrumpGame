@@ -46,10 +46,18 @@ export class TrumpAIService {
 
   async evaluatePersuasion(userInput: string): Promise<ResponseResult> {
     try {
+      console.log('Executing Python script for evaluation:', this.pythonScript);
+
       // Call the Python script with the OpenAI API key and user input
-      const { stdout } = await execAsync(
+      const { stdout, stderr } = await execAsync(
         `python3 "${this.pythonScript}" "${process.env.OPENAI_API_KEY}" "${userInput.replace(/"/g, '\\"')}"`
       );
+
+      if (stderr) {
+        console.error('Python script stderr:', stderr);
+      }
+
+      console.log('Python script stdout:', stdout);
 
       const evaluation = JSON.parse(stdout);
 
