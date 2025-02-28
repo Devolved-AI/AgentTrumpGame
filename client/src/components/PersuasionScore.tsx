@@ -57,35 +57,33 @@ export function PersuasionScore() {
     return Math.random() > RESISTANCE_THRESHOLD;
   };
 
-  const classifyResponse = (response: string): ResponseType => {
-    const lowerResponse = response.toLowerCase();
+  const classifyResponse = (text: string): 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING' => {
+    const textLower = text.toLowerCase();
 
-    if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
+    // Count occurrences of terms in each category
+    const dealTermCount = DEAL_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
+    const powerTermCount = POWER_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
+    const threatTermCount = THREAT_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
+
+    // Check for threatens first as they have the highest penalty
+    if (threatTermCount >= 2) {
       return 'THREATENING';
     }
 
-    const businessTactics = evaluateBusinessTactics(response);
-    const hasNewTactics = businessTactics.length > 0;
-
-    if (hasNewTactics) {
-      businessTactics.forEach(tactic => {
-        usedTacticsRef.current.add(tactic);
-      });
-
-      const dealTermsCount = DEAL_TERMS.filter(term =>
-        lowerResponse.includes(term)).length;
-      const powerTermsCount = POWER_TERMS.filter(term =>
-        lowerResponse.includes(term)).length;
-
-      if (dealTermsCount >= 3 && powerTermsCount >= 2) {
-        return passesResistanceCheck() ? 'DEAL_MAKER' : 'WEAK_PROPOSITION';
-      } else if (dealTermsCount >= 2 || powerTermsCount >= 2) {
-        return passesResistanceCheck() ? 'BUSINESS_SAVVY' : 'WEAK_PROPOSITION';
-      }
+    // Check for strong deal making language
+    if (dealTermCount >= 3 && powerTermCount >= 2) {
+      return 'DEAL_MAKER';
     }
 
+    // Check for business savvy language
+    if (dealTermCount >= 2 || powerTermCount >= 3) {
+      return 'BUSINESS_SAVVY';
+    }
+
+    // Default to weak proposition
     return 'WEAK_PROPOSITION';
   };
+
 
   const resetCaches = async () => {
     usedMessagesRef.current.clear();
@@ -124,7 +122,7 @@ export function PersuasionScore() {
       const scoreResponse = await fetch(`/api/persuasion/${address}`);
       const scoreData = await scoreResponse.json();
       let calculatedScore = scoreData?.score || 50;
-      
+
       const responses = await contract.getAllPlayerResponses(address);
 
       if (!responses || !responses.responses || responses.responses.length === 0) {
@@ -138,7 +136,7 @@ export function PersuasionScore() {
 
       let lastResponse = null;
       let mostRecentTimestamp = BigInt(0);
-      
+
       // Create a temporary set for tracking processed messages in this session
       const tempProcessedMessages = new Set(usedMessagesRef.current);
 
@@ -155,7 +153,7 @@ export function PersuasionScore() {
           if (usedMessagesRef.current.has(text)) {
             continue;
           }
-          
+
           // Track the most recent response for display
           const index = validResponses.indexOf(response);
           const timestamp = responses.timestamps[index];
@@ -212,26 +210,26 @@ export function PersuasionScore() {
 
   const handleRefresh = async () => {
     if (!contract || !address || isUpdating) return;
-    
+
     setIsUpdating(true);
     setError(null);
-    
+
     try {
       // Just fetch the current score from the API without recalculating
       const response = await fetch(`/api/persuasion/${address}`);
       const data = await response.json();
-      
+
       if (data && typeof data.score === 'number') {
         setScore(data.score);
       }
-      
+
       // Update the last response display without changing the score
       const responses = await contract.getAllPlayerResponses(address);
       if (responses && responses.responses && responses.responses.length > 0) {
         const validResponses = responses.responses.filter((response: string, index: number) =>
           responses.exists[index]
         );
-        
+
         if (validResponses.length > 0) {
           const lastResponseText = validResponses[validResponses.length - 1];
           let text = lastResponseText;
@@ -292,11 +290,11 @@ export function PersuasionScore() {
       // Process the new response
       if (!usedMessagesRef.current.has(text)) {
         usedMessagesRef.current.add(text);
-        
+
         // Calculate score for this specific response
         const responseType = classifyResponse(text);
         let newScore = score;
-        
+
         switch (responseType) {
           case 'DEAL_MAKER':
             newScore = Math.min(100, newScore + 10);
@@ -311,23 +309,23 @@ export function PersuasionScore() {
             newScore = Math.max(0, newScore - 75);
             break;
         }
-        
+
         // Update the UI immediately with the new score
         setScore(newScore);
-        
+
         // Send the updated score to the server
         await fetch(`/api/persuasion/${address}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ score: newScore })
         });
-        
+
         // Check if game should end
         if (newScore >= 100 && !hasTriggeredGameEnd) {
           await endGameForAll();
         }
       }
-      
+
       setIsUpdating(false);
     } catch (error) {
       console.error("Error updating score after guess:", error);
