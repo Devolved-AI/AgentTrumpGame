@@ -120,10 +120,15 @@ export function PersuasionScore() {
     if (!contract || !address) return;
 
     try {
+      // First get the current score from the API as our starting point
+      const scoreResponse = await fetch(`/api/persuasion/${address}`);
+      const scoreData = await scoreResponse.json();
+      let calculatedScore = scoreData?.score || 50;
+      
       const responses = await contract.getAllPlayerResponses(address);
 
       if (!responses || !responses.responses || responses.responses.length === 0) {
-        setScore(50);
+        setScore(calculatedScore);
         return;
       }
 
@@ -131,9 +136,11 @@ export function PersuasionScore() {
         responses.exists[index]
       );
 
-      let calculatedScore = 50;
       let lastResponse = null;
       let mostRecentTimestamp = BigInt(0);
+      
+      // Create a temporary set for tracking processed messages in this session
+      const tempProcessedMessages = new Set(usedMessagesRef.current);
 
       for (const response of validResponses) {
         try {
@@ -206,25 +213,42 @@ export function PersuasionScore() {
   const handleRefresh = async () => {
     if (!contract || !address || isUpdating) return;
     
-    // Fetch the current score from the API first
+    setIsUpdating(true);
+    setError(null);
+    
     try {
+      // Just fetch the current score from the API without recalculating
       const response = await fetch(`/api/persuasion/${address}`);
       const data = await response.json();
+      
       if (data && typeof data.score === 'number') {
         setScore(data.score);
       }
-    } catch (error) {
-      console.error("Error fetching current score:", error);
-    }
-
-    setIsUpdating(true);
-    setError(null);
-    try {
-      await resetCaches();
-      await calculateAndUpdateScore();
+      
+      // Update the last response display without changing the score
+      const responses = await contract.getAllPlayerResponses(address);
+      if (responses && responses.responses && responses.responses.length > 0) {
+        const validResponses = responses.responses.filter((response: string, index: number) =>
+          responses.exists[index]
+        );
+        
+        if (validResponses.length > 0) {
+          const lastResponseText = validResponses[validResponses.length - 1];
+          let text = lastResponseText;
+          try {
+            const parsed = JSON.parse(lastResponseText);
+            text = parsed.response;
+          } catch (e) {
+            // Not JSON, using raw text
+          }
+          setLastProcessedResponse(text);
+        }
+      }
     } catch (error) {
       console.error("Error refreshing score:", error);
       setError("Failed to refresh score");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
