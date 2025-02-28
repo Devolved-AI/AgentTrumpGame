@@ -133,6 +133,7 @@ export function PersuasionScore() {
 
       let calculatedScore = 50;
       let lastResponse = null;
+      let mostRecentTimestamp = BigInt(0);
 
       for (const response of validResponses) {
         try {
@@ -146,6 +147,14 @@ export function PersuasionScore() {
 
           if (usedMessagesRef.current.has(text)) {
             continue;
+          }
+          
+          // Track the most recent response for display
+          const index = validResponses.indexOf(response);
+          const timestamp = responses.timestamps[index];
+          if (timestamp > mostRecentTimestamp) {
+            mostRecentTimestamp = timestamp;
+            lastResponse = text;
           }
 
           usedMessagesRef.current.add(text);
@@ -196,6 +205,17 @@ export function PersuasionScore() {
 
   const handleRefresh = async () => {
     if (!contract || !address || isUpdating) return;
+    
+    // Fetch the current score from the API first
+    try {
+      const response = await fetch(`/api/persuasion/${address}`);
+      const data = await response.json();
+      if (data && typeof data.score === 'number') {
+        setScore(data.score);
+      }
+    } catch (error) {
+      console.error("Error fetching current score:", error);
+    }
 
     setIsUpdating(true);
     setError(null);
@@ -242,15 +262,53 @@ export function PersuasionScore() {
         // Response is not JSON, using raw text
       }
 
+      // Immediately set the last processed response for UI feedback
       setLastProcessedResponse(text);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      await resetCaches();
-      await calculateAndUpdateScore();
+      // Process the new response
+      if (!usedMessagesRef.current.has(text)) {
+        usedMessagesRef.current.add(text);
+        
+        // Calculate score for this specific response
+        const responseType = classifyResponse(text);
+        let newScore = score;
+        
+        switch (responseType) {
+          case 'DEAL_MAKER':
+            newScore = Math.min(100, newScore + 10);
+            break;
+          case 'BUSINESS_SAVVY':
+            newScore = Math.min(100, newScore + 5);
+            break;
+          case 'WEAK_PROPOSITION':
+            newScore = Math.max(0, newScore - 8);
+            break;
+          case 'THREATENING':
+            newScore = Math.max(0, newScore - 75);
+            break;
+        }
+        
+        // Update the UI immediately with the new score
+        setScore(newScore);
+        
+        // Send the updated score to the server
+        await fetch(`/api/persuasion/${address}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ score: newScore })
+        });
+        
+        // Check if game should end
+        if (newScore >= 100 && !hasTriggeredGameEnd) {
+          await endGameForAll();
+        }
+      }
+      
+      setIsUpdating(false);
     } catch (error) {
       console.error("Error updating score after guess:", error);
       setError("Failed to update score");
+      setIsUpdating(false);
     }
   };
 
