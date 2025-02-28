@@ -24,21 +24,27 @@ export function PersuasionScore() {
   const usedMessagesRef = useRef<Set<string>>(new Set());
   const usedTacticsRef = useRef<Set<string>>(new Set());
 
-  // Business-focused evaluation terms
+  // Enhanced business-focused evaluation terms
   const DEAL_TERMS = [
     'deal', 'investment', 'opportunity', 'profit', 'return', 'money', 'business',
-    'market', 'value', 'billion', 'million', 'success', 'win', 'negotiate'
+    'market', 'value', 'billion', 'million', 'success', 'win', 'negotiate',
+    'revenue', 'growth', 'partnership', 'acquisition', 'merger', 'scalable'
   ];
 
   const POWER_TERMS = [
     'best', 'huge', 'tremendous', 'successful', 'rich', 'smart', 'genius',
-    'winner', 'powerful', 'incredible', 'amazing', 'fantastic'
+    'winner', 'powerful', 'incredible', 'amazing', 'fantastic', 'exceptional',
+    'outstanding', 'revolutionary', 'innovative', 'disruptive', 'game-changing'
   ];
 
   const THREAT_TERMS = [
     'sue', 'lawyer', 'court', 'lawsuit', 'legal', 'threat', 'destroy',
-    'bankrupt', 'ruin', 'expose', 'media', 'press'
+    'bankrupt', 'ruin', 'expose', 'media', 'press', 'regulation',
+    'investigation', 'competitor', 'scandal', 'failure', 'risk'
   ];
+
+  // Resistance threshold (85%)
+  const RESISTANCE_THRESHOLD = 0.85;
 
   const evaluateBusinessTactics = (message: string): string[] => {
     const lowerMessage = message.toLowerCase();
@@ -48,9 +54,14 @@ export function PersuasionScore() {
     return tactics;
   };
 
+  const passesResistanceCheck = (): boolean => {
+    return Math.random() > RESISTANCE_THRESHOLD;
+  };
+
   const classifyResponse = (response: string): ResponseType => {
     const lowerResponse = response.toLowerCase();
 
+    // Check for threatening terms first (immediate penalty)
     if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
       return 'THREATENING';
     }
@@ -68,7 +79,12 @@ export function PersuasionScore() {
       const powerTermsCount = POWER_TERMS.filter(term =>
         lowerResponse.includes(term)).length;
 
-      return (dealTermsCount >= 2 && powerTermsCount >= 1) ? 'DEAL_MAKER' : 'BUSINESS_SAVVY';
+      // More stringent requirements for positive classifications
+      if (dealTermsCount >= 3 && powerTermsCount >= 2) {
+        return passesResistanceCheck() ? 'DEAL_MAKER' : 'WEAK_PROPOSITION';
+      } else if (dealTermsCount >= 2 || powerTermsCount >= 2) {
+        return passesResistanceCheck() ? 'BUSINESS_SAVVY' : 'WEAK_PROPOSITION';
+      }
     }
 
     return 'WEAK_PROPOSITION';
@@ -126,16 +142,20 @@ export function PersuasionScore() {
           const responseType = classifyResponse(text);
           switch (responseType) {
             case 'DEAL_MAKER':
-              calculatedScore = Math.min(100, calculatedScore + 15);
+              // Harder to increase score, even with DEAL_MAKER
+              calculatedScore = Math.min(100, calculatedScore + 10);
               break;
             case 'BUSINESS_SAVVY':
-              calculatedScore = Math.min(100, calculatedScore + 8);
+              // Smaller increase for BUSINESS_SAVVY
+              calculatedScore = Math.min(100, calculatedScore + 5);
               break;
             case 'WEAK_PROPOSITION':
-              calculatedScore = Math.max(0, calculatedScore - 5);
+              // Bigger penalty for weak propositions
+              calculatedScore = Math.max(0, calculatedScore - 8);
               break;
             case 'THREATENING':
-              calculatedScore = Math.max(0, calculatedScore - 25);
+              // Severe penalty for threats
+              calculatedScore = Math.max(0, calculatedScore - 30);
               break;
           }
         } catch (error) {
@@ -199,7 +219,7 @@ export function PersuasionScore() {
     blockNumber: any,
     responseIndex: any
   ) => {
-    if (player.toLowerCase() !== address.toLowerCase()) {
+    if (player.toLowerCase() !== address?.toLowerCase()) {
       return;
     }
 
@@ -213,13 +233,11 @@ export function PersuasionScore() {
         // Response is not JSON, using raw text
       }
 
-      // Update the last processed response immediately
       setLastProcessedResponse(text);
 
       // Small delay to ensure blockchain state is updated
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Reset and recalculate score
       await resetCaches();
       await calculateAndUpdateScore();
     } catch (error) {
@@ -232,7 +250,6 @@ export function PersuasionScore() {
     if (!contract || !address) return;
 
     try {
-      // Define event handler
       contract.on(
         contract.getEvent("GuessSubmitted"),
         handleGuessSubmitted
