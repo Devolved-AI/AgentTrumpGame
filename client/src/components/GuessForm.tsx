@@ -108,12 +108,9 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         }
       } catch (error) {
         console.error("Error loading responses:", error);
+        // Removed toast notification for better UX
         if (mounted) {
-          toast({
-            title: "Error",
-            description: "Failed to load message history",
-            variant: "destructive"
-          });
+          setMessages([WELCOME_MESSAGE]); // Reset to welcome message on error
         }
       }
     };
@@ -389,8 +386,8 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                     type="submit"
                     disabled={isSubmitting || isGameOver}
                     className={`rounded-full p-3 text-white ${
-                      isGameOver 
-                        ? 'bg-gray-400 cursor-not-allowed' 
+                      isGameOver
+                        ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-blue-500 hover:bg-blue-600'
                     }`}
                     size="icon"
