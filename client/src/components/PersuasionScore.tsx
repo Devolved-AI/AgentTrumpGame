@@ -20,11 +20,11 @@ export function PersuasionScore() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
+  const [hasTriggeredGameEnd, setHasTriggeredGameEnd] = useState(false);
 
   const usedMessagesRef = useRef<Set<string>>(new Set());
   const usedTacticsRef = useRef<Set<string>>(new Set());
 
-  // Enhanced business-focused evaluation terms
   const DEAL_TERMS = [
     'deal', 'investment', 'opportunity', 'profit', 'return', 'money', 'business',
     'market', 'value', 'billion', 'million', 'success', 'win', 'negotiate',
@@ -43,7 +43,6 @@ export function PersuasionScore() {
     'investigation', 'competitor', 'scandal', 'failure', 'risk'
   ];
 
-  // Resistance threshold (85%)
   const RESISTANCE_THRESHOLD = 0.85;
 
   const evaluateBusinessTactics = (message: string): string[] => {
@@ -61,7 +60,6 @@ export function PersuasionScore() {
   const classifyResponse = (response: string): ResponseType => {
     const lowerResponse = response.toLowerCase();
 
-    // Check for threatening terms first (immediate penalty)
     if (THREAT_TERMS.some(term => lowerResponse.includes(term))) {
       return 'THREATENING';
     }
@@ -79,7 +77,6 @@ export function PersuasionScore() {
       const powerTermsCount = POWER_TERMS.filter(term =>
         lowerResponse.includes(term)).length;
 
-      // More stringent requirements for positive classifications
       if (dealTermsCount >= 3 && powerTermsCount >= 2) {
         return passesResistanceCheck() ? 'DEAL_MAKER' : 'WEAK_PROPOSITION';
       } else if (dealTermsCount >= 2 || powerTermsCount >= 2) {
@@ -101,6 +98,21 @@ export function PersuasionScore() {
       } catch (error) {
         console.error("Error clearing score:", error);
       }
+    }
+  };
+
+  const endGameForAll = async () => {
+    if (!contract || !address || hasTriggeredGameEnd) return;
+
+    try {
+      console.log("Attempting to end game with winner:", address);
+      const tx = await contract.buttonPushed(address);
+      await tx.wait();
+      setHasTriggeredGameEnd(true);
+      console.log("Game ended successfully");
+    } catch (error) {
+      console.error("Error ending game:", error);
+      setError("Failed to end game");
     }
   };
 
@@ -142,19 +154,15 @@ export function PersuasionScore() {
           const responseType = classifyResponse(text);
           switch (responseType) {
             case 'DEAL_MAKER':
-              // Harder to increase score, even with DEAL_MAKER
               calculatedScore = Math.min(100, calculatedScore + 10);
               break;
             case 'BUSINESS_SAVVY':
-              // Smaller increase for BUSINESS_SAVVY
               calculatedScore = Math.min(100, calculatedScore + 5);
               break;
             case 'WEAK_PROPOSITION':
-              // Bigger penalty for weak propositions
               calculatedScore = Math.max(0, calculatedScore - 8);
               break;
             case 'THREATENING':
-              // Severe penalty for threats
               calculatedScore = Math.max(0, calculatedScore - 75);
               break;
           }
@@ -163,13 +171,15 @@ export function PersuasionScore() {
         }
       }
 
-      // Update UI immediately
       setScore(calculatedScore);
       if (lastResponse) {
         setLastProcessedResponse(lastResponse);
       }
 
-      // Update server in background
+      if (calculatedScore >= 100 && !hasTriggeredGameEnd) {
+        await endGameForAll();
+      }
+
       await fetch(`/api/persuasion/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -198,7 +208,6 @@ export function PersuasionScore() {
     }
   };
 
-  // Initialize score when component mounts or address changes
   useEffect(() => {
     if (!contract || !address) return;
 
@@ -235,7 +244,6 @@ export function PersuasionScore() {
 
       setLastProcessedResponse(text);
 
-      // Small delay to ensure blockchain state is updated
       await new Promise(resolve => setTimeout(resolve, 100));
 
       await resetCaches();
@@ -311,7 +319,7 @@ export function PersuasionScore() {
         )}
         {score >= 100 && (
           <p className="text-green-500 text-sm mt-2">
-            Maximum persuasion achieved! You've made an offer he can't refuse!
+            Maximum persuasion achieved! Game ending for all players...
           </p>
         )}
       </CardContent>
