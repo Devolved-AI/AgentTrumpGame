@@ -251,14 +251,14 @@ export function PersuasionScore() {
 
     try {
       contract.on(
-        contract.getEvent("GuessSubmitted"),
+        "GuessSubmitted",
         handleGuessSubmitted
       );
 
       return () => {
         try {
           contract.removeListener(
-            contract.getEvent("GuessSubmitted"),
+            "GuessSubmitted",
             handleGuessSubmitted
           );
         } catch (error) {
