@@ -155,7 +155,7 @@ export function PersuasionScore() {
               break;
             case 'THREATENING':
               // Severe penalty for threats
-              calculatedScore = Math.max(0, calculatedScore - 30);
+              calculatedScore = Math.max(0, calculatedScore - 75);
               break;
           }
         } catch (error) {
