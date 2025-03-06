@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 
-const CONTRACT_ADDRESS = "0x666C41e3C9E8aBb2c240BbcB9B94c70737aCD691";
+const CONTRACT_ADDRESS = "0x454C1C53aa5E30c247c1979c9fD9a6848DCc3438";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
