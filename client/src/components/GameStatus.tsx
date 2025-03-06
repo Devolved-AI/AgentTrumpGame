@@ -57,6 +57,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           isEscalation: escalationActive,
           timeRemaining: time,
         }));
+
+        // Check if we should end game immediately
+        if (time <= 0) {
+          setStatus(prev => ({ ...prev, isGameOver: true }));
+          if (onTimerEnd) onTimerEnd();
+        }
       } catch (error) {
         console.error("Error fetching initial time:", error);
       }
@@ -179,7 +185,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       if (status.isEscalation) {
         setDisplayTime(prev => {
           if (prev <= 0) {
-            // Immediately set game over and trigger callback
             setStatus(prev => ({ ...prev, isGameOver: true }));
             if (onTimerEnd) {
               onTimerEnd();
@@ -189,12 +194,32 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           }
           return prev - 1;
         });
+
+        // Update required amount based on time remaining
+        const minutes = Math.floor(displayTime / 60);
+        const baseAmount = 0.0018;
+        let multiplier = 1;
+
+        if (minutes === 4) multiplier = 1;      // 4:00-5:00 - 0.0018 ETH
+        else if (minutes === 3) multiplier = 2;  // 3:00-3:59 - 0.0036 ETH
+        else if (minutes === 2) multiplier = 4;  // 2:00-2:59 - 0.0072 ETH
+        else if (minutes === 1) multiplier = 8;  // 1:00-1:59 - 0.0144 ETH
+        else if (minutes === 0) {               // 0:00-0:59 - double per guess
+          // In the last minute, the price doubles with each guess
+          multiplier = Math.pow(2, Math.max(1, 8 + (300 - displayTime) / 60));
+        }
+
+        const newRequiredAmount = (baseAmount * multiplier).toFixed(4);
+        setStatus(prev => ({
+          ...prev,
+          requiredAmount: newRequiredAmount
+        }));
+
       } else {
         const newBaseTime = Math.max(0, baseTime - 1);
         setDisplayTime(newBaseTime);
         setBaseTime(newBaseTime);
         if (newBaseTime === 0) {
-          // End the game immediately when the timer reaches zero
           setStatus(prev => ({ 
             ...prev, 
             isGameOver: true,
