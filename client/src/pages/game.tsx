@@ -130,8 +130,7 @@ export default function Game() {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Escalation Mode (Sudden Death):</h3>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>The game enters a single 5-minute final round.</li>
-                    <li>The cost to guess doubles during this round (2x the normal price).</li>
+                    <li>The game enters a 5-minute round. The cost to guess doubles during this round.</li>
                     <li>When the timer reaches 0:00, the game ends for everyone.</li>
                   </ul>
                 </div>
