@@ -174,7 +174,7 @@ export function PersuasionScore() {
               calculatedScore = Math.min(100, calculatedScore + 5);
               break;
             case 'WEAK_PROPOSITION':
-              calculatedScore = Math.max(0, calculatedScore - 8);
+              calculatedScore = Math.max(0, calculatedScore - 4);
               break;
             case 'THREATENING':
               calculatedScore = Math.max(0, calculatedScore - 75);
@@ -255,7 +255,7 @@ export function PersuasionScore() {
                 currentScore = Math.min(100, currentScore + 5);
                 break;
               case 'WEAK_PROPOSITION':
-                currentScore = Math.max(0, currentScore - 8);
+                currentScore = Math.max(0, currentScore - 4);
                 break;
               case 'THREATENING':
                 currentScore = Math.max(0, currentScore - 75);
@@ -364,7 +364,7 @@ export function PersuasionScore() {
             newScore = Math.min(100, newScore + 5);
             break;
           case 'WEAK_PROPOSITION':
-            newScore = Math.max(0, newScore - 8);
+            newScore = Math.max(0, newScore - 4);
             break;
           case 'THREATENING':
             newScore = Math.max(0, newScore - 75);
