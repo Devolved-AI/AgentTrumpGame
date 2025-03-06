@@ -159,6 +159,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           // If this is a transition to escalation mode, ensure we set the interval
           if (escalationActive && prev.escalationInterval === 0) {
             newStatus.escalationInterval = 1;
+            newStatus.requiredAmount = ESCALATION_PRICES[0]; // Force the correct initial price
           }
           
           return newStatus;
@@ -355,6 +356,20 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     return () => clearInterval(checkInterval);
   }, [status.isEscalation, status.escalationInterval, status.lastGuessInterval, displayTime, onTimerEnd]);
+
+  // Force the displayed required amount to match the escalation interval price
+  useEffect(() => {
+    if (status.isEscalation && status.escalationInterval > 0 && status.escalationInterval <= 10) {
+      const correctPrice = ESCALATION_PRICES[status.escalationInterval - 1];
+      if (status.requiredAmount !== correctPrice) {
+        console.log(`Correcting price from ${status.requiredAmount} to ${correctPrice} for interval ${status.escalationInterval}`);
+        setStatus(prev => ({
+          ...prev,
+          requiredAmount: correctPrice
+        }));
+      }
+    }
+  }, [status.isEscalation, status.escalationInterval, status.requiredAmount]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
