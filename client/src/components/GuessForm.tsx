@@ -239,11 +239,9 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           requiredAmount = parseEther(priceInEth);
         }
         
-        // Add a buffer to prevent insufficient payment errors (5% increase)
-        const bigIntValue = BigInt(requiredAmount.toString());
-        const buffer = bigIntValue * BigInt(5) / BigInt(100); // 5% buffer
-        requiredAmount = bigIntValue + buffer;
-        console.log(`Final required amount with buffer: ${formatEther(requiredAmount)} ETH`);
+        // For first escalation period, use exact value without buffer
+        // The 5% buffer was causing issues by charging more than expected
+        console.log(`Final required amount (without buffer): ${formatEther(requiredAmount)} ETH`);
       } else {
         // Not in escalation mode, use contract value
         requiredAmount = await contract.currentRequiredAmount();
