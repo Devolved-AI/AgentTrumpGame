@@ -26,7 +26,7 @@ export default function Game() {
   const { address, isInitialized } = useWeb3Store();
   const [gameOver, setGameOver] = useState(false);
 
-  const guessPrice = 0.0009;
+  const guessPrice = 0.0018;
   const guessPriceUsd = (guessPrice * ethPrice).toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD'
