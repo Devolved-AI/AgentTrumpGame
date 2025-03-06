@@ -357,23 +357,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     return () => clearInterval(checkInterval);
   }, [status.isEscalation, status.escalationInterval, status.lastGuessInterval, displayTime, onTimerEnd]);
 
-  // Force the displayed required amount to match the escalation interval price
+  // Display the actual price from the contract and add a small note about the buffer
   useEffect(() => {
     if (status.isEscalation && status.escalationInterval > 0 && status.escalationInterval <= 10) {
-      // For testing, force the first escalation period price (0.0018)
-      const correctPrice = ESCALATION_PRICES[0]; // Always use first period (index 0)
-      
-      if (status.requiredAmount !== correctPrice) {
-        console.log(`Correcting price from ${status.requiredAmount} to ${correctPrice} for interval ${status.escalationInterval}`);
-        setStatus(prev => ({
-          ...prev,
-          requiredAmount: correctPrice
-        }));
-      }
+      // Just store the actual required amount from the contract
+      // The transaction will include a buffer, but we show the base amount
       
       // Store the current interval in localStorage for other components to use
-      localStorage.setItem('escalationInterval', "1"); // Always store as period 1
-      localStorage.setItem('escalationPrice', correctPrice);
+      localStorage.setItem('escalationInterval', status.escalationInterval.toString());
+      localStorage.setItem('escalationPrice', status.requiredAmount);
+      
+      console.log(`Current escalation interval: ${status.escalationInterval}`);
+      console.log(`Current required amount: ${status.requiredAmount} ETH`);
     }
   }, [status.isEscalation, status.escalationInterval, status.requiredAmount]);
 
@@ -436,7 +431,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                 <div className="mt-2 text-sm text-red-500">
                   <div>Escalation Period {status.escalationInterval} of 10</div>
                   <div className="mt-1">
-                    Cost per guess: {parseFloat(status.requiredAmount).toFixed(4)} ETH
+                    Base cost: {parseFloat(status.requiredAmount).toFixed(4)} ETH
+                  </div>
+                  <div className="mt-1 text-xs">
+                    A 10% buffer will be added to ensure transaction success
                   </div>
                   <div className="mt-1 text-xs">
                     Each interval lasts exactly 5:00 minutes
@@ -495,7 +493,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               {status.isEscalation && (
                 <div className="mt-1 text-xs text-red-500">
                   <div>Escalation Period {status.escalationInterval} of 10</div>
-                  <div>Cost: {parseFloat(status.requiredAmount).toFixed(4)} ETH</div>
+                  <div>Base cost: {parseFloat(status.requiredAmount).toFixed(4)} ETH</div>
+                  <div>A 10% buffer is added to ensure transaction success</div>
                   <div>Each interval lasts exactly 5:00 minutes</div>
                 </div>
               )}

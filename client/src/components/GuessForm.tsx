@@ -204,29 +204,26 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       let requiredAmount;
       
       if (isEscalation) {
-        // Always use the price table for accurate pricing during escalation
-        const ESCALATION_PRICES = [
-          "0.0018", // First 5 minutes
-          "0.0036", // Second 5 minutes
-          "0.0072", // Third 5 minutes
-          "0.0144", // Fourth 5 minutes
-          "0.0288", // Fifth 5 minutes
-          "0.0576", // Sixth 5 minutes
-          "0.1152", // Seventh 5 minutes
-          "0.2304", // Eighth 5 minutes
-          "0.4608", // Ninth 5 minutes
-          "0.9216"  // Tenth 5 minutes
-        ];
+        // First, get the actual required amount from the contract
+        try {
+          // Get the required amount directly from the contract
+          requiredAmount = await contract.currentRequiredAmount();
+          console.log(`Got required amount from contract: ${formatEther(requiredAmount)} ETH`);
+          
+          // Add a small buffer (10%) to ensure the transaction goes through
+          const buffer = requiredAmount * BigInt(11) / BigInt(10); // 10% buffer
+          requiredAmount = buffer;
+          console.log(`Adding 10% buffer: ${formatEther(requiredAmount)} ETH`);
+        } catch (error) {
+          console.error("Error getting required amount from contract:", error);
+          
+          // Fallback to a fixed amount if contract call fails
+          const { parseEther } = await import('@/lib/web3');
+          requiredAmount = parseEther("0.002"); // Slightly higher than 0.0018
+          console.log(`Using fallback amount: ${formatEther(requiredAmount)} ETH`);
+        }
         
-        // Force period 1 pricing for testing - we'll use the first escalation period price
-        const priceInEth = ESCALATION_PRICES[0]; // Always use first period price (0.0018)
-        console.log(`Using first escalation period price: ${priceInEth} ETH`);
-        
-        // Convert to Wei for the transaction
-        const { parseEther } = await import('@/lib/web3');
-        requiredAmount = parseEther(priceInEth);
-        
-        console.log(`Final required amount: ${formatEther(requiredAmount)} ETH`);
+        console.log(`Final transaction amount: ${formatEther(requiredAmount)} ETH`);
       } else {
         // Not in escalation mode, use contract value
         requiredAmount = await contract.currentRequiredAmount();
