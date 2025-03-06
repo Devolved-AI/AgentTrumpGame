@@ -208,22 +208,24 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         try {
           // Get the required amount directly from the contract
           requiredAmount = await contract.currentRequiredAmount();
-          console.log(`Got required amount from contract: ${formatEther(requiredAmount)} ETH`);
+          console.log(`Using required amount from contract: ${formatEther(requiredAmount)} ETH`);
           
-          // Add a small buffer (10%) to ensure the transaction goes through
-          const buffer = requiredAmount * BigInt(11) / BigInt(10); // 10% buffer
-          requiredAmount = buffer;
-          console.log(`Adding 10% buffer: ${formatEther(requiredAmount)} ETH`);
+          // Check if we need to override with the correct escalation price
+          const escalationInterval = localStorage.getItem('escalationInterval');
+          if (escalationInterval === '1') {
+            // First escalation period should use 0.0018 ETH
+            const { parseEther } = await import('@/lib/web3');
+            requiredAmount = parseEther("0.0018");
+            console.log(`Using correct price for period 1: ${formatEther(requiredAmount)} ETH`);
+          }
         } catch (error) {
           console.error("Error getting required amount from contract:", error);
           
-          // Fallback to a fixed amount if contract call fails
+          // Fallback to the first escalation period price if contract call fails
           const { parseEther } = await import('@/lib/web3');
-          requiredAmount = parseEther("0.002"); // Slightly higher than 0.0018
+          requiredAmount = parseEther("0.0018");
           console.log(`Using fallback amount: ${formatEther(requiredAmount)} ETH`);
         }
-        
-        console.log(`Final transaction amount: ${formatEther(requiredAmount)} ETH`);
       } else {
         // Not in escalation mode, use contract value
         requiredAmount = await contract.currentRequiredAmount();

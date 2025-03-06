@@ -303,6 +303,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         escalationInterval: 1 // Mark that we've entered the first escalation interval
       }));
       
+      // Ensure price is synchronized
+      localStorage.setItem('escalationInterval', '1');
+      localStorage.setItem('escalationPrice', initialPrice);
+      
       // Only set timer to 5 minutes (300 seconds) if not already in escalation mode
       // This prevents the timer from resetting when wallet is disconnected/reconnected
       const timeFromContract = status.timeRemaining;
@@ -360,15 +364,20 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   // Display the actual price from the contract and add a small note about the buffer
   useEffect(() => {
     if (status.isEscalation && status.escalationInterval > 0 && status.escalationInterval <= 10) {
-      // Just store the actual required amount from the contract
-      // The transaction will include a buffer, but we show the base amount
+      // Ensure we're using the correct price from our escalation table
+      const correctPrice = ESCALATION_PRICES[status.escalationInterval - 1];
+      
+      if (status.requiredAmount !== correctPrice) {
+        console.log(`Correcting price from ${status.requiredAmount} to ${correctPrice} for interval ${status.escalationInterval}`);
+        setStatus(prev => ({...prev, requiredAmount: correctPrice}));
+      }
       
       // Store the current interval in localStorage for other components to use
       localStorage.setItem('escalationInterval', status.escalationInterval.toString());
-      localStorage.setItem('escalationPrice', status.requiredAmount);
+      localStorage.setItem('escalationPrice', correctPrice);
       
       console.log(`Current escalation interval: ${status.escalationInterval}`);
-      console.log(`Current required amount: ${status.requiredAmount} ETH`);
+      console.log(`Current required amount: ${correctPrice} ETH`);
     }
   }, [status.isEscalation, status.escalationInterval, status.requiredAmount]);
 
