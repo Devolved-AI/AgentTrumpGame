@@ -45,6 +45,20 @@ interface Message {
   transaction?: TransactionState;
 }
 
+const ESCALATION_PRICES = [
+    "0.0018", // Period 1
+    "0.0036", // Period 2
+    "0.0072", // Period 3
+    "0.0144", // Period 4
+    "0.0288", // Period 5
+    "0.0576", // Period 6
+    "0.1152", // Period 7
+    "0.2304", // Period 8
+    "0.4608", // Period 9
+    "0.9216"  // Period 10
+  ];
+
+
 export function GuessForm({ onTimerEnd }: GuessFormProps) {
   const { contract, address } = useWeb3Store();
   const { toast } = useToast();
@@ -134,7 +148,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         ]);
         const time = Number(timeRemaining.toString());
         const isOver = gameWon || time <= 0;
-        
+
         if (isOver) {
           setIsGameOver(true);
           if (onTimerEnd) {
@@ -182,7 +196,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       const time = Number(timeRemaining.toString());
       const isOver = gameWon || time <= 0;
-      
+
       if (isOver) {
         setIsGameOver(true);
         if (onTimerEnd) {
@@ -198,33 +212,44 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       setIsSubmitting(true);
       setIsTyping(true);
-      
+
       // Get the correct required amount based on the current escalation interval
       const isEscalation = await contract.escalationActive();
       let requiredAmount;
-      
+
       if (isEscalation) {
-        // First, get the actual required amount from the contract
+        console.log("Getting required amount for escalation mode");
         try {
-          // Get the required amount directly from the contract
-          requiredAmount = await contract.currentRequiredAmount();
-          console.log(`Using required amount from contract: ${formatEther(requiredAmount)} ETH`);
-          
-          // Check if we need to override with the correct escalation price
+          // Check which escalation period we're in from localStorage
           const escalationInterval = localStorage.getItem('escalationInterval');
-          if (escalationInterval === '1') {
-            // First escalation period should use 0.0018 ETH
+          const periodIndex = escalationInterval ? parseInt(escalationInterval) - 1 : 0;
+
+          // Ensure we have a valid period index
+          if (periodIndex >= 0 && periodIndex < ESCALATION_PRICES.length) {
+            // Use the exact price from our predefined table
             const { parseEther } = await import('@/lib/web3');
-            requiredAmount = parseEther("0.0018");
-            console.log(`Using correct price for period 1: ${formatEther(requiredAmount)} ETH`);
+            const exactPrice = ESCALATION_PRICES[periodIndex];
+            requiredAmount = parseEther(exactPrice);
+
+            console.log(`Using exact price from table for period ${periodIndex + 1}: ${exactPrice} ETH`);
+
+            // Add a tiny buffer for gas price fluctuations (0.5%)
+            // This should help prevent "insufficient payment" errors
+            // This is a very small amount but can make a difference
+            const buffer = requiredAmount * BigInt(1005) / BigInt(1000);
+            requiredAmount = buffer;
+            console.log(`With tiny buffer: ${formatEther(requiredAmount)} ETH`);
+          } else {
+            // Fallback to contract value if period is invalid
+            requiredAmount = await contract.currentRequiredAmount();
+            console.log(`Using contract amount: ${formatEther(requiredAmount)} ETH`);
           }
         } catch (error) {
-          console.error("Error getting required amount from contract:", error);
-          
-          // Fallback to the first escalation period price if contract call fails
-          const { parseEther } = await import('@/lib/web3');
-          requiredAmount = parseEther("0.0018");
-          console.log(`Using fallback amount: ${formatEther(requiredAmount)} ETH`);
+          console.error("Error setting required amount:", error);
+
+          // Fallback to contract value
+          requiredAmount = await contract.currentRequiredAmount();
+          console.log(`Fallback to contract amount: ${formatEther(requiredAmount)} ETH`);
         }
       } else {
         // Not in escalation mode, use contract value

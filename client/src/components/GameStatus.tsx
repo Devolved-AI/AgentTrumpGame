@@ -68,12 +68,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining.toString());
-        
+
         // Set the base time only when not in escalation mode or game is not over
         if (!escalationActive) {
           setBaseTime(time);
         }
-        
+
         // Update status with new values from contract
         setStatus(prev => {
           const updatedStatus = {
@@ -82,15 +82,15 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             timeRemaining: time,
             isGameOver: gameOver
           };
-          
+
           // If already in escalation mode, make sure to preserve that state
           if (escalationActive && prev.escalationInterval === 0) {
             updatedStatus.escalationInterval = 1;
           }
-          
+
           return updatedStatus;
         });
-        
+
         // If in escalation mode and the displayTime doesn't match the contract's time,
         // update it to keep them synchronized (only when there's a significant difference)
         if (escalationActive && Math.abs(displayTime - time) > 5 && time > 0 && time <= 300) {
@@ -155,16 +155,16 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             isGameOver: gameOver,
             requiredAmount: requiredAmount,
           };
-          
+
           // If this is a transition to escalation mode, ensure we set the interval
           if (escalationActive && prev.escalationInterval === 0) {
             newStatus.escalationInterval = 1;
             newStatus.requiredAmount = ESCALATION_PRICES[0]; // Force the correct initial price
           }
-          
+
           return newStatus;
         });
-        
+
         // Only update displayTime in escalation mode if there's a significant difference
         // This prevents the timer from jumping around during updates
         if (escalationActive && Math.abs(displayTime - time) > 5 && time > 0 && time <= 300) {
@@ -201,7 +201,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining.toString());
-        
+
         // The timer is not reset when a guess is submitted during escalation mode
         // Each interval is exactly 5 minutes regardless of guesses
         if (escalationActive) {
@@ -302,11 +302,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         requiredAmount: initialPrice,
         escalationInterval: 1 // Mark that we've entered the first escalation interval
       }));
-      
+
       // Ensure price is synchronized
       localStorage.setItem('escalationInterval', '1');
       localStorage.setItem('escalationPrice', initialPrice);
-      
+
       // Only set timer to 5 minutes (300 seconds) if not already in escalation mode
       // This prevents the timer from resetting when wallet is disconnected/reconnected
       const timeFromContract = status.timeRemaining;
@@ -342,16 +342,16 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           // Move to the next escalation interval
           const nextInterval = status.escalationInterval + 1;
           const nextPrice = ESCALATION_PRICES[nextInterval - 1]; // Array is 0-indexed
-          
+
           console.log(`Moving to escalation interval ${nextInterval} with price ${nextPrice}`);
-          
+
           // Update the status with the new interval and price
           setStatus(prev => ({
             ...prev, 
             escalationInterval: nextInterval,
             requiredAmount: nextPrice
           }));
-          
+
           // Reset the timer for the new 5-minute interval
           setDisplayTime(300);
         }
@@ -361,21 +361,21 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     return () => clearInterval(checkInterval);
   }, [status.isEscalation, status.escalationInterval, status.lastGuessInterval, displayTime, onTimerEnd]);
 
-  // Display the actual price from the contract and add a small note about the buffer
+  // This effect handles the synchronization of escalation price
   useEffect(() => {
     if (status.isEscalation && status.escalationInterval > 0 && status.escalationInterval <= 10) {
       // Ensure we're using the correct price from our escalation table
       const correctPrice = ESCALATION_PRICES[status.escalationInterval - 1];
-      
+
       if (status.requiredAmount !== correctPrice) {
         console.log(`Correcting price from ${status.requiredAmount} to ${correctPrice} for interval ${status.escalationInterval}`);
         setStatus(prev => ({...prev, requiredAmount: correctPrice}));
       }
-      
+
       // Store the current interval in localStorage for other components to use
       localStorage.setItem('escalationInterval', status.escalationInterval.toString());
       localStorage.setItem('escalationPrice', correctPrice);
-      
+
       console.log(`Current escalation interval: ${status.escalationInterval}`);
       console.log(`Current required amount: ${correctPrice} ETH`);
     }
