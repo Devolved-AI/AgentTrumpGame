@@ -20,10 +20,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/persuasion/:address', async (req, res) => {
     try {
       const { address } = req.params;
-      const { score } = req.body;
+      const { score, gameOver } = req.body;
 
       if (typeof score !== 'number' || score < 0 || score > 100) {
         return res.status(400).json({ error: 'Invalid score value' });
+      }
+
+      // If game is over, don't update scores
+      if (gameOver) {
+        return res.status(403).json({ error: 'Game is over. No more updates allowed.' });
       }
 
       scoreCache.set(address, score);

@@ -194,12 +194,17 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         setDisplayTime(newBaseTime);
         setBaseTime(newBaseTime);
         if (newBaseTime === 0) {
-          // Immediately set escalation and potentially game over
-          setStatus(prev => ({ ...prev, isEscalation: true }));
-          setDisplayTime(300);
+          // End the game immediately when the timer reaches zero
+          setStatus(prev => ({ 
+            ...prev, 
+            isGameOver: true,
+            isEscalation: false 
+          }));
           if (onTimerEnd) {
             onTimerEnd();
           }
+          clearInterval(timer);
+          return;
         }
       }
     }, 1000);

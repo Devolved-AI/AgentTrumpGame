@@ -134,9 +134,16 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         ]);
         const time = Number(timeRemaining.toString());
         const isOver = gameWon || time <= 0;
-        setIsGameOver(isOver);
-        if (isOver && onTimerEnd) {
-          onTimerEnd();
+        
+        if (isOver) {
+          setIsGameOver(true);
+          if (onTimerEnd) {
+            onTimerEnd();
+          }
+          // Ensure we stop checking once the game is over
+          clearInterval(interval);
+        } else {
+          setIsGameOver(false);
         }
       } catch (error) {
         console.error("Error checking game state:", error);
@@ -175,6 +182,19 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       const time = Number(timeRemaining.toString());
       const isOver = gameWon || time <= 0;
+      
+      if (isOver) {
+        setIsGameOver(true);
+        if (onTimerEnd) {
+          onTimerEnd();
+        }
+        toast({
+          title: "Game Over",
+          description: "The game has ended. No more guesses can be submitted.",
+          variant: "destructive"
+        });
+        return;
+      }
 
       if (isOver) {
         setIsGameOver(true);
