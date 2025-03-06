@@ -204,32 +204,46 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       let requiredAmount;
       
       if (isEscalation) {
-        // Import the price table from GameStatus to ensure consistency
-        const ESCALATION_PRICES = [
-          "0.0018", // First 5 minutes
-          "0.0036", // Second 5 minutes
-          "0.0072", // Third 5 minutes
-          "0.0144", // Fourth 5 minutes
-          "0.0288", // Fifth 5 minutes
-          "0.0576", // Sixth 5 minutes
-          "0.1152", // Seventh 5 minutes
-          "0.2304", // Eighth 5 minutes
-          "0.4608", // Ninth 5 minutes
-          "0.9216"  // Tenth 5 minutes
-        ];
+        // First, try to get the required amount directly from the contract
+        try {
+          requiredAmount = await contract.currentRequiredAmount();
+          console.log(`Got required amount from contract: ${formatEther(requiredAmount)} ETH`);
+        } catch (error) {
+          console.error("Error getting required amount from contract:", error);
+          
+          // Fallback to the price table
+          const ESCALATION_PRICES = [
+            "0.0018", // First 5 minutes
+            "0.0036", // Second 5 minutes
+            "0.0072", // Third 5 minutes
+            "0.0144", // Fourth 5 minutes
+            "0.0288", // Fifth 5 minutes
+            "0.0576", // Sixth 5 minutes
+            "0.1152", // Seventh 5 minutes
+            "0.2304", // Eighth 5 minutes
+            "0.4608", // Ninth 5 minutes
+            "0.9216"  // Tenth 5 minutes
+          ];
+          
+          // Get escalation status from localStorage
+          const currentInterval = localStorage.getItem('escalationInterval') || "1";
+          const intervalNum = parseInt(currentInterval, 10);
+          const priceIndex = Math.min(Math.max(intervalNum - 1, 0), 9); // Ensure index is valid (0-9)
+          
+          // Parse the price to Wei
+          const priceInEth = ESCALATION_PRICES[priceIndex];
+          console.log(`Using price ${priceInEth} ETH for interval ${intervalNum} from price table`);
+          
+          // Convert to Wei for the transaction
+          const { parseEther } = await import('@/lib/web3');
+          requiredAmount = parseEther(priceInEth);
+        }
         
-        // Get escalation status from the GameStatus component (stored in localStorage)
-        const currentInterval = localStorage.getItem('escalationInterval') || "1";
-        const intervalNum = parseInt(currentInterval, 10);
-        const priceIndex = Math.min(Math.max(intervalNum - 1, 0), 9); // Ensure index is valid (0-9)
-        
-        // Parse the price to Wei
-        const priceInEth = ESCALATION_PRICES[priceIndex];
-        console.log(`Using price ${priceInEth} ETH for interval ${intervalNum}`);
-        
-        // Convert to Wei for the transaction
-        const { parseEther } = await import('@/lib/web3');
-        requiredAmount = parseEther(priceInEth);
+        // Add a buffer to prevent insufficient payment errors (5% increase)
+        const bigIntValue = BigInt(requiredAmount.toString());
+        const buffer = bigIntValue * BigInt(5) / BigInt(100); // 5% buffer
+        requiredAmount = bigIntValue + buffer;
+        console.log(`Final required amount with buffer: ${formatEther(requiredAmount)} ETH`);
       } else {
         // Not in escalation mode, use contract value
         requiredAmount = await contract.currentRequiredAmount();
