@@ -134,7 +134,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         ]);
         const time = Number(timeRemaining.toString());
         const isOver = gameWon || time <= 0;
-
+        
         if (isOver) {
           setIsGameOver(true);
           if (onTimerEnd) {
@@ -182,6 +182,19 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       const time = Number(timeRemaining.toString());
       const isOver = gameWon || time <= 0;
+      
+      if (isOver) {
+        setIsGameOver(true);
+        if (onTimerEnd) {
+          onTimerEnd();
+        }
+        toast({
+          title: "Game Over",
+          description: "The game has ended. No more guesses can be submitted.",
+          variant: "destructive"
+        });
+        return;
+      }
 
       if (isOver) {
         setIsGameOver(true);
@@ -241,7 +254,6 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       const receipt = await tx.wait();
 
-      // Update message transaction status
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
@@ -257,6 +269,15 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
             ...prev,
             {
               text: trumpResponse,
+              timestamp: Math.floor(Date.now() / 1000),
+              isUser: false
+            }
+          ]);
+        } else {
+          setMessages(prev => [
+            ...prev,
+            {
+              text: "Interesting... Keep trying to convince me! 🤔",
               timestamp: Math.floor(Date.now() / 1000),
               isUser: false
             }
