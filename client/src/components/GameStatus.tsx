@@ -178,12 +178,32 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       blockNumber: any,
       responseIndex: any
     ) => {
-      setStatus(prev => ({
-        ...prev,
-        lastGuessTimestamp: Date.now(),
-        lastPlayer: player,
-        lastGuessInterval: prev.escalationInterval // Track that a guess was made in current interval
-      }));
+      try {
+        // Get the updated time remaining from the contract
+        const [timeRemaining, escalationActive] = await Promise.all([
+          contract.getTimeRemaining(),
+          contract.escalationActive()
+        ]);
+
+        const time = Number(timeRemaining.toString());
+        
+        // In escalation mode, the contract resets the timer to 5 minutes when a guess is submitted
+        // This is by design - update the UI to match this behavior
+        if (escalationActive) {
+          console.log("Guess submitted during escalation - updating timer to", time);
+          setDisplayTime(time);
+        }
+
+        setStatus(prev => ({
+          ...prev,
+          lastGuessTimestamp: Date.now(),
+          lastPlayer: player,
+          timeRemaining: time,
+          lastGuessInterval: prev.escalationInterval // Track that a guess was made in current interval
+        }));
+      } catch (error) {
+        console.error("Error updating timer after guess:", error);
+      }
     };
 
     try {
@@ -346,9 +366,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               />
               {status.isEscalation ? (
                 <div className="mt-2 text-sm text-red-500">
-                  Escalation Period Active
+                  <div>Escalation Period Active</div>
                   <div className="mt-1">
                     Cost per guess: {parseFloat(status.requiredAmount).toFixed(4)} ETH
+                  </div>
+                  <div className="mt-1 text-xs">
+                    Each guess resets timer to 5:00 for all players
                   </div>
                 </div>
               ) : isNearEnd ? (
@@ -400,7 +423,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               <div className={`text-2xl font-bold ${textColorClass}`}>
                 {minutes}:{seconds.toString().padStart(2, '0')}
               </div>
-              <Progress value={(displayTime / 3600) * 100} className="mt-2" />
+              <Progress value={(displayTime / (status.isEscalation ? 300 : 3600)) * 100} className="mt-2" />
+              {status.isEscalation && (
+                <div className="mt-1 text-xs text-red-500">
+                  Each guess extends the timer for all players
+                </div>
+              )}
             </>
           ) : (
             <div className="text-2xl font-bold text-red-500">
