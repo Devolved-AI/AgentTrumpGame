@@ -30,6 +30,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     requiredAmount: "0.0018",
     lastGuessTimestamp: 0,
     isGameOver: false,
+    escalationInterval: 0, // Initialize escalationInterval
+    lastGuessInterval: 0, // Initialize lastGuessInterval
   });
   const [displayTime, setDisplayTime] = useState(300);
   const [baseTime, setBaseTime] = useState(0);
@@ -137,17 +139,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       blockNumber: any,
       responseIndex: any
     ) => {
-      if (status.isEscalation) {
-        setDisplayTime(300);
-
-        const newAmount = await getEscalationPrice();
-        setStatus(prev => ({
-          ...prev,
-          requiredAmount: newAmount,
-          lastGuessTimestamp: Date.now(),
-          lastPlayer: player
-        }));
-      }
+      setStatus(prev => ({
+        ...prev,
+        lastGuessTimestamp: Date.now(),
+        lastPlayer: player,
+        lastGuessInterval: prev.escalationInterval // Track that a guess was made in current interval
+      }));
     };
 
     try {
@@ -170,7 +167,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     } catch (error) {
       console.error("Error setting up event listener:", error);
     }
-  }, [contract, status.isEscalation]);
+  }, [contract]);
 
   useEffect(() => {
     if (status.isGameOver) return;
@@ -211,6 +208,37 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     return () => clearInterval(timer);
   }, [status.isEscalation, status.isGameOver, baseTime, displayTime, onTimerEnd]);
+
+  useEffect(() => {
+    if (!status.isEscalation) return;
+
+    const checkInterval = setInterval(() => {
+      // Check if timer has reached zero
+      if (displayTime <= 0) {
+        // Check if any guesses were made during this interval
+        const currentInterval = status.escalationInterval;
+        const guessWasMade = status.lastGuessInterval === currentInterval;
+
+        if (guessWasMade) {
+          // Start a new interval with double the price
+          const newAmount = (0.0018 * Math.pow(2, currentInterval));
+          setDisplayTime(300); // Reset timer to 5 minutes
+          setStatus(prev => ({
+            ...prev, 
+            requiredAmount: newAmount.toFixed(4), 
+            escalationInterval: prev.escalationInterval + 1
+          }));
+        } else {
+          // No guess was made during the interval, game over
+          setStatus(prev => ({...prev, isGameOver: true}));
+          if (onTimerEnd) onTimerEnd();
+          clearInterval(checkInterval);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(checkInterval);
+  }, [status.isEscalation, displayTime, status.escalationInterval, status.lastGuessInterval, onTimerEnd]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
