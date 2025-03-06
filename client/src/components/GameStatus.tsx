@@ -47,25 +47,48 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     const initializeTime = async () => {
       try {
-        const [timeRemaining, escalationActive] = await Promise.all([
+        const [timeRemaining, escalationActive, gameOver] = await Promise.all([
           contract.getTimeRemaining(),
-          contract.escalationActive()
+          contract.escalationActive(),
+          isGameOver()
         ]);
 
         const time = Number(timeRemaining.toString());
-        setBaseTime(time);
-        setStatus(prev => ({
-          ...prev,
-          isEscalation: escalationActive,
-          timeRemaining: time,
-        }));
+        
+        // Set the base time only when not in escalation mode or game is not over
+        if (!escalationActive) {
+          setBaseTime(time);
+        }
+        
+        // Update status with new values from contract
+        setStatus(prev => {
+          const updatedStatus = {
+            ...prev,
+            isEscalation: escalationActive,
+            timeRemaining: time,
+            isGameOver: gameOver
+          };
+          
+          // If already in escalation mode, make sure to preserve that state
+          if (escalationActive && prev.escalationInterval === 0) {
+            updatedStatus.escalationInterval = 1;
+          }
+          
+          return updatedStatus;
+        });
+        
+        // If in escalation mode and the displayTime doesn't match the contract's time,
+        // update it to keep them synchronized (only when there's a significant difference)
+        if (escalationActive && Math.abs(displayTime - time) > 5 && time > 0 && time <= 300) {
+          setDisplayTime(time);
+        }
       } catch (error) {
         console.error("Error fetching initial time:", error);
       }
     };
 
     initializeTime();
-  }, [contract]);
+  }, [contract, displayTime, isGameOver]);
 
   useEffect(() => {
     if (!contract) return;
@@ -102,20 +125,36 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           balance: formatEther(balance)
         });
 
+        // Only update the baseTime if we're not in escalation mode
         if (!escalationActive) {
           setBaseTime(time);
         }
 
-        setStatus(prev => ({
-          ...prev,
-          timeRemaining: time,
-          lastPlayer,
-          totalBalance: formatEther(balance),
-          won,
-          isEscalation: escalationActive,
-          isGameOver: gameOver,
-          requiredAmount: requiredAmount,
-        }));
+        setStatus(prev => {
+          const newStatus = {
+            ...prev,
+            timeRemaining: time,
+            lastPlayer,
+            totalBalance: formatEther(balance),
+            won,
+            isEscalation: escalationActive,
+            isGameOver: gameOver,
+            requiredAmount: requiredAmount,
+          };
+          
+          // If this is a transition to escalation mode, ensure we set the interval
+          if (escalationActive && prev.escalationInterval === 0) {
+            newStatus.escalationInterval = 1;
+          }
+          
+          return newStatus;
+        });
+        
+        // Only update displayTime in escalation mode if there's a significant difference
+        // This prevents the timer from jumping around during updates
+        if (escalationActive && Math.abs(displayTime - time) > 5 && time > 0 && time <= 300) {
+          setDisplayTime(time);
+        }
 
       } catch (error) {
         console.error("Error fetching game status:", error);
@@ -126,7 +165,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     updateStatus();
 
     return () => clearInterval(statusInterval);
-  }, [contract]);
+  }, [contract, displayTime]);
 
   useEffect(() => {
     if (!contract) return;
@@ -220,10 +259,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         escalationInterval: 1 // Mark that we've entered the escalation phase
       }));
       
-      // Set timer to 5 minutes (300 seconds)
-      setDisplayTime(300);
+      // Only set timer to 5 minutes (300 seconds) if not already in escalation mode
+      // This prevents the timer from resetting when wallet is disconnected/reconnected
+      const timeFromContract = status.timeRemaining;
+      if (timeFromContract > 0 && timeFromContract < 300) {
+        // We're already in escalation mode, use the remaining time from the contract
+        setDisplayTime(timeFromContract);
+      } else {
+        // Initial entry into escalation mode
+        setDisplayTime(300);
+      }
     }
-  }, [status.isEscalation, status.escalationInterval]);
+  }, [status.isEscalation, status.escalationInterval, status.timeRemaining]);
 
   // This effect handles the countdown check for escalation mode
   useEffect(() => {
