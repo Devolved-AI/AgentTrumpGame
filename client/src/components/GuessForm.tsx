@@ -253,7 +253,21 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         }
       } else {
         // Not in escalation mode, use contract value
-        requiredAmount = await contract.currentRequiredAmount();
+        try {
+          // Get the required amount directly from the contract
+          requiredAmount = await contract.currentRequiredAmount();
+          console.log(`Using required amount from contract: ${formatEther(requiredAmount)} ETH`);
+
+          // No overrides - always use the contract's required amount
+          // This ensures we're sending exactly what the contract expects
+        } catch (error) {
+          console.error("Error getting required amount from contract:", error);
+
+          // Fallback to the base game fee if contract call fails
+          const { parseEther } = await import('@/lib/web3');
+          requiredAmount = parseEther("0.0009"); // Use the GAME_FEE value from contract
+          console.log(`Using fallback amount: ${formatEther(requiredAmount)} ETH`);
+        }
       }
 
       const userMessage: Message = {

@@ -361,23 +361,15 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     return () => clearInterval(checkInterval);
   }, [status.isEscalation, status.escalationInterval, status.lastGuessInterval, displayTime, onTimerEnd]);
 
-  // This effect handles the synchronization of escalation price
+  // Display the actual price from the contract without modifications
   useEffect(() => {
     if (status.isEscalation && status.escalationInterval > 0 && status.escalationInterval <= 10) {
-      // Ensure we're using the correct price from our escalation table
-      const correctPrice = ESCALATION_PRICES[status.escalationInterval - 1];
-
-      if (status.requiredAmount !== correctPrice) {
-        console.log(`Correcting price from ${status.requiredAmount} to ${correctPrice} for interval ${status.escalationInterval}`);
-        setStatus(prev => ({...prev, requiredAmount: correctPrice}));
-      }
-
-      // Store the current interval in localStorage for other components to use
+      // Store the current interval and price in localStorage for other components to use
       localStorage.setItem('escalationInterval', status.escalationInterval.toString());
-      localStorage.setItem('escalationPrice', correctPrice);
+      localStorage.setItem('escalationPrice', status.requiredAmount);
 
       console.log(`Current escalation interval: ${status.escalationInterval}`);
-      console.log(`Current required amount: ${correctPrice} ETH`);
+      console.log(`Current required amount from contract: ${status.requiredAmount} ETH`);
     }
   }, [status.isEscalation, status.escalationInterval, status.requiredAmount]);
 
