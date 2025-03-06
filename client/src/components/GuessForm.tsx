@@ -198,7 +198,42 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       setIsSubmitting(true);
       setIsTyping(true);
-      const requiredAmount = await contract.currentRequiredAmount();
+      
+      // Get the correct required amount based on the current escalation interval
+      const isEscalation = await contract.escalationActive();
+      let requiredAmount;
+      
+      if (isEscalation) {
+        // Import the price table from GameStatus to ensure consistency
+        const ESCALATION_PRICES = [
+          "0.0018", // First 5 minutes
+          "0.0036", // Second 5 minutes
+          "0.0072", // Third 5 minutes
+          "0.0144", // Fourth 5 minutes
+          "0.0288", // Fifth 5 minutes
+          "0.0576", // Sixth 5 minutes
+          "0.1152", // Seventh 5 minutes
+          "0.2304", // Eighth 5 minutes
+          "0.4608", // Ninth 5 minutes
+          "0.9216"  // Tenth 5 minutes
+        ];
+        
+        // Get escalation status from the GameStatus component (stored in localStorage)
+        const currentInterval = localStorage.getItem('escalationInterval') || "1";
+        const intervalNum = parseInt(currentInterval, 10);
+        const priceIndex = Math.min(Math.max(intervalNum - 1, 0), 9); // Ensure index is valid (0-9)
+        
+        // Parse the price to Wei
+        const priceInEth = ESCALATION_PRICES[priceIndex];
+        console.log(`Using price ${priceInEth} ETH for interval ${intervalNum}`);
+        
+        // Convert to Wei for the transaction
+        const { parseEther } = await import('@/lib/web3');
+        requiredAmount = parseEther(priceInEth);
+      } else {
+        // Not in escalation mode, use contract value
+        requiredAmount = await contract.currentRequiredAmount();
+      }
 
       const userMessage: Message = {
         text: data.response,

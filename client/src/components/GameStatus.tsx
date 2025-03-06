@@ -368,6 +368,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           requiredAmount: correctPrice
         }));
       }
+      
+      // Store the current interval in localStorage for other components to use
+      localStorage.setItem('escalationInterval', status.escalationInterval.toString());
+      localStorage.setItem('escalationPrice', correctPrice);
     }
   }, [status.isEscalation, status.escalationInterval, status.requiredAmount]);
 
