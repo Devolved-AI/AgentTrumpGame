@@ -212,33 +212,35 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   useEffect(() => {
     if (!status.isEscalation) return;
 
-    const checkInterval = setInterval(() => {
-      // Check if timer has reached zero
-      if (displayTime <= 0) {
-        // Check if any guesses were made during this interval
-        const currentInterval = status.escalationInterval;
-        const guessWasMade = status.lastGuessInterval === currentInterval;
+    // For the new logic, we only use one 5-minute escalation period
+    // When escalation starts, set the price to double (2 * 0.0018)
+    useEffect(() => {
+      if (status.isEscalation && status.escalationInterval === 0) {
+        // Only set this once when escalation first activates
+        const doubledPrice = (0.0018 * 2).toFixed(4);
+        setStatus(prev => ({
+          ...prev, 
+          requiredAmount: doubledPrice,
+          escalationInterval: 1 // Mark that we've entered the escalation phase
+        }));
+        
+        // Set timer to 5 minutes (300 seconds)
+        setDisplayTime(300);
+      }
+    }, [status.isEscalation]);
 
-        if (guessWasMade) {
-          // Start a new interval with double the price
-          const newAmount = (0.0018 * Math.pow(2, currentInterval));
-          setDisplayTime(300); // Reset timer to 5 minutes
-          setStatus(prev => ({
-            ...prev, 
-            requiredAmount: newAmount.toFixed(4), 
-            escalationInterval: prev.escalationInterval + 1
-          }));
-        } else {
-          // No guess was made during the interval, game over
-          setStatus(prev => ({...prev, isGameOver: true}));
-          if (onTimerEnd) onTimerEnd();
-          clearInterval(checkInterval);
-        }
+    // When timer reaches zero in escalation mode, the game is over
+    const checkInterval = setInterval(() => {
+      if (displayTime <= 0) {
+        // Game over when the 5-minute escalation period ends
+        setStatus(prev => ({...prev, isGameOver: true}));
+        if (onTimerEnd) onTimerEnd();
+        clearInterval(checkInterval);
       }
     }, 1000);
 
     return () => clearInterval(checkInterval);
-  }, [status.isEscalation, displayTime, status.escalationInterval, status.lastGuessInterval, onTimerEnd]);
+  }, [status.isEscalation, displayTime, onTimerEnd]);
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
