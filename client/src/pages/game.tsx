@@ -143,7 +143,7 @@ export default function Game() {
                       <li>.4608 ETH - Ninth 5 minutes</li>
                       <li>.9216 ETH - Tenth 5 minutes</li>
                     </ul>
-                    <li>Each guess resets the timer back to 5:00 for the current interval.</li>
+                    <li>Each interval lasts exactly 5:00 minutes regardless of guesses made.</li>
                     <li>If an interval passes with no guesses, or after the 10th interval completes, the game ends for everyone.</li>
                   </ul>
                 </div>

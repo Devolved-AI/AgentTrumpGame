@@ -201,13 +201,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         const time = Number(timeRemaining.toString());
         
-        // In escalation mode, the contract resets the timer to 5 minutes when a guess is submitted
-        // This is by design - update the UI to match this behavior
+        // The timer is not reset when a guess is submitted during escalation mode
+        // Each interval is exactly 5 minutes regardless of guesses
         if (escalationActive) {
-          console.log("Guess submitted during escalation - updating timer to", time);
-          setDisplayTime(time);
-          
-          // When a guess is made, reset the timer for the current interval
+          // Don't reset the timer but record that a guess was made in this interval
           setStatus(prev => {
             console.log(`Recording guess in interval ${prev.escalationInterval}`);
             return {
@@ -421,7 +418,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                     Cost per guess: {parseFloat(status.requiredAmount).toFixed(4)} ETH
                   </div>
                   <div className="mt-1 text-xs">
-                    Each guess resets timer to 5:00 for all players
+                    Each interval lasts exactly 5:00 minutes
                   </div>
                 </div>
               ) : isNearEnd ? (
@@ -478,7 +475,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                 <div className="mt-1 text-xs text-red-500">
                   <div>Escalation Period {status.escalationInterval} of 10</div>
                   <div>Cost: {parseFloat(status.requiredAmount).toFixed(4)} ETH</div>
-                  <div>Each guess resets the timer for all players</div>
+                  <div>Each interval lasts exactly 5:00 minutes</div>
                 </div>
               )}
             </>
