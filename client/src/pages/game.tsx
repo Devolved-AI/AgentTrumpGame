@@ -130,8 +130,21 @@ export default function Game() {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Escalation Mode (Sudden Death):</h3>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>The game enters a 5-minute round. <b>The cost doubles for each guess</b> during this round. Each guess resets the timer back to 5:00</li>
-                    <li>When the timer reaches 0:00, the game ends for everyone.</li>
+                    <li>The game enters 10 consecutive 5-minute intervals with increasing costs:</li>
+                    <ul className="list-none ml-6 text-sm mt-1 mb-2 grid grid-cols-2 gap-x-4">
+                      <li>.0018 ETH - First 5 minutes</li>
+                      <li>.0036 ETH - Second 5 minutes</li>
+                      <li>.0072 ETH - Third 5 minutes</li>
+                      <li>.0144 ETH - Fourth 5 minutes</li>
+                      <li>.0288 ETH - Fifth 5 minutes</li>
+                      <li>.0576 ETH - Sixth 5 minutes</li>
+                      <li>.1152 ETH - Seventh 5 minutes</li>
+                      <li>.2304 ETH - Eighth 5 minutes</li>
+                      <li>.4608 ETH - Ninth 5 minutes</li>
+                      <li>.9216 ETH - Tenth 5 minutes</li>
+                    </ul>
+                    <li>Each guess resets the timer back to 5:00 for the current interval.</li>
+                    <li>If an interval passes with no guesses, or after the 10th interval completes, the game ends for everyone.</li>
                   </ul>
                 </div>
 
