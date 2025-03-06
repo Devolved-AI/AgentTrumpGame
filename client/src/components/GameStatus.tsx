@@ -213,7 +213,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   useEffect(() => {
     if (status.isEscalation && status.escalationInterval === 0) {
       // Only set this once when escalation first activates
-      const doubledPrice = (0.0018 * 2).toFixed(4);
+      const doubledPrice = (0.0009 * 2).toFixed(4);
       setStatus(prev => ({
         ...prev, 
         requiredAmount: doubledPrice,
