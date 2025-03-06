@@ -360,7 +360,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   // Force the displayed required amount to match the escalation interval price
   useEffect(() => {
     if (status.isEscalation && status.escalationInterval > 0 && status.escalationInterval <= 10) {
-      const correctPrice = ESCALATION_PRICES[status.escalationInterval - 1];
+      // For testing, force the first escalation period price (0.0018)
+      const correctPrice = ESCALATION_PRICES[0]; // Always use first period (index 0)
+      
       if (status.requiredAmount !== correctPrice) {
         console.log(`Correcting price from ${status.requiredAmount} to ${correctPrice} for interval ${status.escalationInterval}`);
         setStatus(prev => ({
@@ -370,7 +372,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       }
       
       // Store the current interval in localStorage for other components to use
-      localStorage.setItem('escalationInterval', status.escalationInterval.toString());
+      localStorage.setItem('escalationInterval', "1"); // Always store as period 1
       localStorage.setItem('escalationPrice', correctPrice);
     }
   }, [status.isEscalation, status.escalationInterval, status.requiredAmount]);
