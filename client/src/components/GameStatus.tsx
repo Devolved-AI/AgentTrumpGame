@@ -209,25 +209,25 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     return () => clearInterval(timer);
   }, [status.isEscalation, status.isGameOver, baseTime, displayTime, onTimerEnd]);
 
+  // This effect handles the initialization of escalation mode with doubled price
+  useEffect(() => {
+    if (status.isEscalation && status.escalationInterval === 0) {
+      // Only set this once when escalation first activates
+      const doubledPrice = (0.0018 * 2).toFixed(4);
+      setStatus(prev => ({
+        ...prev, 
+        requiredAmount: doubledPrice,
+        escalationInterval: 1 // Mark that we've entered the escalation phase
+      }));
+      
+      // Set timer to 5 minutes (300 seconds)
+      setDisplayTime(300);
+    }
+  }, [status.isEscalation, status.escalationInterval]);
+
+  // This effect handles the countdown check for escalation mode
   useEffect(() => {
     if (!status.isEscalation) return;
-
-    // For the new logic, we only use one 5-minute escalation period
-    // When escalation starts, set the price to double (2 * 0.0018)
-    useEffect(() => {
-      if (status.isEscalation && status.escalationInterval === 0) {
-        // Only set this once when escalation first activates
-        const doubledPrice = (0.0018 * 2).toFixed(4);
-        setStatus(prev => ({
-          ...prev, 
-          requiredAmount: doubledPrice,
-          escalationInterval: 1 // Mark that we've entered the escalation phase
-        }));
-        
-        // Set timer to 5 minutes (300 seconds)
-        setDisplayTime(300);
-      }
-    }, [status.isEscalation]);
 
     // When timer reaches zero in escalation mode, the game is over
     const checkInterval = setInterval(() => {

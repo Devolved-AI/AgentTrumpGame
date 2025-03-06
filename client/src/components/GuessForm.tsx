@@ -196,19 +196,6 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         return;
       }
 
-      if (isOver) {
-        setIsGameOver(true);
-        if (onTimerEnd) {
-          onTimerEnd();
-        }
-        toast({
-          title: "Game Over",
-          description: "The game has ended. No more guesses can be submitted.",
-          variant: "destructive"
-        });
-        return;
-      }
-
       setIsSubmitting(true);
       setIsTyping(true);
       const requiredAmount = await contract.currentRequiredAmount();
