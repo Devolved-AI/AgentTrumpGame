@@ -9,7 +9,6 @@ import { useQuery } from "@tanstack/react-query";
 import { GameOverDialog } from "@/components/GameOverDialog";
 import { useWeb3Store } from "@/lib/web3";
 import { useState } from 'react';
-import { GameReset } from "@/components/GameReset";
 
 const fetchEthPrice = async () => {
   const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
@@ -114,7 +113,6 @@ export default function Game() {
           <div className="space-y-8">
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-semibold text-black dark:text-white">Game Status</h2>
-              <GameReset />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <PersuasionScore />
