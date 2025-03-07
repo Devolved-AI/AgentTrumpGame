@@ -47,8 +47,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     escalationInterval: 0, // Track which interval we're in (1-10)
     lastGuessInterval: 0, // Track the interval of the last guess
   });
-  const [displayTime, setDisplayTime] = useState(1800); // 30 minutes in seconds (matching the smart contract's INITIAL_GAME_DURATION)
-  const [baseTime, setBaseTime] = useState(0);
+  const [displayTime, setDisplayTime] = useState(180); // 3 minutes in seconds (custom timer for this game)
+  const [baseTime, setBaseTime] = useState(180); // Match the 3-minute timer
   const [displayEscalationInterval, setDisplayEscalationInterval] = useState(0);
 
 
