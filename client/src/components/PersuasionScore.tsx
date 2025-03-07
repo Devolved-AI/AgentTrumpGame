@@ -314,19 +314,40 @@ export function PersuasionScore() {
       let currentScore = score;
       
       // Adjust score based on response type
+      // Determine points based on current score and response type
+      let pointsToAdd = 0;
+      
+      // For high scores (75+), limit all increases to 1-3 points max
+      if (currentScore >= 75 && (responseType === 'DEAL_MAKER' || responseType === 'BUSINESS_SAVVY')) {
+        // More challenging end-game: random value between 1-3 for any positive response type
+        pointsToAdd = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+        console.log(`End-game scoring: Added ${pointsToAdd} points (score was ${currentScore}+)`);
+      } else {
+        // Normal scoring for scores below 75
+        switch (responseType) {
+          case 'DEAL_MAKER':
+            // Random value between 3-5 points
+            pointsToAdd = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
+            console.log(`Added ${pointsToAdd} points for DEAL_MAKER response`);
+            break;
+          case 'BUSINESS_SAVVY':
+            // Random value between 1-3 points
+            pointsToAdd = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+            console.log(`Added ${pointsToAdd} points for BUSINESS_SAVVY response`);
+            break;
+          default:
+            // No points to add
+            break;
+        }
+      }
+      
+      // Apply positive point changes
+      if (pointsToAdd > 0) {
+        currentScore = Math.min(100, currentScore + pointsToAdd);
+      }
+      
+      // Apply negative point changes
       switch (responseType) {
-        case 'DEAL_MAKER':
-          // Random value between 3-5 points instead of fixed 10
-          const dealPoints = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
-          currentScore = Math.min(100, currentScore + dealPoints);
-          console.log(`Added ${dealPoints} points for DEAL_MAKER response`);
-          break;
-        case 'BUSINESS_SAVVY':
-          // Random value between 1-3 points instead of fixed 5
-          const bizPoints = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
-          currentScore = Math.min(100, currentScore + bizPoints);
-          console.log(`Added ${bizPoints} points for BUSINESS_SAVVY response`);
-          break;
         case 'WEAK_PROPOSITION':
           currentScore = Math.max(0, currentScore - 4);
           break;
