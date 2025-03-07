@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useWeb3Store } from "@/lib/web3";
+import { useWeb3Store, CONTRACT_CHANGE_EVENT } from "@/lib/web3";
 
 export function GameReset() {
-  const { address } = useWeb3Store();
+  const { address, contract, currentContractAddress } = useWeb3Store();
   const [isResetting, setIsResetting] = useState(false);
   
   const resetGameState = async () => {
@@ -35,6 +35,16 @@ export function GameReset() {
         throw new Error("Failed to reset persuasion score");
       }
       
+      // Get current contract address if available
+      let contractAddress = currentContractAddress;
+      if (!contractAddress && contract) {
+        try {
+          contractAddress = await contract.getAddress();
+        } catch (e) {
+          console.error("Failed to get contract address:", e);
+        }
+      }
+      
       // Then explicitly set score to 50 for a new game
       const defaultScore = 50;
       const setResponse = await fetch(`/api/persuasion/${address}`, {
@@ -42,6 +52,7 @@ export function GameReset() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           score: defaultScore,
+          contractAddress, // Include contract address
           message: 'Game reset by user'
         })
       });

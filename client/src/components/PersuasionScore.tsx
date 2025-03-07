@@ -255,12 +255,24 @@ export function PersuasionScore() {
     if (!address) return;
     
     try {
-      const response = await fetch(`/api/persuasion/${address}`);
+      // Get current contract address if available
+      let contractAddressParam = '';
+      if (contract) {
+        try {
+          const currentContractAddress = await contract.getAddress();
+          contractAddressParam = `?contractAddress=${currentContractAddress}`;
+        } catch (e) {
+          console.error("Failed to get contract address for fetchCurrentScore:", e);
+        }
+      }
+      
+      // Request includes contract address as a query parameter if available
+      const response = await fetch(`/api/persuasion/${address}${contractAddressParam}`);
       const data = await response.json();
       
       if (data && typeof data.score === 'number') {
         setScore(data.score);
-        console.log("Score fetched from API:", data.score);
+        console.log(`Score fetched from API: ${data.score} for contract: ${data.contractAddress || 'unknown'}`);
       }
     } catch (error) {
       console.error("Error fetching score:", error);
