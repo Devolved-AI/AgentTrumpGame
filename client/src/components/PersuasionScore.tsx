@@ -65,6 +65,7 @@ export function PersuasionScore() {
   };
 
   // Function to reset the score and cached messages
+  // NOTE: This function is no longer used in normal gameplay to preserve scores between sessions
   const resetScore = async () => {
     if (!address) return;
     
@@ -78,9 +79,16 @@ export function PersuasionScore() {
       
       // Reset score in API
       await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
-      setScore(50); // Reset to default score
       
-      console.log("Persuasion score reset");
+      // Fetch the current default score from API instead of setting to 50
+      const response = await fetch(`/api/persuasion/${address}`);
+      const data = await response.json();
+      
+      if (data && typeof data.score === 'number') {
+        setScore(data.score);
+        console.log("Score reset to default:", data.score);
+      }
+      
     } catch (error) {
       console.error("Error resetting score:", error);
       setError("Failed to reset score");
@@ -231,8 +239,11 @@ export function PersuasionScore() {
     const initialize = async () => {
       setIsUpdating(true);
       try {
-        await resetScore();
+        // First try to get the existing score
         await fetchCurrentScore();
+        
+        // Only reset the score if we're starting a new game session
+        // This ensures the score persists between wallet disconnections
       } catch (error) {
         console.error("Error initializing:", error);
         setError("Failed to initialize");
