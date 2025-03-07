@@ -61,10 +61,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     const initializeTime = async () => {
       try {
-        const [timeRemaining, escalationActive, gameOver] = await Promise.all([
+        const [timeRemaining, escalationActive, won, gameOver] = await Promise.all([
           contract.getTimeRemaining(),
           contract.escalationActive(),
-          contract.isGameOver()
+          contract.gameWon(),
+          isGameOver()
         ]);
 
         const time = Number(timeRemaining.toString());
@@ -118,7 +119,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             isEscalation: escalationActive,
             timeRemaining: calculatedDisplayTime, // Use the calculated time for consistency
             isGameOver: gameOver,
-            won: gameOver // Use gameOver state for won status
+            won: won
           };
           return updatedStatus;
         });
@@ -142,6 +143,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           timeRemaining,
           lastPlayer,
           balance,
+          won,
           escalationActive,
           gameOver,
           requiredAmount
@@ -149,8 +151,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           contract.getTimeRemaining(),
           contract.lastPlayer(),
           contract.getContractBalance(),
+          contract.gameWon(),
           contract.escalationActive(),
-          contract.isGameOver(),
+          isGameOver(),
           getEscalationPrice()
         ]);
 
@@ -159,8 +162,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         // Add debug logging
         console.log("GameStatus - Contract State:", {
           timeRemaining: time,
-          gameOver, // gameOver replaces 'won'
+          won,
           escalationActive,
+          gameOver,
           lastPlayer,
           balance: formatEther(balance)
         });
@@ -176,7 +180,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             timeRemaining: time,
             lastPlayer,
             totalBalance: formatEther(balance),
-            won: gameOver, // Use gameOver state for won status
+            won,
             isEscalation: escalationActive,
             isGameOver: gameOver,
             requiredAmount: requiredAmount,

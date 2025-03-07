@@ -79,14 +79,13 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     const loadResponses = async () => {
       try {
-        // Get the time remaining
-        const timeRemaining = await contract.getTimeRemaining();
-        
-        // Check if the game is over using isGameOver which includes gameWon state
-        const isGameOverValue = await contract.isGameOver();
-        
+        const [gameWon, timeRemaining] = await Promise.all([
+          contract.gameWon(),
+          contract.getTimeRemaining()
+        ]);
+
         // Set initial game over state
-        const isOver = isGameOverValue || Number(timeRemaining.toString()) <= 0;
+        const isOver = gameWon || Number(timeRemaining.toString()) <= 0;
         setIsGameOver(isOver);
         if (isOver && onTimerEnd) {
           onTimerEnd();
@@ -144,13 +143,12 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     const checkGameState = async () => {
       try {
-        // Get the time remaining
-        const timeRemaining = await contract.getTimeRemaining();
+        const [gameWon, timeRemaining] = await Promise.all([
+          contract.gameWon(),
+          contract.getTimeRemaining()
+        ]);
         const time = Number(timeRemaining.toString());
-        
-        // Check if the game is over using isGameOver which includes gameWon state
-        const isGameOverValue = await contract.isGameOver();
-        const isOver = isGameOverValue || time <= 0;
+        const isOver = gameWon || time <= 0;
 
         if (isOver) {
           setIsGameOver(true);
@@ -192,12 +190,13 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     try {
       // Double check game state before submitting
-      const timeRemaining = await contract.getTimeRemaining();
+      const [gameWon, timeRemaining] = await Promise.all([
+        contract.gameWon(),
+        contract.getTimeRemaining()
+      ]);
+
       const time = Number(timeRemaining.toString());
-      
-      // Use isGameOver to check if the game has been won
-      const isGameOverValue = await contract.isGameOver();
-      const isOver = isGameOverValue || time <= 0;
+      const isOver = gameWon || time <= 0;
 
       if (isOver) {
         setIsGameOver(true);
