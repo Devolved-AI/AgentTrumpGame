@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TypingIndicator } from "./TypingIndicator";
 import { TransactionVisualization } from "./TransactionVisualization";
 import { generateTrumpResponse } from "@/lib/openai";
+import { PERSUASION_EVENT } from "./PersuasionScore";
 
 interface GuessFormProps {
   onTimerEnd?: () => void;
@@ -276,6 +277,13 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         isUser: true
       };
       setMessages(prev => [...prev, userMessage]);
+      
+      // Trigger persuasion score update with custom event
+      const persuasionEvent = new CustomEvent(PERSUASION_EVENT, {
+        detail: { message: data.response }
+      });
+      document.dispatchEvent(persuasionEvent);
+      console.log("Persuasion update event dispatched with message:", data.response);
 
       const tx = await contract.submitGuess(
         data.response,

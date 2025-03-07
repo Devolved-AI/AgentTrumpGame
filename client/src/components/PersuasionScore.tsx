@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useWeb3Store } from "@/lib/web3";
 import { Brain, RefreshCw } from "lucide-react";
 
+// Create a custom event for persuasion score updates
+export const PERSUASION_EVENT = "persuasion-score-update";
+export type PersuasionEvent = CustomEvent<{message: string}>;
+
 // Define response types for classification
 type ResponseType = 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING';
 
@@ -258,10 +262,21 @@ export function PersuasionScore() {
     }
   }, [contract, address]);
   
-  // Poll for score updates periodically
+  // Listen for custom persuasion events and poll for score updates
   useEffect(() => {
     if (!address) return;
     
+    // Add listener for custom persuasion update events
+    const handlePersuasionUpdate = (event: Event) => {
+      const customEvent = event as PersuasionEvent;
+      const message = customEvent.detail.message;
+      console.log("Received persuasion update event with message:", message);
+      processNewMessage(message);
+    };
+    
+    document.addEventListener(PERSUASION_EVENT, handlePersuasionUpdate);
+    
+    // Also keep polling for score updates as a fallback
     const interval = setInterval(async () => {
       try {
         await fetchCurrentScore();
@@ -270,8 +285,11 @@ export function PersuasionScore() {
       }
     }, 5000);
     
-    return () => clearInterval(interval);
-  }, [address]);
+    return () => {
+      document.removeEventListener(PERSUASION_EVENT, handlePersuasionUpdate);
+      clearInterval(interval);
+    };
+  }, [address, score]);
 
   return (
     <Card>
