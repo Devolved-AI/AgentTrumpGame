@@ -224,9 +224,10 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     
     // 1. Check for suspiciously uniform character spacing or timing patterns
     // Only check if the text appears too quickly after a previous submission
+    const lastInputTimestamp = localStorage.getItem('lastInputTimestamp');
     const unusualTypingSpeed = text.length > 100 && 
-      localStorage.getItem('lastInputTimestamp') && 
-      (Date.now() - parseInt(localStorage.getItem('lastInputTimestamp') || '0')) < 300;
+      lastInputTimestamp !== null && 
+      (Date.now() - parseInt(lastInputTimestamp || '0')) < 300;
     
     // 2. Analyze typing rhythm from collected keystroke data
     let suspiciousRhythm = false;

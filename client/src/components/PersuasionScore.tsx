@@ -377,6 +377,9 @@ export function PersuasionScore() {
     processNewMessage(text);
   };
 
+  // Keep track of contract address changes
+  const previousContractRef = useRef<string | null>(null);
+  
   // Effect to set up event listener and initialize score
   useEffect(() => {
     if (!contract || !address) return;
@@ -387,11 +390,24 @@ export function PersuasionScore() {
       try {
         console.log(`Initializing persuasion score for address: ${address}`);
         
-        // Fetch the existing score from the server
-        await fetchCurrentScore();
+        // Get the current contract address
+        const contractAddress = await contract.getAddress();
+        console.log(`Current contract address: ${contractAddress}`);
         
-        // IMPORTANT: We NEVER reset scores automatically when wallet connects
-        // Scores should persist between sessions
+        // Check if contract address has changed
+        if (previousContractRef.current !== null && previousContractRef.current !== contractAddress) {
+          console.log(`Contract address changed from ${previousContractRef.current} to ${contractAddress}. Resetting score.`);
+          
+          // Reset score for new contract
+          await resetScore();
+        } else {
+          // Fetch the existing score from the server
+          await fetchCurrentScore();
+        }
+        
+        // Update stored contract address
+        previousContractRef.current = contractAddress;
+        
       } catch (error) {
         console.error("Error initializing persuasion score:", error);
         setError("Failed to initialize score");
