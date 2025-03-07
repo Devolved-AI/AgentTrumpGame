@@ -16,803 +16,133 @@ const BASE_SEPOLIA_CONFIG = {
   blockExplorerUrls: ["https://sepolia.basescan.org"],
 };
 
+// Define the minimal ABI we need for our application
 const CONTRACT_ABI = [
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "playerAddress",
-                                "type": "address"
-                        }
-                ],
-                "name": "getAllPlayerResponses",
-                "outputs": [
-                        {
-                                "components": [
-                                        {
-                                                "internalType": "string[]",
-                                                "name": "responses",
-                                                "type": "string[]"
-                                        },
-                                        {
-                                                "internalType": "bool[]",
-                                                "name": "exists",
-                                                "type": "bool[]"
-                                        },
-                                        {
-                                                "internalType": "uint256[]",
-                                                "name": "timestamps",
-                                                "type": "uint256[]"
-                                        }
-                                ],
-                                "internalType": "struct AgentTrumpGame.PlayerResponses",
-                                "name": "",
-                                "type": "tuple"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "winner",
-                                "type": "address"
-                        }
-                ],
-                "name": "buttonPushed",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "deposit",
-                "outputs": [],
-                "stateMutability": "payable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "emergencyWithdraw",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "endGame",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "forceEndGame",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "stateMutability": "nonpayable",
-                "type": "constructor"
-        },
-        {
-                "inputs": [],
-                "name": "EnforcedPause",
-                "type": "error"
-        },
-        {
-                "inputs": [],
-                "name": "ExpectedPause",
-                "type": "error"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "owner",
-                                "type": "address"
-                        }
-                ],
-                "name": "OwnableInvalidOwner",
-                "type": "error"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "account",
-                                "type": "address"
-                        }
-                ],
-                "name": "OwnableUnauthorizedAccount",
-                "type": "error"
-        },
-        {
-                "inputs": [],
-                "name": "ReentrancyGuardReentrantCall",
-                "type": "error"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "owner",
-                                "type": "address"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "amount",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "Deposited",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "owner",
-                                "type": "address"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "amount",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "EmergencyWithdrawn",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "startBlock",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "EscalationStarted",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "lastPlayer",
-                                "type": "address"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "lastPlayerReward",
-                                "type": "uint256"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "ownerReward",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "GameEnded",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "newEndBlock",
-                                "type": "uint256"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "newMultiplier",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "GameExtended",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "owner",
-                                "type": "address"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "ownerReward",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "GameForciblyEnded",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "winner",
-                                "type": "address"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "reward",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "GameWon",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "player",
-                                "type": "address"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "amount",
-                                "type": "uint256"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "multiplier",
-                                "type": "uint256"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "string",
-                                "name": "response",
-                                "type": "string"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "blockNumber",
-                                "type": "uint256"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "responseIndex",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "GuessSubmitted",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "previousOwner",
-                                "type": "address"
-                        },
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "newOwner",
-                                "type": "address"
-                        }
-                ],
-                "name": "OwnershipTransferred",
-                "type": "event"
-        },
-        {
-                "inputs": [],
-                "name": "pause",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": false,
-                                "internalType": "address",
-                                "name": "account",
-                                "type": "address"
-                        }
-                ],
-                "name": "Paused",
-                "type": "event"
-        },
-        {
-                "inputs": [],
-                "name": "renounceOwnership",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "string",
-                                "name": "response",
-                                "type": "string"
-                        }
-                ],
-                "name": "submitGuess",
-                "outputs": [],
-                "stateMutability": "payable",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "newOwner",
-                                "type": "address"
-                        }
-                ],
-                "name": "transferOwnership",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "unpause",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": false,
-                                "internalType": "address",
-                                "name": "account",
-                                "type": "address"
-                        }
-                ],
-                "name": "Unpaused",
-                "type": "event"
-        },
-        {
-                "anonymous": false,
-                "inputs": [
-                        {
-                                "indexed": true,
-                                "internalType": "address",
-                                "name": "owner",
-                                "type": "address"
-                        },
-                        {
-                                "indexed": false,
-                                "internalType": "uint256",
-                                "name": "amount",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "Withdrawn",
-                "type": "event"
-        },
-        {
-                "stateMutability": "payable",
-                "type": "fallback"
-        },
-        {
-                "inputs": [],
-                "name": "withdraw",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "stateMutability": "payable",
-                "type": "receive"
-        },
-        {
-                "inputs": [],
-                "name": "BASE_MULTIPLIER",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "BLOCKS_PER_MINUTE",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "currentMultiplier",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "currentRequiredAmount",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "ESCALATION_PERIOD",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "escalationActive",
-                "outputs": [
-                        {
-                                "internalType": "bool",
-                                "name": "",
-                                "type": "bool"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "escalationPrices",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "escalationStartBlock",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "GAME_FEE",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "gameEndBlock",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "gameStartBlock",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "gameWon",
-                "outputs": [
-                        {
-                                "internalType": "bool",
-                                "name": "",
-                                "type": "bool"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "getContractBalance",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "getCurrentEscalationInterval",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "player",
-                                "type": "address"
-                        }
-                ],
-                "name": "getPlayerResponses",
-                "outputs": [
-                        {
-                                "components": [
-                                        {
-                                                "internalType": "string",
-                                                "name": "response",
-                                                "type": "string"
-                                        },
-                                        {
-                                                "internalType": "uint256",
-                                                "name": "timestamp",
-                                                "type": "uint256"
-                                        },
-                                        {
-                                                "internalType": "bool",
-                                                "name": "exists",
-                                                "type": "bool"
-                                        }
-                                ],
-                                "internalType": "struct TrumpGuessGame.PlayerResponse[]",
-                                "name": "",
-                                "type": "tuple[]"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "getTimeRemaining",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "INITIAL_GAME_DURATION",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "lastPlayer",
-                "outputs": [
-                        {
-                                "internalType": "address",
-                                "name": "",
-                                "type": "address"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "MAX_RESPONSE_LENGTH",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "owner",
-                "outputs": [
-                        {
-                                "internalType": "address",
-                                "name": "",
-                                "type": "address"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "paused",
-                "outputs": [
-                        {
-                                "internalType": "bool",
-                                "name": "",
-                                "type": "bool"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "",
-                                "type": "address"
-                        },
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "name": "playerResponses",
-                "outputs": [
-                        {
-                                "internalType": "string",
-                                "name": "response",
-                                "type": "string"
-                        },
-                        {
-                                "internalType": "uint256",
-                                "name": "timestamp",
-                                "type": "uint256"
-                        },
-                        {
-                                "internalType": "bool",
-                                "name": "exists",
-                                "type": "bool"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "shouldExtendGame",
-                "outputs": [
-                        {
-                                "internalType": "bool",
-                                "name": "",
-                                "type": "bool"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "shouldStartEscalation",
-                "outputs": [
-                        {
-                                "internalType": "bool",
-                                "name": "",
-                                "type": "bool"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "totalCollected",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        }
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "response",
+        "type": "string"
+      }
+    ],
+    "name": "submitGuess",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCurrentEscalationPrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "isGameOver",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastGuessAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastGuessBlock",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPlayerResponseByIndex",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "response",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "exists",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getContractBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getRemainingBlocks",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ];
 
 interface Web3State {
@@ -849,22 +179,13 @@ const checkNetwork = async (ethereum: any) => {
             });
             return true;
           } catch (addError) {
-            console.error("Failed to add network:", addError);
-            toast({
-              title: "Network Error",
-              description: "Failed to add Base Sepolia network. Please add it manually in MetaMask.",
-              variant: "destructive",
-            });
+            console.error("Failed to add Base Sepolia network:", addError);
             return false;
           }
+        } else {
+          console.error("Failed to switch to Base Sepolia network:", switchError);
+          return false;
         }
-        console.error("Failed to switch network:", switchError);
-        toast({
-          title: "Network Error",
-          description: "Please switch to Base Sepolia network manually in MetaMask.",
-          variant: "destructive",
-        });
-        return false;
       }
     }
     return true;
@@ -881,119 +202,61 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   address: null,
   balance: null,
   isInitialized: false,
-
-  getEscalationPrice: async () => {
-    const { contract } = get();
-    if (!contract) return "0";
-    try {
-      const amount = await contract.currentRequiredAmount();
-      return ethers.formatEther(amount);
-    } catch (error) {
-      console.error("Error getting escalation price:", error);
-      return "0";
-    }
-  },
-
-  isGameOver: async () => {
-    const { contract } = get();
-    if (!contract) return false;
-    try {
-      const [gameWon, timeRemaining] = await Promise.all([
-        contract.gameWon(),
-        contract.getTimeRemaining()
-      ]);
-      return gameWon || Number(timeRemaining.toString()) <= 0;
-    } catch (error) {
-      console.error("Error checking game over status:", error);
-      return false;
-    }
-  },
-
+  
   connect: async () => {
-    if (typeof window === 'undefined' || !window.ethereum) {
-      toast({
-        title: "MetaMask Required",
-        description: "Please install MetaMask to connect your wallet",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      set((state) => {
-        state.clearMessages();
-        return state;
-      });
-
-
-      // Verify network and switch if needed
-      const networkValid = await checkNetwork(window.ethereum);
-      if (!networkValid) return;
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-
-      try {
-        const accounts = await provider.send("eth_requestAccounts", []);
-        if (!accounts || accounts.length === 0) {
-          toast({
-            title: "Connection Error",
-            description: "No accounts found. Please check MetaMask and try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const address = accounts[0];
-        const signer = await provider.getSigner(address);
-        const balance = ethers.formatEther(await provider.getBalance(address));
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-        // Verify contract connection
-        try {
-          await contract.gameWon();
-        } catch (error: any) {
-          console.error("Contract connection error:", error);
-          toast({
-            title: "Contract Error",
-            description: "Failed to connect to game contract. Please try again later.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        set({ provider, signer, contract, address, balance, isInitialized: true });
-
+      if (!window.ethereum) {
         toast({
-          title: "Wallet Connected",
-          description: "Successfully connected to Base Sepolia network",
-        });
-
-        // Setup event listeners
-        window.ethereum.on('accountsChanged', async (accounts: string[]) => {
-          if (accounts.length === 0) {
-            set({ provider: null, signer: null, contract: null, address: null, balance: null, isInitialized: false });
-          } else {
-            const newAddress = accounts[0];
-            const newBalance = ethers.formatEther(await provider.getBalance(newAddress));
-            set((state) => ({ ...state, address: newAddress, balance: newBalance }));
-          }
-        });
-
-        window.ethereum.on('chainChanged', () => {
-          window.location.reload();
-        });
-
-      } catch (error: any) {
-        console.error("Account access error:", error);
-        toast({
-          title: "Connection Error",
-          description: "Failed to access account. Please check MetaMask permissions.",
+          title: "Web3 Error",
+          description: "No Web3 provider detected. Please install MetaMask.",
           variant: "destructive",
         });
+        return;
       }
 
+      const isCorrectNetwork = await checkNetwork(window.ethereum);
+      if (!isCorrectNetwork) {
+        toast({
+          title: "Network Error",
+          description: "Please connect to Base Sepolia network.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      const balance = ethers.formatEther(await provider.getBalance(address));
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      set({
+        provider,
+        signer,
+        contract,
+        address,
+        balance,
+        isInitialized: true,
+      });
+
+      toast({
+        title: "Connected",
+        description: `Successfully connected to ${address.slice(0, 6)}...${address.slice(-4)}`,
+      });
+
+      // Listen for account changes
+      window.ethereum.on("accountsChanged", () => {
+        get().reset();
+        get().connect();
+      });
+
+      // Listen for chain changes
+      window.ethereum.on("chainChanged", () => {
+        window.location.reload();
+      });
+
     } catch (error: any) {
-      console.error("Failed to connect:", error);
+      console.error("Connect error:", error);
       toast({
         title: "Connection Error",
         description: error.message || "Failed to connect wallet",
@@ -1003,44 +266,60 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   },
 
   disconnect: () => {
-    if (window.ethereum) {
-      window.ethereum.removeAllListeners('accountsChanged');
-    }
     set({
       provider: null,
       signer: null,
       contract: null,
       address: null,
       balance: null,
-      isInitialized: false
-    });
-    set((state) => {
-      state.clearMessages();
-      return state;
+      isInitialized: false,
     });
     toast({
-      title: "Wallet Disconnected",
-      description: "Successfully disconnected wallet",
+      title: "Disconnected",
+      description: "Wallet disconnected successfully",
     });
   },
 
   reset: () => {
-    if (window.ethereum) {
-      window.ethereum.removeAllListeners('accountsChanged');
-    }
     set({
       provider: null,
       signer: null,
       contract: null,
       address: null,
       balance: null,
-      isInitialized: false
+      isInitialized: false,
     });
   },
 
   clearMessages: () => {
-    set((state) => ({ ...state }));
+    // This method will be implemented with message history state
   },
+
+  getEscalationPrice: async () => {
+    try {
+      const { contract } = get();
+      if (!contract) return "0";
+      
+      const price = await contract.getCurrentEscalationPrice();
+      return ethers.formatEther(price);
+    } catch (error) {
+      console.error("Error getting escalation price:", error);
+      return "0";
+    }
+  },
+
+  isGameOver: async () => {
+    try {
+      const { contract } = get();
+      if (!contract) return false;
+      
+      const gameOver = await contract.isGameOver();
+      return gameOver;
+    } catch (error) {
+      console.error("Error checking if game is over:", error);
+      return false;
+    }
+  }
 }));
 
 export const formatEther = ethers.formatEther;
