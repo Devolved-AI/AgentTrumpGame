@@ -1,7 +1,7 @@
 // Script to reset game state with new contract address
 import fetch from 'node-fetch';
 
-const contractAddress = "0x5A45ffcE8c69c0Cb13F888b1cF7bBe625b17259a";
+const contractAddress = "0xF3032E13D338405fd455dF356fa528503a3bf906";
 
 async function resetGame() {
   try {
