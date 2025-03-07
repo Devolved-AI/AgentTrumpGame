@@ -21,12 +21,20 @@ export function GameOverDialog() {
     if (!contract) return;
 
     try {
+      console.log("Fetching game over info...");
+      
       // Fetch game over info immediately
       const [lastPlayer, block, gameWon] = await Promise.all([
         contract.lastPlayer(),
         contract.lastGuessBlock(),
         contract.gameWon()
       ]);
+      
+      console.log("Contract data retrieved:", { 
+        lastPlayer, 
+        block: block ? block.toString() : "Unknown", 
+        gameWon 
+      });
       
       // If there's a winner but it's not explicitly provided, try to find it
       let winner = winnerAddress;
@@ -105,7 +113,7 @@ export function GameOverDialog() {
               });
               console.log("Registered fallback winner:", winner);
             } catch (regError) {
-              console.warn("Error registering winner:", regError);
+              console.warn("Error registering fallback winner:", regError);
             }
           }
         }
@@ -129,23 +137,50 @@ export function GameOverDialog() {
         }
       }
       
+      // Try to get additional information about the block
+      let blockInfo = block ? block.toString() : "Unknown";
+      try {
+        if (block) {
+          // Try to get more blockchain info if available
+          const provider = contract.runner?.provider;
+          if (provider) {
+            console.log("Fetching detailed block information for block:", block.toString());
+            try {
+              // Get actual block information if possible
+              const blockData = await provider.getBlock(Number(block.toString()));
+              if (blockData) {
+                console.log("Block data retrieved:", blockData);
+                // Format block info with extra details if available
+                blockInfo = `${block.toString()} (${new Date(Number(blockData.timestamp) * 1000).toLocaleTimeString()})`;
+              }
+            } catch (blockError) {
+              console.warn("Unable to fetch detailed block info:", blockError);
+              // Continue with just the number
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("Error getting additional block information:", error);
+      }
+      
       // Update the game info state
-      setGameInfo({
+      const gameInfoUpdate = {
         lastGuessAddress: lastPlayer || "No last player",
-        lastBlock: block ? block.toString() : "Unknown",
+        lastBlock: blockInfo,
         winner: winner && winner !== "0x0000000000000000000000000000000000000000" ? winner : undefined
-      });
+      };
+      
+      setGameInfo(gameInfoUpdate);
 
-      console.log("Final game info:", {
-        lastGuessAddress: lastPlayer || "No last player",
-        lastBlock: block ? block.toString() : "Unknown",
-        winner: winner && winner !== "0x0000000000000000000000000000000000000000" ? winner : undefined
-      });
+      console.log("Final game info:", gameInfoUpdate);
 
       // Force the dialog to show
       setOpen(true);
     } catch (error) {
       console.error("Error fetching game over info:", error);
+      
+      // Even on error, try to show the dialog with whatever info we have
+      setOpen(true);
     }
   };
 
@@ -269,14 +304,20 @@ export function GameOverDialog() {
               </div>
             )}
             
-            <div>
-              <p className="font-semibold mb-1">Last Player:</p>
-              <p className="font-mono break-all">{gameInfo.lastGuessAddress}</p>
+            <div className="bg-gray-900 p-4 rounded-md">
+              <p className="font-semibold mb-1 text-amber-400">Last Address:</p>
+              <p className="font-mono break-all">{gameInfo.winner || gameInfo.lastGuessAddress}</p>
+              <p className="text-sm mt-2 text-amber-300">
+                {gameInfo.winner ? "This address achieved the winning score of 100/100" : "This was the last player to interact with the contract"}
+              </p>
             </div>
 
-            <div>
-              <p className="font-semibold mb-1">Last Block:</p>
-              <p className="font-mono">{gameInfo.lastBlock}</p>
+            <div className="bg-gray-900 p-4 rounded-md">
+              <p className="font-semibold mb-1 text-blue-400">Last Block:</p>
+              <p className="font-mono">{gameInfo.lastBlock || "Fetching block information..."}</p>
+              <p className="text-sm mt-2 text-blue-300">
+                This is the final blockchain block that concluded the game
+              </p>
             </div>
             
             <p className="text-center mt-4 text-sm">
