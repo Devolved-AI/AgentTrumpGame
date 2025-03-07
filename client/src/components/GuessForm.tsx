@@ -220,45 +220,45 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
   // This function helps detect anomalies in typing patterns
   const detectPastedText = (text: string): boolean => {
     // Human typing typically shows more variation in typing speed and rhythm
-    // Pasted text usually appears instantly with unusual typing speed
+    // For this function, we'll only detect the most obvious cases of automated input
+    // to avoid false positives with genuine user typing
     
-    // 1. Check for suspiciously uniform character spacing or timing patterns
-    // Only check if the text appears too quickly after a previous submission
+    // 1. Only check for the immediate submission after loading the page
+    // This check is now much more lenient to avoid false positives
     const lastInputTimestamp = localStorage.getItem('lastInputTimestamp');
-    const unusualTypingSpeed = text.length > 100 && 
+    const unusualTypingSpeed = text.length > 300 && 
       lastInputTimestamp !== null && 
-      (Date.now() - parseInt(lastInputTimestamp || '0')) < 300;
+      (Date.now() - parseInt(lastInputTimestamp || '0')) < 100;
     
-    // 2. Analyze typing rhythm from collected keystroke data
+    // 2. Rhythm detection is now more permissive 
     let suspiciousRhythm = false;
     
     // We need a significant number of keystrokes to analyze patterns accurately
-    if (typingData.keypressIntervals.length >= 15) {
+    if (typingData.keypressIntervals.length >= 20) {
       // Calculate standard deviation of intervals - human typing has natural variance
       const avg = typingData.keypressIntervals.reduce((sum, val) => sum + val, 0) / typingData.keypressIntervals.length;
       const variance = typingData.keypressIntervals.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / typingData.keypressIntervals.length;
       const stdDev = Math.sqrt(variance);
       
-      // Only flag extremely consistent typing patterns - lowered sensitivity
-      // This should only catch automated typing/script inputs, not human typing
-      if (avg > 0 && (stdDev / avg < 0.2) && avg < 30 && text.length > 50) {
+      // Much more permissive rhythm detection - will only catch extremely robotic patterns
+      if (avg > 0 && (stdDev / avg < 0.1) && avg < 20 && text.length > 200) {
         suspiciousRhythm = true;
         console.log("Suspicious typing rhythm detected", { avg, stdDev, ratio: stdDev/avg });
       }
     }
     
-    // 3. Check for non-standard characters that might indicate copy-paste
+    // 3. Check for certain invisible characters that occur only in pasted text
+    // This check is still useful as these characters don't appear in normal typing
     const hasUnusualCharacters = /[\u200B-\u200F\uFEFF]/.test(text);
     
-    // 4. Check if text length is suspiciously large compared to keystroke count
-    // Only apply this for longer texts and with a much lower ratio to avoid false positives
+    // 4. Length ratio check is now much more lenient
     const keystrokesToTextRatio = typingData.keypressIntervals.length > 0 ? 
       typingData.keypressIntervals.length / text.length : 0;
-    const suspiciousLength = text.length > 100 && keystrokesToTextRatio < 0.3;
+    const suspiciousLength = text.length > 200 && keystrokesToTextRatio < 0.1;
     
-    // Focus mainly on the unusual characters check, which is more reliable
-    // for detecting paste operations
-    return hasUnusualCharacters || (suspiciousRhythm && suspiciousLength) || unusualTypingSpeed;
+    // We now require multiple conditions to be true to reduce false positives
+    // Normal typing should easily pass this check now
+    return hasUnusualCharacters || (suspiciousRhythm && suspiciousLength && unusualTypingSpeed);
   };
 
   const onSubmit = async (data: z.infer<typeof guessSchema>) => {
@@ -594,13 +594,25 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                               }
                             }}
                             onPaste={(e) => {
-                              e.preventDefault();
-                              toast({
-                                title: "Paste Detected",
-                                description: "Pasting is not allowed. Please type your message manually.",
-                                variant: "destructive"
-                              });
-                              return false;
+                              // Allow pasting, but monitor for automated behavior patterns
+                              const pastedText = e.clipboardData.getData('text');
+                              
+                              // Only block pastes that contain unusual characters or are extremely long
+                              if (/[\u200B-\u200F\uFEFF]/.test(pastedText) || pastedText.length > 500) {
+                                e.preventDefault();
+                                toast({
+                                  title: "Unusual Content Detected",
+                                  description: "Your pasted content contains unusual characters or is too long.",
+                                  variant: "destructive"
+                                });
+                                return false;
+                              }
+                              
+                              // Record the paste action in typing data to help with rhythm analysis
+                              setTypingData(prev => ({
+                                lastKeypressTime: Date.now(),
+                                keypressIntervals: [...prev.keypressIntervals.slice(-20), 0] // 0 interval indicates paste
+                              }));
                             }}
                             {...field}
                           />
