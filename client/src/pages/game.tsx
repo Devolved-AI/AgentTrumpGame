@@ -1,7 +1,7 @@
 import { WalletButton } from "@/components/WalletButton";
 import { GameStatus } from "@/components/GameStatus";
 import { GuessForm } from "@/components/GuessForm";
-import { Globe } from "lucide-react";
+import { Globe, ExternalLink } from "lucide-react";
 import { SiX, SiTelegram, SiEthereum } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersuasionScore } from "@/components/PersuasionScore";
@@ -76,18 +76,34 @@ export default function Game() {
             </div>
 
             {address && isInitialized && (
-              <div className="flex gap-8 items-start">
-                <video 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline
-                  className="w-96 h-48 rounded-lg object-cover border-2 border-black dark:border-white"
-                >
-                  <source src="/donald-trump-icegif.mp4" type="video/mp4" />
-                </video>
-                <div className="flex-1">
-                  <GameStatus showPrizePoolOnly={true} />
+              <div className="flex flex-col w-full">
+                <div className="w-full text-center mb-4">
+                  <p className="font-bold text-black dark:text-white text-lg">
+                    This round is sponsored by Devolved AI{" "}
+                    <a 
+                      href="https://www.devolvedai.com" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center hover:opacity-80"
+                    >
+                      <ExternalLink className="ml-1 h-4 w-4" />
+                    </a>
+                  </p>
+                </div>
+                
+                <div className="flex gap-8 items-start">
+                  <video 
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline
+                    className="w-96 h-48 rounded-lg object-cover border-2 border-black dark:border-white"
+                  >
+                    <source src="/donald-trump-icegif.mp4" type="video/mp4" />
+                  </video>
+                  <div className="flex-1">
+                    <GameStatus showPrizePoolOnly={true} />
+                  </div>
                 </div>
               </div>
             )}
