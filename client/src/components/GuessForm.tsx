@@ -66,7 +66,15 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
-  const [isGameOver, setIsGameOver] = useState(false);
+  const [isGameOver, setIsGameOver] = useState<boolean>(false);
+  
+  // Log on initial render if the game is interactive or not
+  console.log("Initial message input state:", { 
+    disabled: isGameOver || isSubmitting, 
+    isGameOver, 
+    isSubmitting, 
+    hasWallet: !!address 
+  });
   const [typingData, setTypingData] = useState<{
     lastKeypressTime: number;
     keypressIntervals: number[];
@@ -79,8 +87,11 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     setMessages([WELCOME_MESSAGE]);
 
     if (!contract || !address) {
+      console.log("Wallet not connected or contract not available:", { contract: !!contract, address });
       return;
     }
+    
+    console.log("Wallet connected successfully:", { address });
 
     let mounted = true;
 
@@ -156,8 +167,11 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         ]);
         const time = Number(timeRemaining.toString());
         const isOver = gameWon || time <= 0;
+        
+        console.log("Game state check:", { gameWon, time, isOver });
 
         if (isOver) {
+          console.log("Game is determined to be over");
           setIsGameOver(true);
           if (onTimerEnd) {
             onTimerEnd();
@@ -165,6 +179,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           // Ensure we stop checking once the game is over
           clearInterval(interval);
         } else {
+          console.log("Game is active and running");
           setIsGameOver(false);
         }
       } catch (error) {
