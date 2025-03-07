@@ -120,9 +120,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset all scores for any users associated with a different contract
       Array.from(scoreCache.entries()).forEach(([address, data]) => {
         if (data.contractAddress !== contractAddress) {
-          // Reset to 50 for new contract
+          // Reset to 25 for new contract
           scoreCache.set(address, {
-            score: 50,
+            score: 25,
             contractAddress: contractAddress,
             lastUpdated: Date.now()
           });

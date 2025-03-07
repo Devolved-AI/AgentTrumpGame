@@ -550,17 +550,7 @@ export function PersuasionScore() {
   useEffect(() => {
     if (!address) return;
     
-    // Add listener for custom persuasion update events
-    const handlePersuasionUpdate = (event: Event) => {
-      const customEvent = event as PersuasionEvent;
-      const message = customEvent.detail.message;
-      console.log("Received persuasion update event with message:", message);
-      processNewMessage(message);
-    };
-    
-    document.addEventListener(PERSUASION_EVENT, handlePersuasionUpdate);
-    
-    // Also keep polling for score updates as a fallback
+    // Keep polling for score updates
     const interval = setInterval(async () => {
       try {
         await fetchCurrentScore();
@@ -570,7 +560,6 @@ export function PersuasionScore() {
     }, 5000);
     
     return () => {
-      document.removeEventListener(PERSUASION_EVENT, handlePersuasionUpdate);
       clearInterval(interval);
     };
   }, [address, score]);
