@@ -42,7 +42,7 @@ const AI_PATTERNS = [
 
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
-  const [score, setScore] = useState<number>(50);
+  const [score, setScore] = useState<number>(25);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);

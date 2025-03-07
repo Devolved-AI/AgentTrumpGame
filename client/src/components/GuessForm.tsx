@@ -473,11 +473,12 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         ]);
         
         // Trigger persuasion score update with custom event AFTER Trump's response
+        // Use Trump's response for persuasion score calculation, not the user's message
         const persuasionEvent = new CustomEvent(PERSUASION_EVENT, {
-          detail: { message: data.response }
+          detail: { message: trumpResponse || "Interesting... Keep trying to convince me! 🤔" }
         });
         document.dispatchEvent(persuasionEvent);
-        console.log("Persuasion update event dispatched with message:", data.response);
+        console.log("Persuasion update event dispatched with Trump's response:", trumpResponse);
 
         toast({
           title: "Success!",
