@@ -67,6 +67,13 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [typingData, setTypingData] = useState<{
+    lastKeypressTime: number;
+    keypressIntervals: number[];
+  }>({
+    lastKeypressTime: 0,
+    keypressIntervals: []
+  });
 
   useEffect(() => {
     setMessages([WELCOME_MESSAGE]);
@@ -195,7 +202,67 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     }
   });
 
+  // This function helps detect anomalies in typing patterns
+  const detectPastedText = (text: string): boolean => {
+    // Human typing typically shows more variation in typing speed and rhythm
+    // Pasted text usually appears instantly with unusual typing speed
+    
+    // 1. Check for suspiciously uniform character spacing or timing patterns
+    const unusualTypingSpeed = text.length > 30 && 
+      localStorage.getItem('lastInputTimestamp') && 
+      (Date.now() - parseInt(localStorage.getItem('lastInputTimestamp') || '0')) < 500;
+    
+    // 2. Analyze typing rhythm from collected keystroke data
+    let suspiciousRhythm = false;
+    
+    // We need a minimum number of keystrokes to analyze typing patterns
+    if (typingData.keypressIntervals.length >= 10) {
+      // Calculate standard deviation of intervals - human typing has natural variance
+      // Too consistent timing might indicate automated typing or pasting
+      const avg = typingData.keypressIntervals.reduce((sum, val) => sum + val, 0) / typingData.keypressIntervals.length;
+      const variance = typingData.keypressIntervals.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / typingData.keypressIntervals.length;
+      const stdDev = Math.sqrt(variance);
+      
+      // Normal human typing typically has more variation (higher standard deviation)
+      // Very low standard deviation may indicate copy-paste or automated input
+      if (avg > 0 && (stdDev / avg < 0.3)) {
+        suspiciousRhythm = true;
+        console.log("Suspicious typing rhythm detected", { avg, stdDev, ratio: stdDev/avg });
+      }
+      
+      // Also check for unnaturally fast typing (average interval too low)
+      if (avg < 50 && text.length > 20) { // Less than 50ms average between keystrokes
+        suspiciousRhythm = true;
+        console.log("Unnaturally fast typing detected", { avg });
+      }
+    }
+    
+    // 3. Check for non-standard characters that might indicate copy-paste
+    const hasUnusualCharacters = /[\u200B-\u200F\uFEFF]/.test(text);
+    
+    // 4. Check if text length is suspiciously large compared to keystroke count
+    // This can happen if text was pasted when no keys were being tracked
+    const keystrokesToTextRatio = typingData.keypressIntervals.length > 0 ? 
+      typingData.keypressIntervals.length / text.length : 0;
+    const suspiciousLength = text.length > 30 && keystrokesToTextRatio < 0.5;
+    
+    return unusualTypingSpeed || hasUnusualCharacters || suspiciousRhythm || suspiciousLength;
+  };
+
   const onSubmit = async (data: z.infer<typeof guessSchema>) => {
+    // Store the timestamp when user submits
+    localStorage.setItem('lastInputTimestamp', Date.now().toString());
+    
+    // Check if the response appears to be pasted text
+    if (detectPastedText(data.response)) {
+      toast({
+        title: "Automated Input Detected",
+        description: "Please type your message manually. Copy-pasted text is not allowed.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!contract || isGameOver) {
       toast({
         title: "Game Over",
@@ -390,6 +457,11 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           variant: "default"
         });
         form.reset();
+        // Reset typing data on successful submission
+        setTypingData({
+          lastKeypressTime: 0,
+          keypressIntervals: []
+        });
       } else {
         toast({
           title: "Error",
@@ -494,6 +566,40 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
                               isGameOver ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                             disabled={isGameOver || isSubmitting}
+                            onKeyDown={(e) => {
+                              // Skip for non-printing keys like arrows, shift, etc.
+                              if (e.key.length > 1 && !['Backspace', 'Delete'].includes(e.key)) {
+                                return;
+                              }
+                              
+                              const now = Date.now();
+                              
+                              // If this isn't the first keypress, calculate the interval
+                              if (typingData.lastKeypressTime > 0) {
+                                const interval = now - typingData.lastKeypressTime;
+                                
+                                // Store the typing interval
+                                setTypingData(prev => ({
+                                  lastKeypressTime: now,
+                                  keypressIntervals: [...prev.keypressIntervals.slice(-20), interval]
+                                }));
+                              } else {
+                                // First keypress, just record the time
+                                setTypingData(prev => ({
+                                  ...prev,
+                                  lastKeypressTime: now
+                                }));
+                              }
+                            }}
+                            onPaste={(e) => {
+                              e.preventDefault();
+                              toast({
+                                title: "Paste Detected",
+                                description: "Pasting is not allowed. Please type your message manually.",
+                                variant: "destructive"
+                              });
+                              return false;
+                            }}
                             {...field}
                           />
                         </FormControl>

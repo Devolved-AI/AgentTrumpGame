@@ -12,7 +12,7 @@ contract AgentTrumpGame is ReentrancyGuard, Ownable, Pausable {
     uint256 public lastGuessBlock;
     
     uint256 public constant BLOCKS_PER_MINUTE = 30;
-    uint256 public constant INITIAL_GAME_DURATION = 10 * BLOCKS_PER_MINUTE;
+    uint256 public constant INITIAL_GAME_DURATION = 30 * BLOCKS_PER_MINUTE;
     uint256 public constant ESCALATION_PERIOD = 5 * BLOCKS_PER_MINUTE;
     uint256 public constant BASE_MULTIPLIER = 200;
     uint256 public constant GAME_FEE = 0.0009 ether;
