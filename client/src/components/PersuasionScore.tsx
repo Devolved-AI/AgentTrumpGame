@@ -103,10 +103,30 @@ export function PersuasionScore() {
 
     try {
       console.log("Attempting to end game with winner:", address);
+      // Call buttonPushed to trigger game over for everyone
       const tx = await contract.buttonPushed(address);
       await tx.wait();
       setHasTriggeredGameEnd(true);
+      
+      // Ensure local game state reflects game over
+      // Attempt to call endGame directly as a fallback
+      try {
+        const gameWonTx = await contract.gameWon();
+        if (!gameWonTx) {
+          console.log("Game won state not set, forcing game end...");
+          // Force the game won state
+          await contract.endGame();
+        }
+      } catch (endGameError) {
+        console.warn("Error forcing game end state:", endGameError);
+      }
+      
       console.log("Game ended successfully");
+      
+      // Force a window refresh to ensure all clients see the game over state
+      window.dispatchEvent(new CustomEvent('game-over', { 
+        detail: { winner: address }
+      }));
     } catch (error) {
       console.error("Error ending game:", error);
       setError("Failed to end game");
