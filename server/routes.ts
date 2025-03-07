@@ -111,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add an endpoint to handle contract address changes
   app.post('/api/contract', async (req, res) => {
     try {
-      const { contractAddress } = req.body;
+      const { contractAddress, defaultScore = 50 } = req.body;
       
       if (!contractAddress) {
         return res.status(400).json({ error: 'Contract address is required' });
@@ -120,20 +120,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset all scores for any users associated with a different contract
       Array.from(scoreCache.entries()).forEach(([address, data]) => {
         if (data.contractAddress !== contractAddress) {
-          // Reset to 50 for new contract
+          // Reset to defaultScore (or 50 if not specified) for new contract
           scoreCache.set(address, {
-            score: 50,
+            score: defaultScore,
             contractAddress: contractAddress,
             lastUpdated: Date.now()
           });
-          console.log(`Reset score for ${address} due to contract change to ${contractAddress}`);
+          console.log(`Reset score for ${address} to ${defaultScore} due to contract change to ${contractAddress}`);
         }
       });
       
       // Save updated scores to disk
       saveScoresToDisk();
       
-      res.json({ success: true, message: 'Contract address updated and scores reset' });
+      res.json({ 
+        success: true, 
+        message: `Contract address updated and scores reset to ${defaultScore}`,
+        defaultScore,
+        contractAddress
+      });
     } catch (error) {
       console.error('Error updating contract address:', error);
       res.status(500).json({ error: 'Failed to update contract address' });
