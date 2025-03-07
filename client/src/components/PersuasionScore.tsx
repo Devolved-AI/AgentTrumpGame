@@ -4,15 +4,28 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useWeb3Store } from "@/lib/web3";
 import { Brain, RefreshCw } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 
+// Define response types for classification
 type ResponseType = 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING';
 
-interface PlayerResponse {
-  response: string;
-  exists: boolean;
-  timestamp: bigint;
-}
+// Define keyword dictionaries for persuasion analysis
+const DEAL_TERMS = [
+  'deal', 'investment', 'opportunity', 'profit', 'return', 'money', 'business',
+  'market', 'value', 'billion', 'million', 'success', 'win', 'negotiate',
+  'revenue', 'growth', 'partnership', 'acquisition', 'merger', 'scalable'
+];
+
+const POWER_TERMS = [
+  'best', 'huge', 'tremendous', 'successful', 'rich', 'smart', 'genius',
+  'winner', 'powerful', 'incredible', 'amazing', 'fantastic', 'exceptional',
+  'outstanding', 'revolutionary', 'innovative', 'disruptive', 'game-changing'
+];
+
+const THREAT_TERMS = [
+  'sue', 'lawyer', 'court', 'lawsuit', 'legal', 'threat', 'destroy',
+  'bankrupt', 'ruin', 'expose', 'media', 'press', 'regulation',
+  'investigation', 'competitor', 'scandal', 'failure', 'risk'
+];
 
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
@@ -21,43 +34,12 @@ export function PersuasionScore() {
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
   const [hasTriggeredGameEnd, setHasTriggeredGameEnd] = useState(false);
+  
+  // Set to track processed messages to avoid double-counting
+  const processedMessagesRef = useRef<Set<string>>(new Set());
 
-  const usedMessagesRef = useRef<Set<string>>(new Set());
-  const usedTacticsRef = useRef<Set<string>>(new Set());
-
-  const DEAL_TERMS = [
-    'deal', 'investment', 'opportunity', 'profit', 'return', 'money', 'business',
-    'market', 'value', 'billion', 'million', 'success', 'win', 'negotiate',
-    'revenue', 'growth', 'partnership', 'acquisition', 'merger', 'scalable'
-  ];
-
-  const POWER_TERMS = [
-    'best', 'huge', 'tremendous', 'successful', 'rich', 'smart', 'genius',
-    'winner', 'powerful', 'incredible', 'amazing', 'fantastic', 'exceptional',
-    'outstanding', 'revolutionary', 'innovative', 'disruptive', 'game-changing'
-  ];
-
-  const THREAT_TERMS = [
-    'sue', 'lawyer', 'court', 'lawsuit', 'legal', 'threat', 'destroy',
-    'bankrupt', 'ruin', 'expose', 'media', 'press', 'regulation',
-    'investigation', 'competitor', 'scandal', 'failure', 'risk'
-  ];
-
-  const RESISTANCE_THRESHOLD = 0.85;
-
-  const evaluateBusinessTactics = (message: string): string[] => {
-    const lowerMessage = message.toLowerCase();
-    const tactics = [...DEAL_TERMS, ...POWER_TERMS].filter(term =>
-      lowerMessage.includes(term) && !usedTacticsRef.current.has(term)
-    );
-    return tactics;
-  };
-
-  const passesResistanceCheck = (): boolean => {
-    return Math.random() > RESISTANCE_THRESHOLD;
-  };
-
-  const classifyResponse = (text: string): 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING' => {
+  // Function to classify a response based on keyword analysis
+  const classifyResponse = (text: string): ResponseType => {
     const textLower = text.toLowerCase();
 
     // Count occurrences of terms in each category
@@ -65,40 +47,45 @@ export function PersuasionScore() {
     const powerTermCount = POWER_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
     const threatTermCount = THREAT_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
 
-    // Check for threatens first as they have the highest penalty
+    // Classify based on term counts
     if (threatTermCount >= 2) {
       return 'THREATENING';
     }
-
-    // Check for strong deal making language
     if (dealTermCount >= 3 && powerTermCount >= 2) {
       return 'DEAL_MAKER';
     }
-
-    // Check for business savvy language
     if (dealTermCount >= 2 || powerTermCount >= 3) {
       return 'BUSINESS_SAVVY';
     }
-
-    // Default to weak proposition
     return 'WEAK_PROPOSITION';
   };
 
-
-  const resetCaches = async () => {
-    usedMessagesRef.current.clear();
-    usedTacticsRef.current.clear();
-    setLastProcessedResponse(null);
-
-    if (address) {
-      try {
-        await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
-      } catch (error) {
-        console.error("Error clearing score:", error);
-      }
+  // Function to reset the score and cached messages
+  const resetScore = async () => {
+    if (!address) return;
+    
+    try {
+      setIsUpdating(true);
+      setError(null);
+      
+      // Clear local cache
+      processedMessagesRef.current.clear();
+      setLastProcessedResponse(null);
+      
+      // Reset score in API
+      await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
+      setScore(50); // Reset to default score
+      
+      console.log("Persuasion score reset");
+    } catch (error) {
+      console.error("Error resetting score:", error);
+      setError("Failed to reset score");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
+  // Function to end the game for all players (when max persuasion is reached)
   const endGameForAll = async () => {
     if (!contract || !address || hasTriggeredGameEnd) return;
 
@@ -114,218 +101,32 @@ export function PersuasionScore() {
     }
   };
 
-  const calculateAndUpdateScore = async () => {
-    if (!contract || !address) {
-      console.log("Missing contract or address:", { contract: !!contract, address });
-      return;
-    }
-
+  // Function to fetch and update the score from the API
+  const fetchCurrentScore = async () => {
+    if (!address) return;
+    
     try {
-      console.log("Starting to calculate score for address:", address);
-      // First get the current score from the API as our starting point
-      const scoreResponse = await fetch(`/api/persuasion/${address}`);
-      const scoreData = await scoreResponse.json();
-      let calculatedScore = scoreData?.score || 50;
-      console.log("Initial score from API:", calculatedScore);
-
-      console.log("Fetching responses from contract...");
-      const responses = await contract.getAllPlayerResponses(address);
-      console.log("Responses received:", responses);
-
-      if (!responses || !responses.responses || responses.responses.length === 0) {
-        console.log("No responses found, using base score:", calculatedScore);
-        setScore(calculatedScore);
-        return;
+      const response = await fetch(`/api/persuasion/${address}`);
+      const data = await response.json();
+      
+      if (data && typeof data.score === 'number') {
+        setScore(data.score);
+        console.log("Score fetched from API:", data.score);
       }
-
-      console.log("Filtering valid responses...");
-      const validResponses = responses.responses.filter((response: string, index: number) =>
-        responses.exists[index]
-      );
-      console.log("Valid responses count:", validResponses.length);
-
-      let lastResponse = null;
-      let mostRecentTimestamp = BigInt(0);
-
-      // Create a temporary set for tracking processed messages in this session
-      const tempProcessedMessages = new Set(usedMessagesRef.current);
-
-      for (const response of validResponses) {
-        try {
-          let text = response;
-          try {
-            const parsed = JSON.parse(response);
-            text = parsed.response;
-          } catch (e) {
-            // Response is not JSON, using raw text
-          }
-
-          if (usedMessagesRef.current.has(text)) {
-            continue;
-          }
-
-          // Track the most recent response for display
-          const index = validResponses.indexOf(response);
-          const timestamp = responses.timestamps[index];
-          if (timestamp > mostRecentTimestamp) {
-            mostRecentTimestamp = timestamp;
-            lastResponse = text;
-          }
-
-          usedMessagesRef.current.add(text);
-          lastResponse = text;
-
-          const responseType = classifyResponse(text);
-          switch (responseType) {
-            case 'DEAL_MAKER':
-              calculatedScore = Math.min(100, calculatedScore + 10);
-              break;
-            case 'BUSINESS_SAVVY':
-              calculatedScore = Math.min(100, calculatedScore + 5);
-              break;
-            case 'WEAK_PROPOSITION':
-              calculatedScore = Math.max(0, calculatedScore - 4);
-              break;
-            case 'THREATENING':
-              calculatedScore = Math.max(0, calculatedScore - 75);
-              break;
-          }
-        } catch (error) {
-          console.error("Error processing response:", error);
-        }
-      }
-
-      setScore(calculatedScore);
-      if (lastResponse) {
-        setLastProcessedResponse(lastResponse);
-      }
-
-      if (calculatedScore >= 100 && !hasTriggeredGameEnd) {
-        await endGameForAll();
-      }
-
-      await fetch(`/api/persuasion/${address}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score: calculatedScore })
-      });
-
     } catch (error) {
-      console.error("Error calculating score:", error);
-      setError("Failed to calculate score");
-    } finally {
-      setIsUpdating(false);
+      console.error("Error fetching score:", error);
     }
   };
 
+  // Function to handle refresh button click
   const handleRefresh = async () => {
-    if (!contract || !address || isUpdating) {
-      console.log("Cannot refresh: missing data or already updating", { 
-        hasContract: !!contract, 
-        address, 
-        isUpdating 
-      });
-      return;
-    }
-
+    if (isUpdating || !address) return;
+    
     setIsUpdating(true);
     setError(null);
-
+    
     try {
-      console.log("Refreshing score for address:", address);
-      
-      // Get responses from the contract
-      console.log("Calling contract.getAllPlayerResponses...");
-      const responses = await contract.getAllPlayerResponses(address);
-      console.log("Contract responses received:", responses);
-
-      if (responses && responses.responses && responses.responses.length > 0) {
-        console.log(`Found ${responses.responses.length} responses from contract`);
-        const validResponses = responses.responses.filter((response: string, index: number) =>
-          responses.exists[index]
-        );
-        console.log(`Filtered to ${validResponses.length} valid responses`);
-
-        // Get the current set of processed messages
-        const currentProcessedMessages = new Set(usedMessagesRef.current);
-        let currentScore = score;
-        let newLastResponse = null;
-
-        // Process any new responses not already counted
-        for (const responseText of validResponses) {
-          let text = responseText;
-          try {
-            const parsed = JSON.parse(responseText);
-            text = parsed.response;
-          } catch (e) {
-            // Not JSON, using raw text
-          }
-
-          // Only process messages we haven't seen before
-          if (!currentProcessedMessages.has(text)) {
-            currentProcessedMessages.add(text);
-            usedMessagesRef.current.add(text);
-            newLastResponse = text;
-
-            // Calculate score for this specific response
-            const responseType = classifyResponse(text);
-
-            switch (responseType) {
-              case 'DEAL_MAKER':
-                currentScore = Math.min(100, currentScore + 10);
-                break;
-              case 'BUSINESS_SAVVY':
-                currentScore = Math.min(100, currentScore + 5);
-                break;
-              case 'WEAK_PROPOSITION':
-                currentScore = Math.max(0, currentScore - 4);
-                break;
-              case 'THREATENING':
-                currentScore = Math.max(0, currentScore - 75);
-                break;
-            }
-          }
-        }
-
-        // If we have a new response, update the display and send the score to API
-        if (newLastResponse) {
-          setLastProcessedResponse(newLastResponse);
-          setScore(currentScore);
-
-          // Send the updated score to the server
-          await fetch(`/api/persuasion/${address}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ score: currentScore })
-          });
-
-          // Check if game should end
-          if (currentScore >= 100 && !hasTriggeredGameEnd) {
-            await endGameForAll();
-          }
-        } else {
-          // If no new responses, just fetch the current score from API
-          const response = await fetch(`/api/persuasion/${address}`);
-          const data = await response.json();
-
-          if (data && typeof data.score === 'number') {
-            setScore(data.score);
-          }
-
-          // Update last response display
-          if (validResponses.length > 0) {
-            const lastResponseText = validResponses[validResponses.length - 1];
-            let text = lastResponseText;
-            try {
-              const parsed = JSON.parse(lastResponseText);
-              text = parsed.response;
-            } catch (e) {
-              // Not JSON, using raw text
-            }
-            setLastProcessedResponse(text);
-          }
-        }
-      }
+      await fetchCurrentScore();
     } catch (error) {
       console.error("Error refreshing score:", error);
       setError("Failed to refresh score");
@@ -334,37 +135,63 @@ export function PersuasionScore() {
     }
   };
 
-  useEffect(() => {
-    if (!contract || !address) return;
-
-    const initializeScore = async () => {
-      setIsUpdating(true);
-      try {
-        await resetCaches();
-        await calculateAndUpdateScore();
-      } catch (error) {
-        console.error("Error initializing persuasion score:", error);
-        setError("Failed to initialize score");
-      } finally {
-        setIsUpdating(false);
+  // Process a new message from the player
+  const processNewMessage = async (message: string) => {
+    if (!address || processedMessagesRef.current.has(message)) return;
+    
+    try {
+      // Mark message as processed
+      processedMessagesRef.current.add(message);
+      
+      // Update the last processed message display
+      setLastProcessedResponse(message);
+      
+      // Classify the message
+      const responseType = classifyResponse(message);
+      
+      // Get current score as base
+      let currentScore = score;
+      
+      // Adjust score based on response type
+      switch (responseType) {
+        case 'DEAL_MAKER':
+          currentScore = Math.min(100, currentScore + 10);
+          break;
+        case 'BUSINESS_SAVVY':
+          currentScore = Math.min(100, currentScore + 5);
+          break;
+        case 'WEAK_PROPOSITION':
+          currentScore = Math.max(0, currentScore - 4);
+          break;
+        case 'THREATENING':
+          currentScore = Math.max(0, currentScore - 75);
+          break;
       }
-    };
-
-    initializeScore();
-
-    // Set up a more frequent periodic refresh of the persuasion score
-    const scoreInterval = setInterval(async () => {
-      try {
-        await calculateAndUpdateScore();
-      } catch (error) {
-        console.error("Error updating persuasion score:", error);
+      
+      // Update UI immediately
+      setScore(currentScore);
+      
+      // Update score in API
+      await fetch(`/api/persuasion/${address}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score: currentScore })
+      });
+      
+      console.log(`Score updated to ${currentScore} (${responseType})`);
+      
+      // Check if game should end
+      if (currentScore >= 100 && !hasTriggeredGameEnd) {
+        await endGameForAll();
       }
-    }, 5000); // Refresh more frequently - every 5 seconds for more immediate feedback
+    } catch (error) {
+      console.error("Error processing message:", error);
+      setError("Failed to process message");
+    }
+  };
 
-    return () => clearInterval(scoreInterval);
-  }, [contract, address]);
-
-  const handleGuessSubmitted = async (
+  // Handle GuessSubmitted event
+  const handleGuessSubmitted = (
     player: string,
     amount: any,
     multiplier: any,
@@ -372,110 +199,79 @@ export function PersuasionScore() {
     blockNumber: any,
     responseIndex: any
   ) => {
-    console.log("Guess submitted event received:", { player, response });
-    
     // Only process our own submissions
     if (player.toLowerCase() !== address?.toLowerCase()) {
       return;
     }
     
-    setIsUpdating(true);
+    console.log("Guess submitted event received:", { player, response });
+    
+    // Extract the message text
+    let text = response;
     try {
-      let text = response;
-      try {
-        const parsed = JSON.parse(response);
-        text = parsed.response;
-      } catch (e) {
-        // Response is not JSON, using raw text
-      }
-
-      // Immediately set the last processed response for UI feedback
-      setLastProcessedResponse(text);
-
-      // Process the new response
-      if (!usedMessagesRef.current.has(text)) {
-        usedMessagesRef.current.add(text);
-
-        // Calculate score for this specific response
-        const responseType = classifyResponse(text);
-        let newScore = score;
-
-        switch (responseType) {
-          case 'DEAL_MAKER':
-            newScore = Math.min(100, newScore + 10);
-            break;
-          case 'BUSINESS_SAVVY':
-            newScore = Math.min(100, newScore + 5);
-            break;
-          case 'WEAK_PROPOSITION':
-            newScore = Math.max(0, newScore - 4);
-            break;
-          case 'THREATENING':
-            newScore = Math.max(0, newScore - 75);
-            break;
-        }
-
-        // Update the UI immediately with the new score
-        setScore(newScore);
-        console.log(`Score updated immediately to ${newScore}`);
-
-        // Send the updated score to the server
-        await fetch(`/api/persuasion/${address}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ score: newScore })
-        });
-
-        // Check if game should end
-        if (newScore >= 100 && !hasTriggeredGameEnd) {
-          await endGameForAll();
-        }
-      } else {
-        // If we've seen this message before, still refresh the score
-        await calculateAndUpdateScore();
-      }
-    } catch (error) {
-      console.error("Error updating score after guess:", error);
-      setError("Failed to update score");
-      
-      // Even if there's an error, try to refresh from the server
-      try {
-        await calculateAndUpdateScore();
-      } catch (secondError) {
-        console.error("Failed to refresh score after error:", secondError);
-      }
-    } finally {
-      setIsUpdating(false);
+      const parsed = JSON.parse(response);
+      text = parsed.response;
+    } catch (e) {
+      // Not JSON, using raw text
     }
+    
+    // Process the message
+    processNewMessage(text);
   };
 
+  // Effect to set up event listener and initialize score
   useEffect(() => {
     if (!contract || !address) return;
-
+    
+    // Initialize score
+    const initialize = async () => {
+      setIsUpdating(true);
+      try {
+        await resetScore();
+        await fetchCurrentScore();
+      } catch (error) {
+        console.error("Error initializing:", error);
+        setError("Failed to initialize");
+      } finally {
+        setIsUpdating(false);
+      }
+    };
+    
+    initialize();
+    
+    // Set up event listener for new messages
     try {
-      // Add event listener for guess submissions
-      contract.on(
-        "GuessSubmitted",
-        handleGuessSubmitted
-      );
-
-      console.log("Set up GuessSubmitted event listener");
-
+      contract.on("GuessSubmitted", handleGuessSubmitted);
+      console.log("GuessSubmitted event listener set up");
+      
       return () => {
         try {
-          contract.removeListener(
-            "GuessSubmitted",
-            handleGuessSubmitted
-          );
-          console.log("Removed GuessSubmitted event listener");
+          contract.removeListener("GuessSubmitted", handleGuessSubmitted);
+          console.log("GuessSubmitted event listener removed");
         } catch (error) {
           console.error("Error removing event listener:", error);
         }
       };
     } catch (error) {
       console.error("Error setting up event listener:", error);
+      setError("Failed to connect to game events");
     }
   }, [contract, address]);
+  
+  // Poll for score updates periodically
+  useEffect(() => {
+    if (!address) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        await fetchCurrentScore();
+      } catch (error) {
+        console.error("Error in score polling:", error);
+      }
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [address]);
 
   return (
     <Card>
