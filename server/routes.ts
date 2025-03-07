@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add endpoint to reset persuasion scores for a specific address
   app.post('/api/persuasion/reset', async (req, res) => {
     try {
-      const { address, defaultScore = 25 } = req.body;
+      const { address, defaultScore = 99 } = req.body;
       
       if (!address) {
         return res.status(400).json({ error: 'Address is required' });
@@ -214,7 +214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint to reset all persuasion scores
   app.post('/api/persuasion/reset-all', async (req, res) => {
     try {
-      const { contractAddress, defaultScore = 25 } = req.body;
+      const { contractAddress, defaultScore = 99 } = req.body;
       const scoreValue = Number(defaultScore);
       
       if (!contractAddress) {
