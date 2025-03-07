@@ -139,39 +139,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to update contract address' });
     }
   });
-
-  // Endpoint to reset all persuasion scores - this must come BEFORE other persuasion routes
+  
+  // Add endpoint to reset persuasion scores for a specific address
   app.post('/api/persuasion/reset', async (req, res) => {
     try {
-      const { contractAddress, defaultScore = 50 } = req.body;
+      const { address } = req.body;
       
-      if (!contractAddress) {
-        return res.status(400).json({ error: 'Contract address is required' });
+      if (!address) {
+        return res.status(400).json({ error: 'Address is required' });
       }
       
-      // Reset all scores to the default value (50 if not specified)
-      Array.from(scoreCache.keys()).forEach((address) => {
-        scoreCache.set(address, {
-          score: defaultScore,
-          contractAddress: contractAddress,
-          lastUpdated: Date.now()
-        });
+      // Reset the score to 50 for the specified address
+      const existingData = scoreCache.get(address.toLowerCase());
+      const currentContract = existingData?.contractAddress || null;
+      
+      scoreCache.set(address.toLowerCase(), {
+        score: 50,
+        contractAddress: currentContract,
+        lastUpdated: Date.now()
       });
+      
+      console.log(`Manually reset persuasion score for ${address} to 50`);
       
       // Save updated scores to disk
       saveScoresToDisk();
       
-      console.log(`Reset all persuasion scores to ${defaultScore} for contract ${contractAddress}`);
       res.json({ 
         success: true, 
-        message: `All persuasion scores reset to ${defaultScore} for contract ${contractAddress}`,
-        affectedAddresses: Array.from(scoreCache.keys())
+        message: 'Persuasion score reset to 50',
+        address: address.toLowerCase(),
+        score: 50
       });
     } catch (error) {
-      console.error('Error resetting persuasion scores:', error);
-      res.status(500).json({ error: 'Failed to reset persuasion scores' });
+      console.error('Error resetting persuasion score:', error);
+      res.status(500).json({ error: 'Failed to reset persuasion score' });
     }
   });
+
+  // Endpoint to reset all persuasion scores - not used currently, kept for reference
+  // app.post('/api/persuasion/reset-all', async (req, res) => {
+  //   try {
+  //     const { contractAddress, defaultScore = 50 } = req.body;
+  //     
+  //     if (!contractAddress) {
+  //       return res.status(400).json({ error: 'Contract address is required' });
+  //     }
+  //     
+  //     // Reset all scores to the default value (50 if not specified)
+  //     Array.from(scoreCache.keys()).forEach((address) => {
+  //       scoreCache.set(address, {
+  //         score: defaultScore,
+  //         contractAddress: contractAddress,
+  //         lastUpdated: Date.now()
+  //       });
+  //     });
+  //     
+  //     // Save updated scores to disk
+  //     saveScoresToDisk();
+  //     
+  //     console.log(`Reset all persuasion scores to ${defaultScore} for contract ${contractAddress}`);
+  //     res.json({ 
+  //       success: true, 
+  //       message: `All persuasion scores reset to ${defaultScore} for contract ${contractAddress}`,
+  //       affectedAddresses: Array.from(scoreCache.keys())
+  //     });
+  //   } catch (error) {
+  //     console.error('Error resetting persuasion scores:', error);
+  //     res.status(500).json({ error: 'Failed to reset persuasion scores' });
+  //   }
+  // });
 
   // Endpoint to get all persuasion scores - this must come BEFORE the dynamic :address route
   app.get('/api/persuasion/all', async (req, res) => {

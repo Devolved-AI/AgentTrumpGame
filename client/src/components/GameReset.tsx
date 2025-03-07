@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, RefreshCw } from "lucide-react";
+import { Trash2, RefreshCw, RotateCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useWeb3Store, CONTRACT_CHANGE_EVENT } from "@/lib/web3";
 
 export function GameReset() {
-  const { address, contract, currentContractAddress } = useWeb3Store();
+  const { address, contract, currentContractAddress, resetPersuasionScores } = useWeb3Store();
   const [isResetting, setIsResetting] = useState(false);
+  const [isResetingScores, setIsResettingScores] = useState(false);
   
   const resetGameState = async () => {
     if (!address) {
@@ -24,6 +25,7 @@ export function GameReset() {
       // Clear local storage items related to game state
       localStorage.removeItem('gameTimerState');
       localStorage.removeItem('escalationInterval');
+      localStorage.removeItem('escalationCount');
       localStorage.removeItem('escalationPrice');
       
       // Reset the persuasion score via API - first delete existing score
@@ -65,7 +67,7 @@ export function GameReset() {
       
       toast({
         title: "Game Reset Complete",
-        description: "Game state has been reset. New game will start with 30 minutes timer and persuasion score of 50.",
+        description: "Game state has been reset. New game will start with 5 minute timer and persuasion score of 50.",
         variant: "default",
       });
       
@@ -84,20 +86,63 @@ export function GameReset() {
     }
   };
   
+  const handleResetScores = async () => {
+    if (!address) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsResettingScores(true);
+    try {
+      await resetPersuasionScores();
+      // No need to reload, the event listener will update the UI
+    } catch (error) {
+      console.error("Error resetting persuasion scores:", error);
+      toast({
+        title: "Reset Failed",
+        description: "An error occurred while resetting persuasion scores. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingScores(false);
+    }
+  };
+  
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={resetGameState}
-      disabled={isResetting || !address}
-      className="flex items-center gap-1"
-    >
-      {isResetting ? (
-        <RefreshCw className="h-4 w-4 animate-spin" />
-      ) : (
-        <Trash2 className="h-4 w-4" />
-      )}
-      Reset Game
-    </Button>
+    <div className="flex flex-col md:flex-row gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={resetGameState}
+        disabled={isResetting || !address}
+        className="flex items-center gap-1"
+      >
+        {isResetting ? (
+          <RefreshCw className="h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="h-4 w-4" />
+        )}
+        Reset Game
+      </Button>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleResetScores}
+        disabled={isResetingScores || !address}
+        className="flex items-center gap-1"
+      >
+        {isResetingScores ? (
+          <RefreshCw className="h-4 w-4 animate-spin" />
+        ) : (
+          <RotateCcw className="h-4 w-4" />
+        )}
+        Reset Scores
+      </Button>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
+import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
 const CONTRACT_ADDRESS = "0xe1190EA4aC68f831e7deCCf00675F841Ef88412A";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
@@ -834,6 +835,7 @@ interface Web3State {
   disconnect: () => void;
   reset: () => void;
   clearMessages: () => void;
+  resetPersuasionScores: () => Promise<void>;
   getEscalationPrice: () => Promise<string>;
   isGameOver: () => Promise<boolean>;
 }
@@ -1086,6 +1088,52 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
 
   clearMessages: () => {
     set((state) => ({ ...state }));
+  },
+  
+  resetPersuasionScores: async () => {
+    const { address } = get();
+    if (!address) {
+      toast({
+        title: "Not Connected",
+        description: "Please connect your wallet first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/persuasion/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ address })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to reset persuasion scores');
+      }
+      
+      // Dispatch event to notify components about the reset
+      window.dispatchEvent(
+        new CustomEvent(PERSUASION_EVENT, { 
+          detail: { message: "Persuasion scores reset to 50" }
+        })
+      );
+      
+      toast({
+        title: "Scores Reset",
+        description: "Your persuasion scores have been reset to 50",
+      });
+    } catch (error: any) {
+      console.error("Error resetting persuasion scores:", error);
+      toast({
+        title: "Reset Error",
+        description: error.message || "Failed to reset persuasion scores",
+        variant: "destructive",
+      });
+    }
   },
 }));
 
