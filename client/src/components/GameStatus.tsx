@@ -336,6 +336,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
             // Reset display time to 5 minutes (300 seconds) for first escalation period
             setDisplayTime(300);
+            
+            // Store escalation state in localStorage for persistence
+            localStorage.setItem('escalationInterval', '1');
+            localStorage.setItem('escalationPrice', ESCALATION_PRICES[0]);
 
             // Don't end game or clear the timer - we're now in escalation mode
           }
@@ -402,6 +406,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           const nextPrice = ESCALATION_PRICES[nextInterval - 1]; // Array is 0-indexed
 
           console.log(`Moving to escalation interval ${nextInterval} with price ${nextPrice}`);
+          console.log(`Previous timer was: ${displayTime} seconds`);
 
           // Update the status with the new interval and price
           setStatus(prev => ({
@@ -412,6 +417,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
           // Reset the timer for the new 5-minute interval
           setDisplayTime(300);
+          console.log(`Timer reset to: 300 seconds for new escalation period`);
+          
+          // Update localStorage with current values for persistence
+          localStorage.setItem('escalationInterval', nextInterval.toString());
+          localStorage.setItem('escalationPrice', nextPrice);
+          console.log(`Escalation data saved to localStorage: interval=${nextInterval}, price=${nextPrice}`);
         }
       }
     }, 1000);
