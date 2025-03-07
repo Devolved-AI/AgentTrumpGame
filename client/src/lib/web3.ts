@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
-const CONTRACT_ADDRESS = "0x6a2ebec240323F8DB7692540262a423F7F6158EE";
+const CONTRACT_ADDRESS = "0x5d1e763f67bb84960a7f1894c906b89f09280E00";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -1091,7 +1091,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   },
   
   resetPersuasionScores: async () => {
-    const { address } = get();
+    const { address, currentContractAddress } = get();
     if (!address) {
       toast({
         title: "Not Connected",
@@ -1102,12 +1102,39 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     }
     
     try {
+      // Use reset-all endpoint to reset all scores to 25 for new contract
+      const defaultScore = 25; // Set all scores to 25
+      
+      if (currentContractAddress) {
+        // Reset all scores for the current contract to 25
+        const resetAllResponse = await fetch('/api/persuasion/reset-all', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            contractAddress: currentContractAddress,
+            defaultScore 
+          })
+        });
+        
+        if (!resetAllResponse.ok) {
+          console.warn('Failed to reset all persuasion scores, falling back to individual reset');
+        } else {
+          console.log(`Successfully reset all persuasion scores to ${defaultScore}`);
+        }
+      }
+      
+      // Also reset the individual user's score
       const response = await fetch('/api/persuasion/reset', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ address })
+        body: JSON.stringify({ 
+          address,
+          defaultScore
+        })
       });
       
       if (!response.ok) {
@@ -1118,13 +1145,13 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       // Dispatch event to notify components about the reset
       window.dispatchEvent(
         new CustomEvent(PERSUASION_EVENT, { 
-          detail: { message: "Persuasion scores reset to 50" }
+          detail: { message: `Persuasion scores reset to ${defaultScore}` }
         })
       );
       
       toast({
         title: "Scores Reset",
-        description: "Your persuasion scores have been reset to 50",
+        description: `Your persuasion scores have been reset to ${defaultScore}`,
       });
     } catch (error: any) {
       console.error("Error resetting persuasion scores:", error);
