@@ -329,14 +329,14 @@ export function PersuasionScore() {
 
     initializeScore();
 
-    // Set up a periodic refresh of the persuasion score
+    // Set up a more frequent periodic refresh of the persuasion score
     const scoreInterval = setInterval(async () => {
       try {
         await calculateAndUpdateScore();
       } catch (error) {
         console.error("Error updating persuasion score:", error);
       }
-    }, 15000); // Refresh more frequently - every 15 seconds
+    }, 5000); // Refresh more frequently - every 5 seconds for more immediate feedback
 
     return () => clearInterval(scoreInterval);
   }, [contract, address]);
@@ -356,17 +356,6 @@ export function PersuasionScore() {
       return;
     }
     
-    // Immediately trigger score calculation after submission
-    setIsUpdating(true);
-    try {
-      await calculateAndUpdateScore();
-      console.log("Score updated after submission");
-    } catch (error) {
-      console.error("Error updating score after submission:", error);
-    } finally {
-      setIsUpdating(false);
-    }
-
     setIsUpdating(true);
     try {
       let text = response;
@@ -405,6 +394,7 @@ export function PersuasionScore() {
 
         // Update the UI immediately with the new score
         setScore(newScore);
+        console.log(`Score updated immediately to ${newScore}`);
 
         // Send the updated score to the server
         await fetch(`/api/persuasion/${address}`, {
@@ -417,12 +407,21 @@ export function PersuasionScore() {
         if (newScore >= 100 && !hasTriggeredGameEnd) {
           await endGameForAll();
         }
+      } else {
+        // If we've seen this message before, still refresh the score
+        await calculateAndUpdateScore();
       }
-
-      setIsUpdating(false);
     } catch (error) {
       console.error("Error updating score after guess:", error);
       setError("Failed to update score");
+      
+      // Even if there's an error, try to refresh from the server
+      try {
+        await calculateAndUpdateScore();
+      } catch (secondError) {
+        console.error("Failed to refresh score after error:", secondError);
+      }
+    } finally {
       setIsUpdating(false);
     }
   };
