@@ -323,8 +323,8 @@ export function PersuasionScore() {
     initializeScore();
 
     // Set up a periodic refresh of the persuasion score
-    const scoreInterval = setInterval(() => {
-      calculateAndUpdateScore();
+    const scoreInterval = setInterval(async () => {
+      await calculateAndUpdateScore(); // Added await here
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(scoreInterval);

@@ -291,12 +291,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       // Check escalation status directly from the contract for accurate state
       let escalationActive = false;
       if (contract) {
-        try {
-          escalationActive = await contract.escalationActive();
-          console.log(`Timer check - Contract escalation status: ${escalationActive}`);
-        } catch (error) {
-          console.error("Error checking escalation status:", error);
-        }
+        // Use the status state value instead of trying to fetch it in the timer
+        escalationActive = status.isEscalation;
+        console.log(`Timer check - Contract escalation status: ${escalationActive}`);
       }
 
       setDisplayTime(prev => {
