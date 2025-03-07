@@ -95,7 +95,7 @@ function detectSuspiciousPatterns(address: string, currentInput: string): boolea
   return false;
 }
 
-export async function generateTrumpResponse(userGuess: string, address?: string): Promise<string> {
+export async function generateTrumpResponse(userGuess: string, address?: string | null): Promise<string> {
   try {
     // If address is provided, check for suspicious patterns
     if (address) {
