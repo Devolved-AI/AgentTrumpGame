@@ -9,8 +9,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// File to store persuasion scores persistently
+// Files to store game data persistently
 const SCORES_FILE = path.join(__dirname, '../scores.json');
+const WINNERS_FILE = path.join(__dirname, '../winners.json');
+
+// Interface for winner data
+interface Winner {
+  address: string;
+  timestamp: number;
+  score: number;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Load persistent scores from file or initialize empty map
@@ -32,6 +40,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Convert to Map for runtime use
   const scoreCache = new Map<string, number>(Object.entries(persistentScores));
+  
+  // Load past winners
+  let winners: Winner[] = [];
+  
+  try {
+    if (fs.existsSync(WINNERS_FILE)) {
+      const fileContent = fs.readFileSync(WINNERS_FILE, 'utf8');
+      winners = JSON.parse(fileContent);
+      console.log('Loaded past winners:', winners.length);
+    } else {
+      console.log('No existing winners file found, creating a new one');
+      fs.writeFileSync(WINNERS_FILE, JSON.stringify([]), 'utf8');
+    }
+  } catch (error) {
+    console.error('Error loading winners:', error);
+    // Continue with empty winners if file can't be loaded
+  }
 
   // Helper function to save scores to disk
   const saveScoresToDisk = () => {
@@ -41,6 +66,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Saved scores to disk');
     } catch (error) {
       console.error('Error saving scores to disk:', error);
+    }
+  };
+  
+  // Helper function to save winners to disk
+  const saveWinnersToDisk = () => {
+    try {
+      fs.writeFileSync(WINNERS_FILE, JSON.stringify(winners, null, 2), 'utf8');
+      console.log('Saved winners to disk');
+    } catch (error) {
+      console.error('Error saving winners to disk:', error);
     }
   };
 
@@ -121,6 +156,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error clearing persuasion score:', error);
       res.status(500).json({ error: 'Failed to clear persuasion score' });
+    }
+  });
+  
+  // Endpoint to get game winners
+  app.get('/api/winners', async (req, res) => {
+    try {
+      res.json(winners);
+    } catch (error) {
+      console.error('Error getting winners:', error);
+      res.status(500).json({ error: 'Failed to get winners' });
+    }
+  });
+  
+  // Endpoint to register a new winner
+  app.post('/api/winners', async (req, res) => {
+    try {
+      const { address } = req.body;
+      
+      if (!address) {
+        return res.status(400).json({ error: 'Winner address is required' });
+      }
+      
+      // Get score for this address
+      const score = scoreCache.get(address) ?? 0;
+      
+      // Create new winner entry
+      const newWinner: Winner = {
+        address,
+        score,
+        timestamp: Date.now()
+      };
+      
+      // Check if this address is already in winners
+      const existingWinnerIndex = winners.findIndex(w => w.address === address);
+      
+      if (existingWinnerIndex >= 0) {
+        // Update existing winner
+        winners[existingWinnerIndex] = newWinner;
+      } else {
+        // Add new winner
+        winners.push(newWinner);
+      }
+      
+      // Save winners to disk
+      saveWinnersToDisk();
+      
+      res.status(201).json({ success: true, winner: newWinner });
+    } catch (error) {
+      console.error('Error registering winner:', error);
+      res.status(500).json({ error: 'Failed to register winner' });
     }
   });
 

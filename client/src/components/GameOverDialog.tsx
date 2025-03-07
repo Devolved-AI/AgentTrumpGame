@@ -30,27 +30,20 @@ export function GameOverDialog() {
       
       // If there's a winner but it's not explicitly provided, try to find it
       let winner = winnerAddress;
+      console.log("Initial winner from parameter:", winner);
       
-      // If we don't have a winner address yet, and the game was won
-      if (!winner && gameWon) {
-        try {
-          // We know the game is won, but let's see if we can find who has 100 points
-          // This is a simpler approach than trying to parse events
-          console.log("Game is won, trying to find the winner");
-          
-          // We'll attempt to find the winner in the API section below 
-          // instead of using events parsing which is complex
-        } catch (eventError) {
-          console.warn("Error finding winner:", eventError);
-        }
-      }
-
       // If we still don't have a winner, check for any player with 100/100 score
-      if (!winner) {
+      // This is the most reliable approach - looking for anyone with 100 points
+      if (!winner || winner === address) {
         try {
+          console.log("Fetching all scores to find winner with 100 points");
           // Get the API endpoint for all players
-          const response = await fetch(`/api/persuasion/all`);
+          const response = await fetch(`/api/persuasion/all`, {
+            // Add cache busting to ensure we get fresh data
+            headers: { 'pragma': 'no-cache', 'cache-control': 'no-cache' }
+          });
           const data = await response.json();
+          console.log("All player scores:", data);
           
           // Find the first player with score 100
           const maxScorePlayer = Object.entries(data).find(([addr, scoreData]: [string, any]) => 
@@ -59,17 +52,94 @@ export function GameOverDialog() {
           
           if (maxScorePlayer) {
             winner = maxScorePlayer[0];
-            console.log("Found winner from API with max score:", winner);
+            console.log("Found winner from API with 100 score:", winner);
+            
+            // Check if we found ourselves as winner and game is won by someone else
+            if (winner === address && gameWon && lastPlayer && lastPlayer !== address) {
+              console.log("We found ourselves as winner but last player is different, using last player");
+              winner = lastPlayer;
+            }
+            
+            // Register the winner in our winners database
+            try {
+              await fetch('/api/winners', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: winner })
+              });
+              console.log("Registered winner in database:", winner);
+            } catch (regError) {
+              console.warn("Error registering winner:", regError);
+            }
+          } else if (gameWon && lastPlayer) {
+            // If game was won but no one has 100 score, use last player
+            console.log("Game is won but no one has 100 score, using last player:", lastPlayer);
+            winner = lastPlayer;
+            
+            // Also register this winner
+            try {
+              await fetch('/api/winners', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: winner })
+              });
+              console.log("Registered last player as winner:", winner);
+            } catch (regError) {
+              console.warn("Error registering winner:", regError);
+            }
           }
         } catch (apiError) {
           console.warn("Error finding winner from API:", apiError);
+          
+          // Fallback to last player if API fails
+          if (gameWon && lastPlayer) {
+            winner = lastPlayer;
+            console.log("API error, falling back to last player:", lastPlayer);
+            
+            // Try to register this winner too
+            try {
+              await fetch('/api/winners', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: winner })
+              });
+              console.log("Registered fallback winner:", winner);
+            } catch (regError) {
+              console.warn("Error registering winner:", regError);
+            }
+          }
+        }
+      }
+
+      // If we don't have a winner address yet, and the game was won, use lastPlayer
+      if (!winner && gameWon && lastPlayer) {
+        winner = lastPlayer;
+        console.log("Game was won, using last player as winner:", lastPlayer);
+        
+        // Register this fallback winner too
+        try {
+          await fetch('/api/winners', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: winner })
+          });
+          console.log("Registered last player as winner (fallback):", winner);
+        } catch (regError) {
+          console.warn("Error registering fallback winner:", regError);
         }
       }
       
+      // Update the game info state
       setGameInfo({
         lastGuessAddress: lastPlayer || "No last player",
         lastBlock: block ? block.toString() : "Unknown",
-        winner: winner || undefined
+        winner: winner && winner !== "0x0000000000000000000000000000000000000000" ? winner : undefined
+      });
+
+      console.log("Final game info:", {
+        lastGuessAddress: lastPlayer || "No last player",
+        lastBlock: block ? block.toString() : "Unknown",
+        winner: winner && winner !== "0x0000000000000000000000000000000000000000" ? winner : undefined
       });
 
       // Force the dialog to show
@@ -86,16 +156,24 @@ export function GameOverDialog() {
       
       // Update game info with the winner address from the event
       if (event.detail.winner) {
-        setGameInfo(prev => ({
-          ...prev,
-          winner: event.detail.winner
-        }));
+        // Add check to prevent setting our address as winner if it's not really the winner
+        if (event.detail.winner !== address || event.detail.winner === address && event.detail.winner !== "0x0000000000000000000000000000000000000000") {
+          setGameInfo(prev => ({
+            ...prev,
+            winner: event.detail.winner
+          }));
+          
+          console.log("Updated game info with winner from event:", event.detail.winner);
+        } else {
+          console.log("Detected attempt to set our address as winner, will verify...");
+        }
       }
       
-      // Show the dialog immediately
+      // Show the dialog immediately 
       setOpen(true);
       
       // Also fetch additional info from the contract, passing the winner address
+      // This will verify the winner through multiple sources
       fetchGameOverInfo(event.detail.winner);
     };
 
@@ -104,7 +182,7 @@ export function GameOverDialog() {
     return () => {
       window.removeEventListener('game-over', handleGameOver as EventListener);
     };
-  }, []);
+  }, [address]);
 
   // Regular polling to check game status (fallback method)
   useEffect(() => {

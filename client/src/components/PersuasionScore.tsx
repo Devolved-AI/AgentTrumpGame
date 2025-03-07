@@ -102,7 +102,22 @@ export function PersuasionScore() {
     if (!contract || !address || hasTriggeredGameEnd) return;
 
     try {
+      // First, verify we have a 100 score by checking the API
+      try {
+        const response = await fetch(`/api/persuasion/${address}`);
+        const data = await response.json();
+        
+        if (!data || data.score < 100) {
+          console.log("Score verification failed - we don't have 100 points yet");
+          return; // Don't end the game if we don't actually have 100 points
+        }
+      } catch (apiError) {
+        console.warn("Error verifying score from API:", apiError);
+        // Continue anyway - the contract will handle validation
+      }
+      
       console.log("Attempting to end game with winner:", address);
+      
       // Call buttonPushed to trigger game over for everyone
       const tx = await contract.buttonPushed(address);
       await tx.wait();
@@ -123,9 +138,31 @@ export function PersuasionScore() {
       
       console.log("Game ended successfully");
       
+      // Get all player scores to find who REALLY has 100 points
+      let verifiedWinner = address;
+      try {
+        const response = await fetch(`/api/persuasion/all`, {
+          headers: { 'pragma': 'no-cache', 'cache-control': 'no-cache' }
+        });
+        const data = await response.json();
+        
+        // Find the player with score 100
+        const maxScorePlayer = Object.entries(data).find(([addr, scoreData]: [string, any]) => 
+          scoreData.score >= 100
+        );
+        
+        if (maxScorePlayer) {
+          verifiedWinner = maxScorePlayer[0];
+          console.log("Verified winner from API with 100 score:", verifiedWinner);
+        }
+      } catch (apiError) {
+        console.warn("Error verifying winner from API:", apiError);
+      }
+      
       // Force a window refresh to ensure all clients see the game over state
+      // Use the verified winner address
       window.dispatchEvent(new CustomEvent('game-over', { 
-        detail: { winner: address }
+        detail: { winner: verifiedWinner }
       }));
     } catch (error) {
       console.error("Error ending game:", error);
