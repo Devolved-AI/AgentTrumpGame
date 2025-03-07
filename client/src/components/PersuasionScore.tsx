@@ -115,24 +115,34 @@ export function PersuasionScore() {
   };
 
   const calculateAndUpdateScore = async () => {
-    if (!contract || !address) return;
+    if (!contract || !address) {
+      console.log("Missing contract or address:", { contract: !!contract, address });
+      return;
+    }
 
     try {
+      console.log("Starting to calculate score for address:", address);
       // First get the current score from the API as our starting point
       const scoreResponse = await fetch(`/api/persuasion/${address}`);
       const scoreData = await scoreResponse.json();
       let calculatedScore = scoreData?.score || 50;
+      console.log("Initial score from API:", calculatedScore);
 
+      console.log("Fetching responses from contract...");
       const responses = await contract.getAllPlayerResponses(address);
+      console.log("Responses received:", responses);
 
       if (!responses || !responses.responses || responses.responses.length === 0) {
+        console.log("No responses found, using base score:", calculatedScore);
         setScore(calculatedScore);
         return;
       }
 
+      console.log("Filtering valid responses...");
       const validResponses = responses.responses.filter((response: string, index: number) =>
         responses.exists[index]
       );
+      console.log("Valid responses count:", validResponses.length);
 
       let lastResponse = null;
       let mostRecentTimestamp = BigInt(0);
@@ -209,19 +219,32 @@ export function PersuasionScore() {
   };
 
   const handleRefresh = async () => {
-    if (!contract || !address || isUpdating) return;
+    if (!contract || !address || isUpdating) {
+      console.log("Cannot refresh: missing data or already updating", { 
+        hasContract: !!contract, 
+        address, 
+        isUpdating 
+      });
+      return;
+    }
 
     setIsUpdating(true);
     setError(null);
 
     try {
+      console.log("Refreshing score for address:", address);
+      
       // Get responses from the contract
+      console.log("Calling contract.getAllPlayerResponses...");
       const responses = await contract.getAllPlayerResponses(address);
+      console.log("Contract responses received:", responses);
 
       if (responses && responses.responses && responses.responses.length > 0) {
+        console.log(`Found ${responses.responses.length} responses from contract`);
         const validResponses = responses.responses.filter((response: string, index: number) =>
           responses.exists[index]
         );
+        console.log(`Filtered to ${validResponses.length} valid responses`);
 
         // Get the current set of processed messages
         const currentProcessedMessages = new Set(usedMessagesRef.current);

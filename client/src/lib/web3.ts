@@ -21,6 +21,42 @@ const CONTRACT_ABI = [
                 "inputs": [
                         {
                                 "internalType": "address",
+                                "name": "playerAddress",
+                                "type": "address"
+                        }
+                ],
+                "name": "getAllPlayerResponses",
+                "outputs": [
+                        {
+                                "components": [
+                                        {
+                                                "internalType": "string[]",
+                                                "name": "responses",
+                                                "type": "string[]"
+                                        },
+                                        {
+                                                "internalType": "bool[]",
+                                                "name": "exists",
+                                                "type": "bool[]"
+                                        },
+                                        {
+                                                "internalType": "uint256[]",
+                                                "name": "timestamps",
+                                                "type": "uint256[]"
+                                        }
+                                ],
+                                "internalType": "struct AgentTrumpGame.PlayerResponses",
+                                "name": "",
+                                "type": "tuple"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
                                 "name": "winner",
                                 "type": "address"
                         }
