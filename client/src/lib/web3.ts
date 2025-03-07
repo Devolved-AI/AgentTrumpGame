@@ -815,6 +815,13 @@ const CONTRACT_ABI = [
         }
 ];
 
+// Define a custom event for contract changes
+export const CONTRACT_CHANGE_EVENT = "contract-address-changed";
+export type ContractChangeEvent = CustomEvent<{
+  previousAddress: string | null;
+  newAddress: string;
+}>;
+
 interface Web3State {
   provider: ethers.BrowserProvider | null;
   signer: ethers.JsonRpcSigner | null;
@@ -822,6 +829,7 @@ interface Web3State {
   address: string | null;
   balance: string | null;
   isInitialized: boolean;
+  currentContractAddress: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   reset: () => void;
@@ -881,6 +889,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   address: null,
   balance: null,
   isInitialized: false,
+  currentContractAddress: null,
 
   getEscalationPrice: async () => {
     const { contract } = get();
