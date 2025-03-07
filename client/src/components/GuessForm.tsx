@@ -472,9 +472,12 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           }
         ]);
         
-        // We no longer need to manually trigger a persuasion score update here
-        // The score will be updated through the contract's GuessSubmitted event
-        console.log("Transaction confirmed. Persuasion score will update via contract event.");
+        // Trigger persuasion score update with custom event AFTER Trump's response
+        const persuasionEvent = new CustomEvent(PERSUASION_EVENT, {
+          detail: { message: data.response }
+        });
+        document.dispatchEvent(persuasionEvent);
+        console.log("Persuasion update event dispatched with message:", data.response);
 
         toast({
           title: "Success!",

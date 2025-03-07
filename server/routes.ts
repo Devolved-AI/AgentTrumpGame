@@ -120,9 +120,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset all scores for any users associated with a different contract
       Array.from(scoreCache.entries()).forEach(([address, data]) => {
         if (data.contractAddress !== contractAddress) {
-          // Reset to 25 for new contract
+          // Reset to 50 for new contract
           scoreCache.set(address, {
-            score: 25,
+            score: 50,
             contractAddress: contractAddress,
             lastUpdated: Date.now()
           });
@@ -149,26 +149,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Address is required' });
       }
       
-      // Reset the score to 25 for the specified address
+      // Reset the score to 50 for the specified address
       const existingData = scoreCache.get(address.toLowerCase());
       const currentContract = existingData?.contractAddress || null;
       
       scoreCache.set(address.toLowerCase(), {
-        score: 25,
+        score: 50,
         contractAddress: currentContract,
         lastUpdated: Date.now()
       });
       
-      console.log(`Manually reset persuasion score for ${address} to 25`);
+      console.log(`Manually reset persuasion score for ${address} to 50`);
       
       // Save updated scores to disk
       saveScoresToDisk();
       
       res.json({ 
         success: true, 
-        message: 'Persuasion score reset to 25',
+        message: 'Persuasion score reset to 50',
         address: address.toLowerCase(),
-        score: 25
+        score: 50
       });
     } catch (error) {
       console.error('Error resetting persuasion score:', error);
@@ -179,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint to reset all persuasion scores - not used currently, kept for reference
   // app.post('/api/persuasion/reset-all', async (req, res) => {
   //   try {
-  //     const { contractAddress, defaultScore = 25 } = req.body;
+  //     const { contractAddress, defaultScore = 50 } = req.body;
   //     
   //     if (!contractAddress) {
   //       return res.status(400).json({ error: 'Contract address is required' });
@@ -237,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get score data or create default
       const scoreData = scoreCache.get(address) || {
-        score: 25,
+        score: 50,
         contractAddress: null,
         lastUpdated: Date.now()
       };
@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Contract address change detected: ${scoreData.contractAddress} -> ${contractAddress}`);
         
         // Reset score for new contract
-        scoreData.score = 25;
+        scoreData.score = 50;
         scoreData.contractAddress = contractAddress as string;
         scoreData.lastUpdated = Date.now();
         
@@ -416,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get existing score data or create default
       const existingData = scoreCache.get(address) || {
-        score: 25,
+        score: 50,
         contractAddress: null,
         lastUpdated: Date.now()
       };
@@ -428,8 +428,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!rateLimitCheck.allowed) {
           console.log(`Rate limit exceeded for ${address}: ${rateLimitCheck.reason}`);
           
-          // Apply moderate penalty for rate limit violations (using the standard decrease value)
-          const penalizedScore = Math.max(0, existingData.score - 5);
+          // Apply moderate penalty for rate limit violations
+          const penalizedScore = Math.max(0, existingData.score - 25);
           
           // Update score with penalty
           const penalizedData = {
@@ -455,8 +455,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // This ensures that even if client-side detection is bypassed, the server will catch it
           console.log(`Server detected AI content from ${address}, applying penalty`);
           
-          // Apply significant penalty for AI content (matching client-side threat penalty)
-          const penalizedScore = Math.max(0, existingData.score - 25);
+          // Apply significant penalty (more severe than client-side penalty)
+          const penalizedScore = Math.max(0, existingData.score - 75);
           
           // Update with penalized score
           const penalizedData = {
@@ -532,7 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get score data for this address
       const scoreData = scoreCache.get(address) || {
-        score: 25,
+        score: 50,
         contractAddress: null,
         lastUpdated: Date.now()
       };

@@ -29,9 +29,7 @@ const POWER_TERMS = [
 const THREAT_TERMS = [
   'sue', 'lawyer', 'court', 'lawsuit', 'legal', 'threat', 'destroy',
   'bankrupt', 'ruin', 'expose', 'media', 'press', 'regulation',
-  'investigation', 'competitor', 'scandal', 'failure', 'risk',
-  'murder', 'kill', 'stab', 'shoot', 'harm', 'kidnap', 'hurt',
-  'violence', 'attack', 'weapon', 'gun', 'knife', 'death', 'assassinate'
+  'investigation', 'competitor', 'scandal', 'failure', 'risk'
 ];
 
 // AI detection patterns (common patterns used by AI responses)
@@ -44,7 +42,7 @@ const AI_PATTERNS = [
 
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
-  const [score, setScore] = useState<number>(25);
+  const [score, setScore] = useState<number>(50);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
@@ -154,11 +152,11 @@ export function PersuasionScore() {
         }
       }
       
-      // Set score to exactly 25 for new games
-      const defaultScore = 25;
+      // Set score to exactly 50 for new games
+      const defaultScore = 50;
       setScore(defaultScore);
       
-      // Update the score in the API to ensure it's set to 25
+      // Update the score in the API to ensure it's set to 50
       await fetch(`/api/persuasion/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -169,7 +167,7 @@ export function PersuasionScore() {
         })
       });
       
-      console.log(`Score explicitly reset to 25 for new game with contract ${contractAddress || 'unknown'}`);
+      console.log(`Score explicitly reset to 50 for new game with contract ${contractAddress || 'unknown'}`);
       
     } catch (error) {
       console.error("Error resetting score:", error);
@@ -319,11 +317,11 @@ export function PersuasionScore() {
       // Determine points based on current score and response type
       let pointsToAdd = 0;
       
-      // For high scores (75+), limit all increases to exactly 1 point max
+      // For high scores (75+), limit all increases to 1-3 points max
       if (currentScore >= 75 && (responseType === 'DEAL_MAKER' || responseType === 'BUSINESS_SAVVY')) {
-        // More challenging end-game: exactly 1 point for any positive response type
-        pointsToAdd = 1; // Always 1 point for scores 75+
-        console.log(`End-game scoring: Added ${pointsToAdd} point (score was ${currentScore}+)`);
+        // More challenging end-game: random value between 1-3 for any positive response type
+        pointsToAdd = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+        console.log(`End-game scoring: Added ${pointsToAdd} points (score was ${currentScore}+)`);
       } else {
         // Normal scoring for scores below 75
         switch (responseType) {
@@ -351,14 +349,10 @@ export function PersuasionScore() {
       // Apply negative point changes
       switch (responseType) {
         case 'WEAK_PROPOSITION':
-          // Decrease by 5 points (updated from 4)
-          currentScore = Math.max(0, currentScore - 5);
-          console.log(`Deducted 5 points for WEAK_PROPOSITION response`);
+          currentScore = Math.max(0, currentScore - 4);
           break;
         case 'THREATENING':
-          // Decrease by 25 points for threats (updated from 20)
-          currentScore = Math.max(0, currentScore - 25);
-          console.log(`Deducted 25 points for THREATENING response`);
+          currentScore = Math.max(0, currentScore - 75);
           break;
       }
       
@@ -550,7 +544,17 @@ export function PersuasionScore() {
   useEffect(() => {
     if (!address) return;
     
-    // Keep polling for score updates
+    // Add listener for custom persuasion update events
+    const handlePersuasionUpdate = (event: Event) => {
+      const customEvent = event as PersuasionEvent;
+      const message = customEvent.detail.message;
+      console.log("Received persuasion update event with message:", message);
+      processNewMessage(message);
+    };
+    
+    document.addEventListener(PERSUASION_EVENT, handlePersuasionUpdate);
+    
+    // Also keep polling for score updates as a fallback
     const interval = setInterval(async () => {
       try {
         await fetchCurrentScore();
@@ -560,6 +564,7 @@ export function PersuasionScore() {
     }, 5000);
     
     return () => {
+      document.removeEventListener(PERSUASION_EVENT, handlePersuasionUpdate);
       clearInterval(interval);
     };
   }, [address, score]);

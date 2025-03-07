@@ -308,29 +308,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         if (newTime <= 0 && !status.isEscalation && !escalationActive) {
           // Main timer reached zero but not in escalation mode yet
-          console.log("Main timer reached zero, auto-transitioning to escalation mode");
+          console.log("Main timer reached zero, checking for escalation transition");
 
-          // Auto-transition to escalation mode and reset timer to 5 minutes
-          setStatus(prev => ({ 
-            ...prev, 
-            isEscalation: true, // Mark as escalation mode
-            escalationInterval: 1, // First escalation interval
-            requiredAmount: ESCALATION_PRICES[0] // Set to first escalation price
-          }));
-          
-          // Store escalation state in localStorage for persistence
-          localStorage.setItem('escalationInterval', '1');
-          localStorage.setItem('escalationPrice', ESCALATION_PRICES[0]);
-          
-          // Create and dispatch a custom event to notify other components
-          const escalationEvent = new CustomEvent('escalation-started', {
-            detail: { interval: 1, price: ESCALATION_PRICES[0] }
-          });
-          document.dispatchEvent(escalationEvent);
-          console.log("Dispatched escalation-started event");
-          
-          // Return 300 seconds (5 minutes) for the first escalation period
-          return 300;
+          // Instead of immediately ending the game, trigger transition to escalation
+          return 0;
         }
 
         return newTime;
@@ -343,9 +324,31 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
           // Critical point: When main timer reaches zero
           if (newTime === 0) {
-            console.log("Base time reached zero");
-            // The transition is now handled in the displayTime effect to avoid duplicating the logic
-            // This ensures we have a single code path for transitioning to escalation mode
+            console.log("Base time reached zero, initializing escalation mode");
+
+            // This is the key change - starting escalation mode when timer hits zero
+            setStatus(prev => ({ 
+              ...prev, 
+              isEscalation: true, // Mark as escalation mode
+              escalationInterval: 1, // First escalation interval
+              requiredAmount: ESCALATION_PRICES[0] // Set to first escalation price
+            }));
+
+            // Reset display time to 5 minutes (300 seconds) for first escalation period
+            setDisplayTime(300);
+            
+            // Store escalation state in localStorage for persistence
+            localStorage.setItem('escalationInterval', '1');
+            localStorage.setItem('escalationPrice', ESCALATION_PRICES[0]);
+
+            // Create and dispatch a custom event to notify other components
+            const escalationEvent = new CustomEvent('escalation-started', {
+              detail: { interval: 1, price: ESCALATION_PRICES[0] }
+            });
+            document.dispatchEvent(escalationEvent);
+            console.log("Dispatched escalation-started event");
+
+            // Don't end game or clear the timer - we're now in escalation mode
           }
           return newTime;
         });

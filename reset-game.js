@@ -1,13 +1,13 @@
 // Script to reset game state with new contract address
 import fetch from 'node-fetch';
 
-const contractAddress = "0xF3032E13D338405fd455dF356fa528503a3bf906";
+const contractAddress = "0x6a2ebec240323F8DB7692540262a423F7F6158EE";
 
 async function resetGame() {
   try {
     console.log(`Resetting game with new contract address: ${contractAddress}`);
     
-    // Update the contract address on the server - this will reset all user scores to 25
+    // Update the contract address on the server - this will reset all user scores to 50
     const response = await fetch('http://localhost:5000/api/contract', {
       method: 'POST',
       headers: {
@@ -31,7 +31,7 @@ async function resetGame() {
     }
     
     console.log('Game reset successful!');
-    console.log('All player persuasion scores have been reset to 25');
+    console.log('All player persuasion scores have been reset to 50');
     console.log('Contract address updated to:', contractAddress);
   } catch (error) {
     console.error('Error resetting game:', error);
