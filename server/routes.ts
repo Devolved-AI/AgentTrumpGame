@@ -140,6 +140,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint to reset all persuasion scores - this must come BEFORE other persuasion routes
+  app.post('/api/persuasion/reset', async (req, res) => {
+    try {
+      const { contractAddress, defaultScore = 50 } = req.body;
+      
+      if (!contractAddress) {
+        return res.status(400).json({ error: 'Contract address is required' });
+      }
+      
+      // Reset all scores to the default value (50 if not specified)
+      Array.from(scoreCache.keys()).forEach((address) => {
+        scoreCache.set(address, {
+          score: defaultScore,
+          contractAddress: contractAddress,
+          lastUpdated: Date.now()
+        });
+      });
+      
+      // Save updated scores to disk
+      saveScoresToDisk();
+      
+      console.log(`Reset all persuasion scores to ${defaultScore} for contract ${contractAddress}`);
+      res.json({ 
+        success: true, 
+        message: `All persuasion scores reset to ${defaultScore} for contract ${contractAddress}`,
+        affectedAddresses: Array.from(scoreCache.keys())
+      });
+    } catch (error) {
+      console.error('Error resetting persuasion scores:', error);
+      res.status(500).json({ error: 'Failed to reset persuasion scores' });
+    }
+  });
+
   // Endpoint to get all persuasion scores - this must come BEFORE the dynamic :address route
   app.get('/api/persuasion/all', async (req, res) => {
     try {
