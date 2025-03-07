@@ -7,9 +7,18 @@ import { SiEthereum } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
 
 const fetchEthPrice = async () => {
-  const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-  const data = await response.json();
-  return data.ethereum.usd;
+  try {
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    if (!response.ok) {
+      console.log('ETH price API returned non-200 response, using fallback price');
+      return 3000; // Fallback price
+    }
+    const data = await response.json();
+    return data.ethereum.usd;
+  } catch (error) {
+    console.log('Error fetching ETH price, using fallback price:', error);
+    return 3000; // Fallback price if API fails
+  }
 };
 
 interface GameStatusProps {
