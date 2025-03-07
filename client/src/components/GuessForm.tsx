@@ -321,7 +321,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       });
 
       if (receipt.status === 1) {
-        // Transaction successful
+        // Transaction successful - updating UI with Trump's response
         if (trumpResponse) {
           setMessages(prev => [
             ...prev,
