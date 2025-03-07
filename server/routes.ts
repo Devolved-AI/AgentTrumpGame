@@ -149,26 +149,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Address is required' });
       }
       
-      // Reset the score to 50 for the specified address
+      // Reset the score to 25 for the specified address
       const existingData = scoreCache.get(address.toLowerCase());
       const currentContract = existingData?.contractAddress || null;
       
       scoreCache.set(address.toLowerCase(), {
-        score: 50,
+        score: 25,
         contractAddress: currentContract,
         lastUpdated: Date.now()
       });
       
-      console.log(`Manually reset persuasion score for ${address} to 50`);
+      console.log(`Manually reset persuasion score for ${address} to 25`);
       
       // Save updated scores to disk
       saveScoresToDisk();
       
       res.json({ 
         success: true, 
-        message: 'Persuasion score reset to 50',
+        message: 'Persuasion score reset to 25',
         address: address.toLowerCase(),
-        score: 50
+        score: 25
       });
     } catch (error) {
       console.error('Error resetting persuasion score:', error);
@@ -179,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint to reset all persuasion scores - not used currently, kept for reference
   // app.post('/api/persuasion/reset-all', async (req, res) => {
   //   try {
-  //     const { contractAddress, defaultScore = 50 } = req.body;
+  //     const { contractAddress, defaultScore = 25 } = req.body;
   //     
   //     if (!contractAddress) {
   //       return res.status(400).json({ error: 'Contract address is required' });
@@ -237,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get score data or create default
       const scoreData = scoreCache.get(address) || {
-        score: 50,
+        score: 25,
         contractAddress: null,
         lastUpdated: Date.now()
       };
@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Contract address change detected: ${scoreData.contractAddress} -> ${contractAddress}`);
         
         // Reset score for new contract
-        scoreData.score = 50;
+        scoreData.score = 25;
         scoreData.contractAddress = contractAddress as string;
         scoreData.lastUpdated = Date.now();
         
@@ -416,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get existing score data or create default
       const existingData = scoreCache.get(address) || {
-        score: 50,
+        score: 25,
         contractAddress: null,
         lastUpdated: Date.now()
       };
@@ -532,7 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get score data for this address
       const scoreData = scoreCache.get(address) || {
-        score: 50,
+        score: 25,
         contractAddress: null,
         lastUpdated: Date.now()
       };
