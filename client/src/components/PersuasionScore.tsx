@@ -152,8 +152,8 @@ export function PersuasionScore() {
         }
       }
       
-      // Set score to exactly 99 for new games
-      const defaultScore = 99;
+      // Set score to exactly 25 for new games
+      const defaultScore = 25;
       setScore(defaultScore);
       
       // Update the score in the API to ensure it's set to 99
@@ -167,7 +167,7 @@ export function PersuasionScore() {
         })
       });
       
-      console.log(`Score explicitly reset to 99 for new game with contract ${contractAddress || 'unknown'}`);
+      console.log(`Score explicitly reset to 25 for new game with contract ${contractAddress || 'unknown'}`);
       
     } catch (error) {
       console.error("Error resetting score:", error);
