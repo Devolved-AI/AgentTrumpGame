@@ -1,12 +1,17 @@
 {
   "0xd7bc9888a66bf8683521d65a7938a839406c2e0e": {
-    "score": 46,
+    "score": 42,
     "contractAddress": "0xe1190EA4aC68f831e7deCCf00675F841Ef88412A",
-    "lastUpdated": 1741371879619
+    "lastUpdated": 1741372004641
   },
   "0xcce8be503efd8308bb39e043591b8a78c1227d48": {
     "score": 53,
     "contractAddress": "0x8d1454473f3188253F9c340d12Ce54a966128FDb",
     "lastUpdated": 1741370292463
+  },
+  "0xc495bd69b313ca48865effba6c597535f6dc41a2": {
+    "score": 50,
+    "contractAddress": "0xe1190EA4aC68f831e7deCCf00675F841Ef88412A",
+    "lastUpdated": 1741371961419
   }
 }
