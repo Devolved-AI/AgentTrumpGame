@@ -42,7 +42,7 @@ const AI_PATTERNS = [
 
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
-  const [score, setScore] = useState<number>(50);
+  const [score, setScore] = useState<number>(25);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastProcessedResponse, setLastProcessedResponse] = useState<string | null>(null);
@@ -152,11 +152,11 @@ export function PersuasionScore() {
         }
       }
       
-      // Set score to exactly 50 for new games
-      const defaultScore = 50;
+      // Set score to exactly 25 for new games
+      const defaultScore = 25;
       setScore(defaultScore);
       
-      // Update the score in the API to ensure it's set to 50
+      // Update the score in the API to ensure it's set to 25
       await fetch(`/api/persuasion/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,7 +167,7 @@ export function PersuasionScore() {
         })
       });
       
-      console.log(`Score explicitly reset to 50 for new game with contract ${contractAddress || 'unknown'}`);
+      console.log(`Score explicitly reset to 25 for new game with contract ${contractAddress || 'unknown'}`);
       
     } catch (error) {
       console.error("Error resetting score:", error);
