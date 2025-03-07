@@ -47,7 +47,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     escalationInterval: 0, // Track which interval we're in (1-10)
     lastGuessInterval: 0, // Track the interval of the last guess
   });
-  const [displayTime, setDisplayTime] = useState(300);
+  const [displayTime, setDisplayTime] = useState(1800); // 30 minutes in seconds
   const [baseTime, setBaseTime] = useState(0);
 
   const { data: ethPrice } = useQuery({
