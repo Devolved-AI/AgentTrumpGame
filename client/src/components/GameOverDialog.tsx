@@ -17,19 +17,59 @@ export function GameOverDialog() {
   });
 
   // Function to fetch game over info and show the dialog
-  const fetchGameOverInfo = async () => {
+  const fetchGameOverInfo = async (winnerAddress?: string) => {
     if (!contract) return;
 
     try {
       // Fetch game over info immediately
-      const [lastPlayer, block] = await Promise.all([
+      const [lastPlayer, block, gameWon] = await Promise.all([
         contract.lastPlayer(),
-        contract.lastGuessBlock()
+        contract.lastGuessBlock(),
+        contract.gameWon()
       ]);
+      
+      // If there's a winner but it's not explicitly provided, try to find it
+      let winner = winnerAddress;
+      
+      // If we don't have a winner address yet, and the game was won
+      if (!winner && gameWon) {
+        try {
+          // We know the game is won, but let's see if we can find who has 100 points
+          // This is a simpler approach than trying to parse events
+          console.log("Game is won, trying to find the winner");
+          
+          // We'll attempt to find the winner in the API section below 
+          // instead of using events parsing which is complex
+        } catch (eventError) {
+          console.warn("Error finding winner:", eventError);
+        }
+      }
 
+      // If we still don't have a winner, check for any player with 100/100 score
+      if (!winner) {
+        try {
+          // Get the API endpoint for all players
+          const response = await fetch(`/api/persuasion/all`);
+          const data = await response.json();
+          
+          // Find the first player with score 100
+          const maxScorePlayer = Object.entries(data).find(([addr, scoreData]: [string, any]) => 
+            scoreData.score >= 100
+          );
+          
+          if (maxScorePlayer) {
+            winner = maxScorePlayer[0];
+            console.log("Found winner from API with max score:", winner);
+          }
+        } catch (apiError) {
+          console.warn("Error finding winner from API:", apiError);
+        }
+      }
+      
       setGameInfo({
         lastGuessAddress: lastPlayer || "No last player",
-        lastBlock: block ? block.toString() : "Unknown"
+        lastBlock: block ? block.toString() : "Unknown",
+        winner: winner || undefined
       });
 
       // Force the dialog to show
@@ -43,16 +83,20 @@ export function GameOverDialog() {
   useEffect(() => {
     const handleGameOver = (event: CustomEvent<{winner: string}>) => {
       console.log("Game over event received, winner:", event.detail.winner);
-      setGameInfo(prev => ({
-        ...prev,
-        winner: event.detail.winner
-      }));
+      
+      // Update game info with the winner address from the event
+      if (event.detail.winner) {
+        setGameInfo(prev => ({
+          ...prev,
+          winner: event.detail.winner
+        }));
+      }
       
       // Show the dialog immediately
       setOpen(true);
       
-      // Also fetch additional info from the contract
-      fetchGameOverInfo();
+      // Also fetch additional info from the contract, passing the winner address
+      fetchGameOverInfo(event.detail.winner);
     };
 
     window.addEventListener('game-over', handleGameOver as EventListener);

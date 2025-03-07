@@ -54,6 +54,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/persuasion/:address', async (req, res) => {
     try {
       const { address } = req.params;
+      
+      // Special case for all scores - should use the dedicated endpoint
+      if (address === 'all') {
+        return res.redirect('/api/persuasion/all');
+      }
+      
       // Get score from cache or use 50 as default
       const score = scoreCache.get(address) ?? 50;
       res.json({ score });
@@ -102,6 +108,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error clearing persuasion score:', error);
       res.status(500).json({ error: 'Failed to clear persuasion score' });
+    }
+  });
+  
+  // Endpoint to get all persuasion scores
+  app.get('/api/persuasion/all', async (req, res) => {
+    try {
+      // Convert Map to Object for JSON response
+      const scores = Object.fromEntries(
+        Array.from(scoreCache.entries()).map(([address, score]) => [
+          address, 
+          { score }
+        ])
+      );
+      
+      res.json(scores);
+    } catch (error) {
+      console.error('Error getting all persuasion scores:', error);
+      res.status(500).json({ error: 'Failed to get all persuasion scores' });
     }
   });
 
