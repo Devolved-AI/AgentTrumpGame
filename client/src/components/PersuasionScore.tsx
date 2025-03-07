@@ -258,17 +258,24 @@ export function PersuasionScore() {
     
     // Set up event listener for new messages
     try {
-      contract.on("GuessSubmitted", handleGuessSubmitted);
-      console.log("GuessSubmitted event listener set up");
-      
-      return () => {
-        try {
-          contract.removeListener("GuessSubmitted", handleGuessSubmitted);
-          console.log("GuessSubmitted event listener removed");
-        } catch (error) {
-          console.error("Error removing event listener:", error);
-        }
-      };
+      // Only set up listener if contract is available
+      if (contract) {
+        contract.on("GuessSubmitted", handleGuessSubmitted);
+        console.log("GuessSubmitted event listener set up");
+        
+        return () => {
+          try {
+            if (contract) {
+              contract.removeListener("GuessSubmitted", handleGuessSubmitted);
+              console.log("GuessSubmitted event listener removed");
+            }
+          } catch (error) {
+            console.error("Error removing event listener:", error);
+          }
+        };
+      } else {
+        console.log("Contract not available, skipping event listener setup");
+      }
     } catch (error) {
       console.error("Error setting up event listener:", error);
       setError("Failed to connect to game events");

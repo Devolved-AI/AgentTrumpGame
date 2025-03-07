@@ -19,6 +19,49 @@ const BASE_SEPOLIA_CONFIG = {
 // Define the minimal ABI we need for our application
 const CONTRACT_ABI = [
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "multiplier",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "response",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "blockNumber",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "responseIndex",
+        "type": "uint256"
+      }
+    ],
+    "name": "GuessSubmitted",
+    "type": "event"
+  },
+  {
     "inputs": [
       {
         "internalType": "string",
