@@ -13,6 +13,7 @@ export type PersuasionEvent = CustomEvent<{message: string}>;
 type ResponseType = 'DEAL_MAKER' | 'BUSINESS_SAVVY' | 'WEAK_PROPOSITION' | 'THREATENING';
 
 // Define keyword dictionaries for persuasion analysis
+// These are intentionally incomplete - full analysis happens server-side
 const DEAL_TERMS = [
   'deal', 'investment', 'opportunity', 'profit', 'return', 'money', 'business',
   'market', 'value', 'billion', 'million', 'success', 'win', 'negotiate',
@@ -31,6 +32,14 @@ const THREAT_TERMS = [
   'investigation', 'competitor', 'scandal', 'failure', 'risk'
 ];
 
+// AI detection patterns (common patterns used by AI responses)
+const AI_PATTERNS = [
+  "as an ai", "as a language model", "assist you", "happy to help",
+  "based on my training", "my programming", "cannot provide",
+  "i apologize", "im not able to", "ethical considerations",
+  "my knowledge cutoff", "to summarize", "in conclusion"
+];
+
 export function PersuasionScore() {
   const { contract, address } = useWeb3Store();
   const [score, setScore] = useState<number>(50);
@@ -46,12 +55,53 @@ export function PersuasionScore() {
   const classifyResponse = (text: string): ResponseType => {
     const textLower = text.toLowerCase();
 
-    // Count occurrences of terms in each category
+    // Check for AI-generated content patterns first
+    const aiPatternCount = AI_PATTERNS.filter(pattern => textLower.includes(pattern.toLowerCase())).length;
+    
+    // If AI patterns are detected, immediately classify as threatening (highest penalty)
+    if (aiPatternCount > 0) {
+      console.log(`AI pattern detected (${aiPatternCount} matches). Applying penalty.`);
+      return 'THREATENING';
+    }
+
+    // Analyze for unnatural language patterns (too perfect, formulaic)
+    const hasUnusualFormality = 
+      // Look for perfectly structured sentences
+      (textLower.includes(". furthermore,") || 
+       textLower.includes(". additionally,") || 
+       textLower.includes(". moreover,") ||
+       // Check for overly formal transition phrases that humans rarely use in casual conversation
+       textLower.includes("in conclusion") || 
+       textLower.includes("to summarize") ||
+       // Check for suspiciously well-structured arguments
+       (textLower.includes("firstly") && textLower.includes("secondly")) ||
+       (textLower.includes("first point") && textLower.includes("second point")));
+    
+    if (hasUnusualFormality) {
+      console.log("Unusually formal/structured language detected. Applying penalty.");
+      return 'THREATENING';
+    }
+
+    // Character count and entropy checks
+    // Messages that are very long with high variation are likely AI-generated
+    if (text.length > 500) {
+      // Calculate entropy (variety of characters/words used)
+      const uniqueChars = new Set(text.split('')).size;
+      const entropyScore = uniqueChars / text.length;
+      
+      // Long messages with high entropy are suspicious
+      if (entropyScore > 0.4) {
+        console.log(`Long message with high entropy detected (${entropyScore.toFixed(2)}). Applying penalty.`);
+        return 'THREATENING';
+      }
+    }
+
+    // Standard keyword analysis for human responses
     const dealTermCount = DEAL_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
     const powerTermCount = POWER_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
     const threatTermCount = THREAT_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
-
-    // Classify based on term counts
+    
+    // Apply normal classification logic
     if (threatTermCount >= 2) {
       return 'THREATENING';
     }
@@ -240,12 +290,35 @@ export function PersuasionScore() {
       // Update UI immediately
       setScore(currentScore);
       
-      // Update score in API
-      await fetch(`/api/persuasion/${address}`, {
+      // Update score in API with message content for server-side AI detection
+      const response = await fetch(`/api/persuasion/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ score: currentScore })
+        body: JSON.stringify({ 
+          score: currentScore,
+          message: message // Include the message for server-side analysis
+        })
       });
+      
+      // Check if server detected AI content
+      if (!response.ok) {
+        try {
+          const errorData = await response.json();
+          if (errorData.error === 'AI-generated content detected') {
+            console.error('Server detected AI content:', errorData.message);
+            setError('AI-generated content detected - penalty applied');
+            
+            // Update UI with penalized score
+            if (typeof errorData.penalizedScore === 'number') {
+              setScore(errorData.penalizedScore);
+              console.log(`Score adjusted to ${errorData.penalizedScore} by server AI detection`);
+            }
+            return; // Stop further processing
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
       
       console.log(`Score updated to ${currentScore} (${responseType})`);
       

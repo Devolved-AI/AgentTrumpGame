@@ -117,10 +117,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Patterns to detect AI-generated content for server-side validation
+  const AI_PATTERNS = [
+    'as an ai', 'as a language model', 'assist you', 'happy to help',
+    'based on my training', 'my programming', 'cannot provide',
+    'i apologize', 'im not able to', 'ethical considerations',
+    'my knowledge cutoff', 'to summarize', 'in conclusion'
+  ];
+  
+  // Enhanced server-side function to detect AI-generated content
+  const detectAiContent = (message: string): boolean => {
+    if (!message) return false;
+    
+    const textLower = message.toLowerCase();
+    
+    // Pattern matching for common AI phrases
+    const hasAiPattern = AI_PATTERNS.some(pattern => 
+      textLower.includes(pattern.toLowerCase())
+    );
+    
+    if (hasAiPattern) {
+      console.log('Server detected AI pattern in message');
+      return true;
+    }
+    
+    // Check for unnatural formality in casual conversation
+    const hasUnusualFormality = 
+      (textLower.includes(". furthermore,") || 
+       textLower.includes(". additionally,") || 
+       textLower.includes(". moreover,") ||
+       textLower.includes("in conclusion") || 
+       textLower.includes("to summarize") ||
+       (textLower.includes("firstly") && textLower.includes("secondly")) ||
+       (textLower.includes("first point") && textLower.includes("second point")));
+    
+    if (hasUnusualFormality) {
+      console.log('Server detected unusually formal language in message');
+      return true;
+    }
+    
+    // Check for suspiciously high entropy in long messages
+    if (message.length > 500) {
+      const uniqueChars = new Set(message.split('')).size;
+      const entropyScore = uniqueChars / message.length;
+      
+      if (entropyScore > 0.4) {
+        console.log(`Server detected high entropy (${entropyScore.toFixed(2)}) in long message`);
+        return true;
+      }
+    }
+    
+    // Additional server-side heuristics - ratio checks
+    // AI often writes with very balanced sentence lengths
+    if (message.length > 100) {
+      const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      if (sentences.length >= 3) {
+        // Calculate average sentence length
+        const avgLength = sentences.reduce((sum, s) => sum + s.length, 0) / sentences.length;
+        
+        // Calculate standard deviation of sentence lengths
+        const variance = sentences.reduce((sum, s) => sum + Math.pow(s.length - avgLength, 2), 0) / sentences.length;
+        const stdDev = Math.sqrt(variance);
+        
+        // Human writing typically has more sentence length variation
+        // Very low standard deviation suggests AI-generated content
+        if (stdDev < avgLength * 0.3) {
+          console.log(`Server detected suspiciously consistent sentence lengths (stdDev: ${stdDev.toFixed(2)}, avg: ${avgLength.toFixed(2)})`);
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
+
   app.post('/api/persuasion/:address', async (req, res) => {
     try {
       const { address } = req.params;
-      const { score, gameOver } = req.body;
+      const { score, gameOver, message } = req.body;
 
       if (typeof score !== 'number' || score < 0 || score > 100) {
         return res.status(400).json({ error: 'Invalid score value' });
@@ -129,6 +203,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If game is over, don't update scores
       if (gameOver) {
         return res.status(403).json({ error: 'Game is over. No more updates allowed.' });
+      }
+      
+      // Enhanced server-side AI detection if message is provided
+      if (message) {
+        const isAiGenerated = detectAiContent(message);
+        if (isAiGenerated) {
+          // Apply a server-side penalty for AI-generated content
+          // This ensures that even if client-side detection is bypassed, the server will catch it
+          console.log(`Server detected AI content from ${address}, applying penalty`);
+          
+          // Get current score
+          const currentScore = scoreCache.get(address) ?? 50;
+          
+          // Apply significant penalty (more severe than client-side penalty)
+          const penalizedScore = Math.max(0, currentScore - 75);
+          
+          // Update with penalized score
+          scoreCache.set(address, penalizedScore);
+          saveScoresToDisk();
+          
+          return res.status(403).json({ 
+            error: 'AI-generated content detected',
+            penalizedScore,
+            message: 'Using AI to play the game is not allowed and results in a significant score penalty.'
+          });
+        }
       }
 
       // Update score in memory
