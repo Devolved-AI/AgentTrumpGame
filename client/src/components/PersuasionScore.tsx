@@ -314,7 +314,11 @@ export function PersuasionScore() {
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between mb-2">
-          <div className="text-2xl font-bold">
+          <div className={`text-2xl font-bold ${
+            score <= 25 ? "text-red-500" : 
+            score >= 75 ? "text-green-500" : 
+            ""
+          }`}>
             {score}/100
             {isUpdating && <span className="text-sm text-gray-500 ml-2">(updating...)</span>}
           </div>
@@ -331,7 +335,11 @@ export function PersuasionScore() {
         </div>
         <Progress
           value={score}
-          className={`h-2 ${score >= 100 ? "bg-green-500" : ""}`}
+          className={`h-2 ${
+            score <= 25 ? "bg-red-500" : 
+            score >= 75 ? "bg-green-500" : 
+            ""
+          }`}
         />
         {error && (
           <p className="text-red-500 text-sm mt-2">
