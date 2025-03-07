@@ -91,9 +91,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           return updatedStatus;
         });
 
-        // If in escalation mode and the displayTime doesn't match the contract's time,
-        // update it to keep them synchronized (only when there's a significant difference)
-        if (escalationActive && Math.abs(displayTime - time) > 5 && time > 0 && time <= 300) {
+        // Only update the display time from contract when initializing or when a large discrepancy exists
+        // This prevents timer disruption during normal countdown
+        if (escalationActive && (displayTime === 0 || Math.abs(displayTime - time) > 30) && time > 0 && time <= 300) {
           setDisplayTime(time);
         }
       } catch (error) {
@@ -176,7 +176,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       }
     };
 
-    const statusInterval = setInterval(updateStatus, 15000);
+    // Reduce frequency of status updates to prevent timer disruption
+    const statusInterval = setInterval(updateStatus, 30000);
     updateStatus();
 
     return () => clearInterval(statusInterval);
@@ -255,42 +256,44 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   useEffect(() => {
     if (status.isGameOver) return;
 
+    // Set up a single timer for consistent countdown
     const timer = setInterval(() => {
-      if (status.isEscalation) {
-        setDisplayTime(prev => {
-          if (prev <= 0) {
-            // Immediately set game over and trigger callback
-            setStatus(prev => ({ ...prev, isGameOver: true }));
-            if (onTimerEnd) {
-              onTimerEnd();
-            }
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      } else {
-        const newBaseTime = Math.max(0, baseTime - 1);
-        setDisplayTime(newBaseTime);
-        setBaseTime(newBaseTime);
-        if (newBaseTime === 0) {
-          // End the game immediately when the timer reaches zero
-          setStatus(prev => ({ 
-            ...prev, 
-            isGameOver: true,
-            isEscalation: false 
-          }));
+      setDisplayTime(prev => {
+        if (prev <= 0) {
+          // Immediately set game over and trigger callback
+          setStatus(prev => ({ ...prev, isGameOver: true }));
           if (onTimerEnd) {
             onTimerEnd();
           }
           clearInterval(timer);
-          return;
+          return 0;
         }
+        return prev - 1;
+      });
+      
+      // Only update baseTime if not in escalation mode
+      if (!status.isEscalation) {
+        setBaseTime(prev => {
+          const newTime = Math.max(0, prev - 1);
+          if (newTime === 0) {
+            // End the game immediately when the timer reaches zero
+            setStatus(prev => ({ 
+              ...prev, 
+              isGameOver: true,
+              isEscalation: false 
+            }));
+            if (onTimerEnd) {
+              onTimerEnd();
+            }
+            clearInterval(timer);
+          }
+          return newTime;
+        });
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [status.isEscalation, status.isGameOver, baseTime, displayTime, onTimerEnd]);
+  }, [status.isEscalation, status.isGameOver, onTimerEnd]);
 
   // This effect handles the initialization of escalation mode
   useEffect(() => {
