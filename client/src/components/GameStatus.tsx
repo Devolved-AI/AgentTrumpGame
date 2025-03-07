@@ -289,44 +289,58 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     if (status.isGameOver) return;
 
     // Set up a single timer for consistent countdown
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
+      // Check escalation status directly from the contract for accurate state
+      let escalationActive = false;
+      if (contract) {
+        try {
+          escalationActive = await contract.escalationActive();
+          console.log(`Timer check - Contract escalation status: ${escalationActive}`);
+        } catch (error) {
+          console.error("Error checking escalation status:", error);
+        }
+      }
+
       setDisplayTime(prev => {
-        if (prev <= 0) {
-          // Immediately set game over and trigger callback
-          setStatus(prev => ({ ...prev, isGameOver: true }));
-          if (onTimerEnd) {
-            onTimerEnd();
-          }
-          clearInterval(timer);
+        if (prev <= 0 && !status.isEscalation && !escalationActive) {
+          // Main timer reached zero but not in escalation mode yet
+          console.log("Main timer reached zero, checking for escalation transition");
+          
+          // Instead of immediately ending the game, trigger transition to escalation
           return 0;
         }
         
         const newTime = prev - 1;
         
         // Save the current timer state to localStorage every second
-        // This ensures we can restore the correct time if the wallet disconnects
         localStorage.setItem('agentTrumpDisplayTime', newTime.toString());
-        localStorage.setItem('agentTrumpEscalationStatus', status.isEscalation.toString());
+        localStorage.setItem('agentTrumpEscalationStatus', (status.isEscalation || escalationActive).toString());
         localStorage.setItem('agentTrumpTimeSaved', Date.now().toString());
         
         return newTime;
       });
       
       // Only update baseTime if not in escalation mode
-      if (!status.isEscalation) {
+      if (!status.isEscalation && !escalationActive) {
         setBaseTime(prev => {
           const newTime = Math.max(0, prev - 1);
+          
+          // Critical point: When main timer reaches zero
           if (newTime === 0) {
-            // End the game immediately when the timer reaches zero
+            console.log("Base time reached zero, initializing escalation mode");
+            
+            // This is the key change - starting escalation mode when timer hits zero
             setStatus(prev => ({ 
               ...prev, 
-              isGameOver: true,
-              isEscalation: false 
+              isEscalation: true, // Mark as escalation mode
+              escalationInterval: 1, // First escalation interval
+              requiredAmount: ESCALATION_PRICES[0] // Set to first escalation price
             }));
-            if (onTimerEnd) {
-              onTimerEnd();
-            }
-            clearInterval(timer);
+            
+            // Reset display time to 5 minutes (300 seconds) for first escalation period
+            setDisplayTime(300);
+            
+            // Don't end game or clear the timer - we're now in escalation mode
           }
           return newTime;
         });
@@ -334,7 +348,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [status.isEscalation, status.isGameOver, onTimerEnd]);
+  }, [status, contract, onTimerEnd]);
 
   // This effect handles the initialization of escalation mode
   useEffect(() => {
