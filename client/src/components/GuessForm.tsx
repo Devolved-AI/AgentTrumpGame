@@ -223,32 +223,26 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     // Pasted text usually appears instantly with unusual typing speed
     
     // 1. Check for suspiciously uniform character spacing or timing patterns
-    const unusualTypingSpeed = text.length > 30 && 
+    // Only check if the text appears too quickly after a previous submission
+    const unusualTypingSpeed = text.length > 100 && 
       localStorage.getItem('lastInputTimestamp') && 
-      (Date.now() - parseInt(localStorage.getItem('lastInputTimestamp') || '0')) < 500;
+      (Date.now() - parseInt(localStorage.getItem('lastInputTimestamp') || '0')) < 300;
     
     // 2. Analyze typing rhythm from collected keystroke data
     let suspiciousRhythm = false;
     
-    // We need a minimum number of keystrokes to analyze typing patterns
-    if (typingData.keypressIntervals.length >= 10) {
+    // We need a significant number of keystrokes to analyze patterns accurately
+    if (typingData.keypressIntervals.length >= 15) {
       // Calculate standard deviation of intervals - human typing has natural variance
-      // Too consistent timing might indicate automated typing or pasting
       const avg = typingData.keypressIntervals.reduce((sum, val) => sum + val, 0) / typingData.keypressIntervals.length;
       const variance = typingData.keypressIntervals.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / typingData.keypressIntervals.length;
       const stdDev = Math.sqrt(variance);
       
-      // Normal human typing typically has more variation (higher standard deviation)
-      // Very low standard deviation may indicate copy-paste or automated input
-      if (avg > 0 && (stdDev / avg < 0.3)) {
+      // Only flag extremely consistent typing patterns - lowered sensitivity
+      // This should only catch automated typing/script inputs, not human typing
+      if (avg > 0 && (stdDev / avg < 0.2) && avg < 30 && text.length > 50) {
         suspiciousRhythm = true;
         console.log("Suspicious typing rhythm detected", { avg, stdDev, ratio: stdDev/avg });
-      }
-      
-      // Also check for unnaturally fast typing (average interval too low)
-      if (avg < 50 && text.length > 20) { // Less than 50ms average between keystrokes
-        suspiciousRhythm = true;
-        console.log("Unnaturally fast typing detected", { avg });
       }
     }
     
@@ -256,12 +250,14 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     const hasUnusualCharacters = /[\u200B-\u200F\uFEFF]/.test(text);
     
     // 4. Check if text length is suspiciously large compared to keystroke count
-    // This can happen if text was pasted when no keys were being tracked
+    // Only apply this for longer texts and with a much lower ratio to avoid false positives
     const keystrokesToTextRatio = typingData.keypressIntervals.length > 0 ? 
       typingData.keypressIntervals.length / text.length : 0;
-    const suspiciousLength = text.length > 30 && keystrokesToTextRatio < 0.5;
+    const suspiciousLength = text.length > 100 && keystrokesToTextRatio < 0.3;
     
-    return unusualTypingSpeed || hasUnusualCharacters || suspiciousRhythm || suspiciousLength;
+    // Focus mainly on the unusual characters check, which is more reliable
+    // for detecting paste operations
+    return hasUnusualCharacters || (suspiciousRhythm && suspiciousLength) || unusualTypingSpeed;
   };
 
   const onSubmit = async (data: z.infer<typeof guessSchema>) => {
