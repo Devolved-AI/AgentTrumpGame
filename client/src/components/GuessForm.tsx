@@ -66,6 +66,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [persuasionScore, setPersuasionScore] = useState<number | null>(null); // Added persuasion score state
 
   useEffect(() => {
     setMessages([WELCOME_MESSAGE]);
@@ -321,6 +322,17 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       });
 
       if (receipt.status === 1) {
+        // Update persuasion score after successful transaction
+        try {
+          const response = await fetch(`/api/persuasion/${address}`, { method: 'GET' });
+          const scoreData = await response.json();
+          setPersuasionScore(scoreData.score); // Assuming API returns { score: 123 }
+          console.log("Persuasion score updated:", scoreData.score);
+        } catch (error) {
+          console.error("Error updating persuasion score:", error);
+          toast({ title: "Error", description: "Failed to update persuasion score", variant: "destructive" });
+        }
+
         if (trumpResponse) {
           setMessages(prev => [
             ...prev,
@@ -480,6 +492,11 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
               {isGameOver && (
                 <p className="text-red-500 mt-2 text-sm text-center">
                   Game has ended. No more guesses can be submitted.
+                </p>
+              )}
+              {persuasionScore !== null && ( // Display persuasion score if available
+                <p className="text-green-500 mt-2 text-sm text-center">
+                  Persuasion Score: {persuasionScore}
                 </p>
               )}
             </div>

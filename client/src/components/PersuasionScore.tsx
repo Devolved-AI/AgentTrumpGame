@@ -316,16 +316,27 @@ export function PersuasionScore() {
 
     const initializeScore = async () => {
       setIsUpdating(true);
-      await resetCaches();
-      await calculateAndUpdateScore();
+      try {
+        await resetCaches();
+        await calculateAndUpdateScore();
+      } catch (error) {
+        console.error("Error initializing persuasion score:", error);
+        setError("Failed to initialize score");
+      } finally {
+        setIsUpdating(false);
+      }
     };
 
     initializeScore();
 
     // Set up a periodic refresh of the persuasion score
     const scoreInterval = setInterval(async () => {
-      await calculateAndUpdateScore(); // Added await here
-    }, 30000); // Refresh every 30 seconds
+      try {
+        await calculateAndUpdateScore();
+      } catch (error) {
+        console.error("Error updating persuasion score:", error);
+      }
+    }, 15000); // Refresh more frequently - every 15 seconds
 
     return () => clearInterval(scoreInterval);
   }, [contract, address]);
@@ -338,8 +349,22 @@ export function PersuasionScore() {
     blockNumber: any,
     responseIndex: any
   ) => {
+    console.log("Guess submitted event received:", { player, response });
+    
+    // Only process our own submissions
     if (player.toLowerCase() !== address?.toLowerCase()) {
       return;
+    }
+    
+    // Immediately trigger score calculation after submission
+    setIsUpdating(true);
+    try {
+      await calculateAndUpdateScore();
+      console.log("Score updated after submission");
+    } catch (error) {
+      console.error("Error updating score after submission:", error);
+    } finally {
+      setIsUpdating(false);
     }
 
     setIsUpdating(true);
@@ -406,10 +431,13 @@ export function PersuasionScore() {
     if (!contract || !address) return;
 
     try {
+      // Add event listener for guess submissions
       contract.on(
         "GuessSubmitted",
         handleGuessSubmitted
       );
+
+      console.log("Set up GuessSubmitted event listener");
 
       return () => {
         try {
@@ -417,6 +445,7 @@ export function PersuasionScore() {
             "GuessSubmitted",
             handleGuessSubmitted
           );
+          console.log("Removed GuessSubmitted event listener");
         } catch (error) {
           console.error("Error removing event listener:", error);
         }
