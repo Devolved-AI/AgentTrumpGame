@@ -165,10 +165,27 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       }
     };
 
+    // Check game state immediately
     checkGameState();
-    const interval = setInterval(checkGameState, 5000);
+    
+    // Check more frequently (every 2 seconds) to ensure we catch game over states quickly
+    const interval = setInterval(checkGameState, 2000);
+    
+    // Also listen for custom game-over events
+    const handleGameOver = () => {
+      console.log("Game over event received in GuessForm");
+      setIsGameOver(true);
+      if (onTimerEnd) {
+        onTimerEnd();
+      }
+    };
+    
+    window.addEventListener('game-over', handleGameOver);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('game-over', handleGameOver);
+    };
   }, [contract, onTimerEnd]);
 
   const form = useForm<z.infer<typeof guessSchema>>({
@@ -195,8 +212,24 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         contract.getTimeRemaining()
       ]);
 
+      // Also check if any player has reached max persuasion (100/100)
+      let maxPersuasion = false;
+      try {
+        // Check if the current player has max persuasion
+        if (address) {
+          const response = await fetch(`/api/persuasion/${address}`);
+          const data = await response.json();
+          if (data && data.score >= 100) {
+            maxPersuasion = true;
+            console.log("This player has already achieved maximum persuasion!");
+          }
+        }
+      } catch (scoreError) {
+        console.warn("Error checking persuasion score:", scoreError);
+      }
+
       const time = Number(timeRemaining.toString());
-      const isOver = gameWon || time <= 0;
+      const isOver = gameWon || time <= 0 || maxPersuasion;
 
       if (isOver) {
         setIsGameOver(true);
