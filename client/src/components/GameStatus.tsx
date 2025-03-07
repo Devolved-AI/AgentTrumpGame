@@ -61,71 +61,69 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     const initializeTime = async () => {
       try {
-        const [timeRemaining, escalationActive, gameOver] = await Promise.all([
+        const [timeRemaining, escalationActive, won, gameOver] = await Promise.all([
           contract.getTimeRemaining(),
           contract.escalationActive(),
+          contract.gameWon(),
           isGameOver()
         ]);
 
         const time = Number(timeRemaining.toString());
-        console.log("Contract time remaining:", time, "Escalation active:", escalationActive);
 
-        // Set the base time only when not in escalation mode or game is not over
-        if (!escalationActive) {
-          setBaseTime(time);
-        }
+        // Calculate the display time based on saved state or contract time
+        let calculatedDisplayTime = 0;
+        const savedState = localStorage.getItem('gameTimerState');
 
-        // Check if we have a saved timer state in localStorage
-        const savedDisplayTime = localStorage.getItem('agentTrumpDisplayTime');
-        const savedEscalationStatus = localStorage.getItem('agentTrumpEscalationStatus');
-        const savedTimestamp = localStorage.getItem('agentTrumpTimeSaved');
-        
-        let calculatedDisplayTime = displayTime;
-        
-        // If we have saved state AND it's newer than contract data
-        if (savedDisplayTime && savedEscalationStatus && savedTimestamp) {
-          const savedTime = parseInt(savedDisplayTime, 10);
-          const isEscalation = savedEscalationStatus === 'true';
-          const timeSaved = parseInt(savedTimestamp, 10);
-          
-          // Calculate elapsed time since last save (in seconds)
-          const elapsedSeconds = Math.floor((Date.now() - timeSaved) / 1000);
-          
-          // Calculate the new display time based on elapsed time
-          let newDisplayTime = Math.max(0, savedTime - elapsedSeconds);
-          
-          // Only use saved time if it makes sense (not negative, not too different from contract)
-          if (newDisplayTime >= 0 && (!escalationActive || Math.abs(newDisplayTime - time) < 60)) {
-            calculatedDisplayTime = newDisplayTime;
-            console.log("Using saved display time:", calculatedDisplayTime);
-          } else {
-            // Use contract time if saved time doesn't make sense
-            calculatedDisplayTime = escalationActive ? Math.min(time, 300) : time;
-            console.log("Using contract time:", calculatedDisplayTime);
+        if (savedState) {
+          try {
+            const parsedState = JSON.parse(savedState);
+            const { savedTime, timestamp, wasEscalation } = parsedState;
+
+            // Only use saved state if the saved time is greater than contract time
+            // This ensures we don't reset progress when reconnecting
+            const elapsedSeconds = Math.floor((Date.now() - timestamp) / 1000);
+            const adjustedSavedTime = Math.max(0, savedTime - elapsedSeconds);
+
+            if (adjustedSavedTime > time) {
+              calculatedDisplayTime = adjustedSavedTime;
+              console.log("Using saved time:", calculatedDisplayTime);
+            } else {
+              // If contract time is better, use that (handles case where server might have
+              // a more accurate timer than what was stored locally)
+              calculatedDisplayTime = time;
+              console.log("Using contract time (better than saved):", calculatedDisplayTime);
+            }
+          } catch (e) {
+            // If parsing fails, use contract time
+            calculatedDisplayTime = time;
+            console.log("Using contract time (parsing error):", calculatedDisplayTime);
           }
         } else {
           // No saved state, use contract time
-          calculatedDisplayTime = escalationActive ? Math.min(time, 300) : time;
+          calculatedDisplayTime = time;
           console.log("No saved state, using contract time:", calculatedDisplayTime);
         }
-        
+
+        // If we're in escalation mode, ensure time doesn't exceed 5 minutes (300 seconds)
+        if (escalationActive && calculatedDisplayTime > 300) {
+          calculatedDisplayTime = 300;
+        }
+
+        // Make sure we have a valid time
+        calculatedDisplayTime = Math.max(calculatedDisplayTime, 0);
+
         // Update status with new values from contract
         setStatus(prev => {
           const updatedStatus = {
             ...prev,
             isEscalation: escalationActive,
-            timeRemaining: time,
-            isGameOver: gameOver
+            timeRemaining: calculatedDisplayTime, // Use the calculated time for consistency
+            isGameOver: gameOver,
+            won: won
           };
-
-          // If already in escalation mode, make sure to preserve that state
-          if (escalationActive && prev.escalationInterval === 0) {
-            updatedStatus.escalationInterval = 1;
-          }
-
           return updatedStatus;
         });
-        
+
         // Update the display time
         setDisplayTime(calculatedDisplayTime);
       } catch (error) {
@@ -289,7 +287,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     if (status.isGameOver) return;
 
     // Set up a single timer for consistent countdown
-    const timer = setInterval(async () => {
+    const timer = setInterval(() => {
       // Check escalation status directly from the contract for accurate state
       let escalationActive = false;
       if (contract) {
@@ -302,33 +300,35 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       }
 
       setDisplayTime(prev => {
-        if (prev <= 0 && !status.isEscalation && !escalationActive) {
+        const newTime = Math.max(0, prev - 1);
+
+        // Save timer state to localStorage for persistence across reconnects
+        localStorage.setItem('gameTimerState', JSON.stringify({
+          savedTime: newTime,
+          timestamp: Date.now(),
+          wasEscalation: status.isEscalation
+        }));
+
+        if (newTime <= 0 && !status.isEscalation && !escalationActive) {
           // Main timer reached zero but not in escalation mode yet
           console.log("Main timer reached zero, checking for escalation transition");
-          
+
           // Instead of immediately ending the game, trigger transition to escalation
           return 0;
         }
-        
-        const newTime = prev - 1;
-        
-        // Save the current timer state to localStorage every second
-        localStorage.setItem('agentTrumpDisplayTime', newTime.toString());
-        localStorage.setItem('agentTrumpEscalationStatus', (status.isEscalation || escalationActive).toString());
-        localStorage.setItem('agentTrumpTimeSaved', Date.now().toString());
-        
+
         return newTime;
       });
-      
+
       // Only update baseTime if not in escalation mode
       if (!status.isEscalation && !escalationActive) {
         setBaseTime(prev => {
           const newTime = Math.max(0, prev - 1);
-          
+
           // Critical point: When main timer reaches zero
           if (newTime === 0) {
             console.log("Base time reached zero, initializing escalation mode");
-            
+
             // This is the key change - starting escalation mode when timer hits zero
             setStatus(prev => ({ 
               ...prev, 
@@ -336,10 +336,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               escalationInterval: 1, // First escalation interval
               requiredAmount: ESCALATION_PRICES[0] // Set to first escalation price
             }));
-            
+
             // Reset display time to 5 minutes (300 seconds) for first escalation period
             setDisplayTime(300);
-            
+
             // Don't end game or clear the timer - we're now in escalation mode
           }
           return newTime;
@@ -356,17 +356,17 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       // Check if we have saved escalation data
       const savedInterval = localStorage.getItem('escalationInterval');
       const savedPrice = localStorage.getItem('escalationPrice');
-      
+
       // Calculate which interval we're in based on display time or use saved interval
       let currentInterval = 1;
       let currentPrice = ESCALATION_PRICES[0];
-      
+
       if (savedInterval && savedPrice) {
         currentInterval = parseInt(savedInterval, 10);
         currentPrice = savedPrice;
         console.log(`Restoring saved escalation interval: ${currentInterval} with price: ${currentPrice}`);
       }
-      
+
       setStatus(prev => ({
         ...prev, 
         requiredAmount: currentPrice,
@@ -376,7 +376,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       // Update localStorage with current values
       localStorage.setItem('escalationInterval', currentInterval.toString());
       localStorage.setItem('escalationPrice', currentPrice);
-      
+
       // We don't set displayTime here anymore as it's handled in the initialization effect
     }
   }, [status.isEscalation, status.escalationInterval]);
