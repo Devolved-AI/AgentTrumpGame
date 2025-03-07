@@ -160,13 +160,13 @@ export default function Game() {
                   <h3 className="text-lg font-semibold mb-2">Where to Buy Agent Trump ($AGT):</h3>
                   <ul className="list-disc list-inside space-y-1">
                     <li>Available on <a 
-                      href="https://app.uniswap.org/swap?outputCurrency=0x0803d65b93621c0d89f2081d6980c0a6e1ce2e98&chain=base"
+                      href="https://app.uniswap.org/swap?outputCurrency=0xD23BDC6fe93d358728Ba284bfCBeDED6a316b45B&chain=base"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-500"
                     >Uniswap, Base Network</a></li>
                     <li>Can be purchased with wAGC or ETH</li>
-                    <li className="break-all">Agent Trump Contract Address: 0x0803d65b93621c0d89f2081d6980c0a6e1ce2e98</li>
+                    <li className="break-all">Agent Trump Contract Address: 0xD23BDC6fe93d358728Ba284bfCBeDED6a316b45B</li>
                   </ul>
                 </div>
               </div>
