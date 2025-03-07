@@ -117,6 +117,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rate limiting to prevent rapid-fire submissions typical of AI usage
+  // Track submission timestamps by address
+  const lastSubmissionTime = new Map<string, number>();
+  const submissionCounts = new Map<string, number[]>();
+  const MIN_SUBMISSION_INTERVAL = 5000; // 5 seconds minimum between submissions
+  
+  // Rate limiting function to detect unusual submission patterns
+  const checkRateLimit = (address: string): { allowed: boolean; reason?: string } => {
+    const now = Date.now();
+    const lastTime = lastSubmissionTime.get(address) || 0;
+    const timeDiff = now - lastTime;
+    
+    // Update submission time
+    lastSubmissionTime.set(address, now);
+    
+    // First message is always allowed
+    if (lastTime === 0) {
+      return { allowed: true };
+    }
+    
+    // Check if submission is too rapid (5 seconds minimum)
+    if (timeDiff < MIN_SUBMISSION_INTERVAL) {
+      console.log(`Rate limiting triggered: ${address} sent messages too quickly (${timeDiff}ms)`);
+      return { 
+        allowed: false, 
+        reason: `Messages must be at least ${MIN_SUBMISSION_INTERVAL/1000} seconds apart` 
+      };
+    }
+    
+    // Track submission pattern over time (last 10 minutes)
+    const TEN_MINUTES = 10 * 60 * 1000;
+    const recentSubmissions = submissionCounts.get(address) || [];
+    
+    // Add current timestamp to submissions, remove old ones
+    const updatedSubmissions = [
+      ...recentSubmissions.filter(time => now - time < TEN_MINUTES),
+      now
+    ];
+    submissionCounts.set(address, updatedSubmissions);
+    
+    // If user has submitted too many times in a short period, flag as suspicious
+    if (updatedSubmissions.length > 10) {
+      const oldestRecentSubmission = updatedSubmissions[0];
+      const timeSpan = now - oldestRecentSubmission;
+      const averageInterval = timeSpan / (updatedSubmissions.length - 1);
+      
+      // If average interval is too short (under 20 seconds), this is suspicious behavior
+      if (averageInterval < 20000 && updatedSubmissions.length >= 5) {
+        console.log(`Rate limiting triggered: ${address} has suspicious submission pattern (avg ${averageInterval.toFixed(0)}ms between msgs)`);
+        return { 
+          allowed: false, 
+          reason: 'Unusual submission pattern detected - please wait longer between messages' 
+        };
+      }
+    }
+    
+    return { allowed: true };
+  };
+  
   // Patterns to detect AI-generated content for server-side validation
   const AI_PATTERNS = [
     'as an ai', 'as a language model', 'assist you', 'happy to help',
@@ -205,8 +264,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Game is over. No more updates allowed.' });
       }
       
-      // Enhanced server-side AI detection if message is provided
+      // Apply rate limiting if message is provided (genuine user interaction)
       if (message) {
+        // Check if rate limit is exceeded
+        const rateLimitCheck = checkRateLimit(address);
+        if (!rateLimitCheck.allowed) {
+          console.log(`Rate limit exceeded for ${address}: ${rateLimitCheck.reason}`);
+          
+          // Get current score for penalty
+          const currentScore = scoreCache.get(address) ?? 50;
+          // Apply moderate penalty for rate limit violations
+          const penalizedScore = Math.max(0, currentScore - 25);
+          
+          // Update score with penalty
+          scoreCache.set(address, penalizedScore);
+          saveScoresToDisk();
+          
+          return res.status(429).json({ 
+            error: 'Rate limit exceeded',
+            penalizedScore,
+            message: `${rateLimitCheck.reason}. This has resulted in a score penalty.`
+          });
+        }
+        
+        // Enhanced server-side AI detection if message is provided
         const isAiGenerated = detectAiContent(message);
         if (isAiGenerated) {
           // Apply a server-side penalty for AI-generated content

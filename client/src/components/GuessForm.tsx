@@ -345,7 +345,8 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       let trumpResponse: string | null = null;
       try {
-        trumpResponse = await generateTrumpResponse(data.response);
+        // Pass both the message and wallet address to enable pattern detection
+        trumpResponse = await generateTrumpResponse(data.response, address);
       } catch (error) {
         console.error("Error generating response:", error);
       }

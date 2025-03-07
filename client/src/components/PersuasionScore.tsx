@@ -300,13 +300,15 @@ export function PersuasionScore() {
         })
       });
       
-      // Check if server detected AI content
+      // Check server response for errors (AI detection or rate limiting)
       if (!response.ok) {
         try {
           const errorData = await response.json();
+          
+          // Handle AI content detection
           if (errorData.error === 'AI-generated content detected') {
             console.error('Server detected AI content:', errorData.message);
-            setError('AI-generated content detected - penalty applied');
+            setError('AI-generated content detected - significant penalty applied');
             
             // Update UI with penalized score
             if (typeof errorData.penalizedScore === 'number') {
@@ -315,8 +317,22 @@ export function PersuasionScore() {
             }
             return; // Stop further processing
           }
+          
+          // Handle rate limit errors
+          if (errorData.error === 'Rate limit exceeded') {
+            console.error('Rate limit exceeded:', errorData.message);
+            setError(`${errorData.message} Please wait between submissions.`);
+            
+            // Update UI with penalized score
+            if (typeof errorData.penalizedScore === 'number') {
+              setScore(errorData.penalizedScore);
+              console.log(`Score adjusted to ${errorData.penalizedScore} due to rate limiting`);
+            }
+            return; // Stop further processing
+          }
         } catch (e) {
           // Ignore parsing errors
+          console.warn('Error parsing server response', e);
         }
       }
       
