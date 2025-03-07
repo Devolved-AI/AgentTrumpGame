@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { GameOverDialog } from "@/components/GameOverDialog";
 import { useWeb3Store } from "@/lib/web3";
 import { useState } from 'react';
+import { GameReset } from "@/components/GameReset";
 
 const fetchEthPrice = async () => {
   const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
@@ -95,6 +96,10 @@ export default function Game() {
 
         {address && isInitialized ? (
           <div className="space-y-8">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-lg font-semibold text-black dark:text-white">Game Status</h2>
+              <GameReset />
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <PersuasionScore />
               <GameStatus showTimeRemainingOnly={true} onTimerEnd={() => setGameOver(true)} />
@@ -116,14 +121,14 @@ export default function Game() {
                 </p>
 
                 <p>
-                  You have 72 hours to convince Agent Trump (AGT) to give the Prize Pool Money to you.
+                  You have 30 minutes to convince Agent Trump (AGT) to give the Prize Pool Money to you.
                 </p>
 
                 <div>
                   <h3 className="text-lg font-semibold mb-2">How to Win:</h3>
                   <ul className="list-disc list-inside space-y-1">
                     <li>Your persuasion score must reach 100 to win immediately.</li>
-                    <li>If no one wins within 72 hours, the game enters Escalation Mode (Sudden Death).</li>
+                    <li>If no one wins within 30 minutes, the game enters Escalation Mode (Sudden Death).</li>
                   </ul>
                 </div>
 
@@ -160,13 +165,13 @@ export default function Game() {
                   <h3 className="text-lg font-semibold mb-2">Where to Buy Agent Trump ($AGT):</h3>
                   <ul className="list-disc list-inside space-y-1">
                     <li>Available on <a 
-                      href="https://app.uniswap.org/swap?outputCurrency=0xD23BDC6fe93d358728Ba284bfCBeDED6a316b45B&chain=base"
+                      href="https://app.uniswap.org/swap?outputCurrency=0x2E80D5c38e619BA03C2Fcf2f4714Ebdc65a73BE8&chain=base"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-500"
                     >Uniswap, Base Network</a></li>
                     <li>Can be purchased with wAGC or ETH</li>
-                    <li className="break-all">Agent Trump Contract Address: 0xD23BDC6fe93d358728Ba284bfCBeDED6a316b45B</li>
+                    <li className="break-all">Agent Trump Contract Address: 0x2E80D5c38e619BA03C2Fcf2f4714Ebdc65a73BE8</li>
                   </ul>
                 </div>
               </div>
