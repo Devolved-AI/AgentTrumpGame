@@ -297,9 +297,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { address } = req.params;
       const { contractAddress } = req.query;
       
-      // Get score data or create default with 99 score
+      // Get score data or create default with 25 score
       const scoreData = scoreCache.get(address) || {
-        score: 99, // Default to 99 for new addresses
+        score: 25, // Default to 25 for new addresses
         contractAddress: null,
         lastUpdated: Date.now()
       };
@@ -308,8 +308,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (contractAddress && contractAddress !== scoreData.contractAddress) {
         console.log(`Contract address change detected: ${scoreData.contractAddress} -> ${contractAddress}`);
         
-        // Reset score for new contract to 99
-        scoreData.score = 99;
+        // Reset score for new contract to 25
+        scoreData.score = 25;
         scoreData.contractAddress = contractAddress as string;
         scoreData.lastUpdated = Date.now();
         
@@ -478,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get existing score data or create default
       const existingData = scoreCache.get(address) || {
-        score: 99, // Default to 99 for new addresses
+        score: 25, // Default to 25 for new addresses
         contractAddress: null,
         lastUpdated: Date.now()
       };
@@ -594,7 +594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get score data for this address
       const scoreData = scoreCache.get(address) || {
-        score: 99, // Default to 99 for new addresses
+        score: 25, // Default to 25 for new addresses
         contractAddress: null,
         lastUpdated: Date.now()
       };

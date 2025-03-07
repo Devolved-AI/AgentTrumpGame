@@ -47,8 +47,8 @@ export function GameReset() {
         }
       }
       
-      // Then explicitly set score to 99 for a new game
-      const defaultScore = 99;
+      // Then explicitly set score to 25 for a new game
+      const defaultScore = 25;
       const setResponse = await fetch(`/api/persuasion/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,11 +63,11 @@ export function GameReset() {
         throw new Error("Failed to set new default score");
       }
       
-      console.log("Persuasion score reset to 99 for new game");
+      console.log("Persuasion score reset to 25 for new game");
       
       toast({
         title: "Game Reset Complete",
-        description: "Game state has been reset. New game will start with 5 minute timer and persuasion score of 99.",
+        description: "Game state has been reset. New game will start with 3 minute timer and persuasion score of 25.",
         variant: "default",
       });
       

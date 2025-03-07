@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
-const CONTRACT_ADDRESS = "0xF4FAFc4D502c34D6411cB49E8C1E49ACA9111AAB";
+const CONTRACT_ADDRESS = "0xA31435C805AC89963735D1aDc13B6e8749c7134b";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -1102,11 +1102,11 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     }
     
     try {
-      // Use reset-all endpoint to reset all scores to 99 for new contract
-      const defaultScore = 99; // Set all scores to 99
+      // Use reset-all endpoint to reset all scores to 25 for new contract
+      const defaultScore = 25; // Set all scores to 25
       
       if (currentContractAddress) {
-        // Reset all scores for the current contract to 99
+        // Reset all scores for the current contract to 25
         const resetAllResponse = await fetch('/api/persuasion/reset-all', {
           method: 'POST',
           headers: {
