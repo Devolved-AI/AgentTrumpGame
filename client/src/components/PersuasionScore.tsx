@@ -316,10 +316,16 @@ export function PersuasionScore() {
       // Adjust score based on response type
       switch (responseType) {
         case 'DEAL_MAKER':
-          currentScore = Math.min(100, currentScore + 10);
+          // Random value between 3-5 points instead of fixed 10
+          const dealPoints = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
+          currentScore = Math.min(100, currentScore + dealPoints);
+          console.log(`Added ${dealPoints} points for DEAL_MAKER response`);
           break;
         case 'BUSINESS_SAVVY':
-          currentScore = Math.min(100, currentScore + 5);
+          // Random value between 1-3 points instead of fixed 5
+          const bizPoints = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+          currentScore = Math.min(100, currentScore + bizPoints);
+          console.log(`Added ${bizPoints} points for BUSINESS_SAVVY response`);
           break;
         case 'WEAK_PROPOSITION':
           currentScore = Math.max(0, currentScore - 4);
