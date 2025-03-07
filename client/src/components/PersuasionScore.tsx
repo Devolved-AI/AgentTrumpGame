@@ -29,7 +29,9 @@ const POWER_TERMS = [
 const THREAT_TERMS = [
   'sue', 'lawyer', 'court', 'lawsuit', 'legal', 'threat', 'destroy',
   'bankrupt', 'ruin', 'expose', 'media', 'press', 'regulation',
-  'investigation', 'competitor', 'scandal', 'failure', 'risk'
+  'investigation', 'competitor', 'scandal', 'failure', 'risk',
+  'murder', 'kill', 'stab', 'shoot', 'harm', 'kidnap', 'hurt',
+  'violence', 'attack', 'weapon', 'gun', 'knife', 'death', 'assassinate'
 ];
 
 // AI detection patterns (common patterns used by AI responses)
@@ -354,9 +356,9 @@ export function PersuasionScore() {
           console.log(`Deducted 5 points for WEAK_PROPOSITION response`);
           break;
         case 'THREATENING':
-          // Decrease by 20 points for threats (updated from 75)
-          currentScore = Math.max(0, currentScore - 20);
-          console.log(`Deducted 20 points for THREATENING response`);
+          // Decrease by 25 points for threats (updated from 20)
+          currentScore = Math.max(0, currentScore - 25);
+          console.log(`Deducted 25 points for THREATENING response`);
           break;
       }
       

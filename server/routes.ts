@@ -456,7 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Server detected AI content from ${address}, applying penalty`);
           
           // Apply significant penalty for AI content (matching client-side threat penalty)
-          const penalizedScore = Math.max(0, existingData.score - 20);
+          const penalizedScore = Math.max(0, existingData.score - 25);
           
           // Update with penalized score
           const penalizedData = {
