@@ -377,13 +377,6 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         isUser: true
       };
       setMessages(prev => [...prev, userMessage]);
-      
-      // Trigger persuasion score update with custom event
-      const persuasionEvent = new CustomEvent(PERSUASION_EVENT, {
-        detail: { message: data.response }
-      });
-      document.dispatchEvent(persuasionEvent);
-      console.log("Persuasion update event dispatched with message:", data.response);
 
       const tx = await contract.submitGuess(
         data.response,
@@ -431,25 +424,22 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       if (receipt.status === 1) {
         // Transaction successful - updating UI with Trump's response
-        if (trumpResponse) {
-          setMessages(prev => [
-            ...prev,
-            {
-              text: trumpResponse,
-              timestamp: Math.floor(Date.now() / 1000),
-              isUser: false
-            }
-          ]);
-        } else {
-          setMessages(prev => [
-            ...prev,
-            {
-              text: "Interesting... Keep trying to convince me! 🤔",
-              timestamp: Math.floor(Date.now() / 1000),
-              isUser: false
-            }
-          ]);
-        }
+        // Display Trump's response (AI-generated or fallback)
+        setMessages(prev => [
+          ...prev,
+          {
+            text: trumpResponse || "Interesting... Keep trying to convince me! 🤔",
+            timestamp: Math.floor(Date.now() / 1000),
+            isUser: false
+          }
+        ]);
+        
+        // Trigger persuasion score update with custom event AFTER Trump's response
+        const persuasionEvent = new CustomEvent(PERSUASION_EVENT, {
+          detail: { message: data.response }
+        });
+        document.dispatchEvent(persuasionEvent);
+        console.log("Persuasion update event dispatched with message:", data.response);
 
         toast({
           title: "Success!",
