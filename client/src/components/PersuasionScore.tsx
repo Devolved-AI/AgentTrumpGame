@@ -317,11 +317,11 @@ export function PersuasionScore() {
       // Determine points based on current score and response type
       let pointsToAdd = 0;
       
-      // For high scores (75+), limit all increases to 1-3 points max
+      // For high scores (75+), limit all increases to exactly 1 point max
       if (currentScore >= 75 && (responseType === 'DEAL_MAKER' || responseType === 'BUSINESS_SAVVY')) {
-        // More challenging end-game: random value between 1-3 for any positive response type
-        pointsToAdd = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
-        console.log(`End-game scoring: Added ${pointsToAdd} points (score was ${currentScore}+)`);
+        // More challenging end-game: exactly 1 point for any positive response type
+        pointsToAdd = 1; // Always 1 point for scores 75+
+        console.log(`End-game scoring: Added ${pointsToAdd} point (score was ${currentScore}+)`);
       } else {
         // Normal scoring for scores below 75
         switch (responseType) {
@@ -349,10 +349,14 @@ export function PersuasionScore() {
       // Apply negative point changes
       switch (responseType) {
         case 'WEAK_PROPOSITION':
-          currentScore = Math.max(0, currentScore - 4);
+          // Decrease by 5 points (updated from 4)
+          currentScore = Math.max(0, currentScore - 5);
+          console.log(`Deducted 5 points for WEAK_PROPOSITION response`);
           break;
         case 'THREATENING':
-          currentScore = Math.max(0, currentScore - 75);
+          // Decrease by 20 points for threats (updated from 75)
+          currentScore = Math.max(0, currentScore - 20);
+          console.log(`Deducted 20 points for THREATENING response`);
           break;
       }
       

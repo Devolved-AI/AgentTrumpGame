@@ -428,8 +428,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!rateLimitCheck.allowed) {
           console.log(`Rate limit exceeded for ${address}: ${rateLimitCheck.reason}`);
           
-          // Apply moderate penalty for rate limit violations
-          const penalizedScore = Math.max(0, existingData.score - 25);
+          // Apply moderate penalty for rate limit violations (using the standard decrease value)
+          const penalizedScore = Math.max(0, existingData.score - 5);
           
           // Update score with penalty
           const penalizedData = {
@@ -455,8 +455,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // This ensures that even if client-side detection is bypassed, the server will catch it
           console.log(`Server detected AI content from ${address}, applying penalty`);
           
-          // Apply significant penalty (more severe than client-side penalty)
-          const penalizedScore = Math.max(0, existingData.score - 75);
+          // Apply significant penalty for AI content (matching client-side threat penalty)
+          const penalizedScore = Math.max(0, existingData.score - 20);
           
           // Update with penalized score
           const penalizedData = {
