@@ -47,7 +47,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     escalationInterval: 0, // Track which interval we're in (1-10)
     lastGuessInterval: 0, // Track the interval of the last guess
   });
-  const [displayTime, setDisplayTime] = useState(600); // 10 minutes in seconds (matching the smart contract's INITIAL_GAME_DURATION)
+  const [displayTime, setDisplayTime] = useState(1800); // 30 minutes in seconds (matching the smart contract's INITIAL_GAME_DURATION)
   const [baseTime, setBaseTime] = useState(0);
 
   const { data: ethPrice } = useQuery({
@@ -484,7 +484,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                 {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
               </div>
               <Progress
-                value={(displayTime / (status.isEscalation ? 300 : 600)) * 100}
+                value={(displayTime / (status.isEscalation ? 300 : 1800)) * 100}
                 className={`mt-2 ${status.isEscalation || isNearEnd ? 'bg-red-200' : ''}`}
               />
               {status.isEscalation ? (
@@ -549,7 +549,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               <div className={`text-2xl font-bold ${textColorClass}`}>
                 {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
               </div>
-              <Progress value={(displayTime / (status.isEscalation ? 300 : 600)) * 100} className="mt-2" />
+              <Progress value={(displayTime / (status.isEscalation ? 300 : 1800)) * 100} className="mt-2" />
               {status.isEscalation && (
                 <div className="mt-1 text-xs text-red-500">
                   <div>Escalation Period {status.escalationInterval} of 10</div>

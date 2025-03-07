@@ -65,7 +65,7 @@ export function GameReset() {
       
       toast({
         title: "Game Reset Complete",
-        description: "Game state has been reset. New game will start with 30 minutes and persuasion score of 50.",
+        description: "Game state has been reset. New game will start with 30 minutes timer and persuasion score of 50.",
         variant: "default",
       });
       
