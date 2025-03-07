@@ -21,13 +21,11 @@ export function GameOverDialog() {
     const checkGameStatus = async () => {
       try {
         // Get game state information
-        const [gameWon, timeRemaining] = await Promise.all([
-          contract.gameWon(),
-          contract.getTimeRemaining()
-        ]);
-
+        const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
-        const isOver = gameWon || time <= 0;
+        
+        // Contract's gameWon is a state variable, not a function
+        const isOver = await contract.isGameOver() || time <= 0;
 
         if (isOver) {
           // Fetch game over info immediately

@@ -76,7 +76,7 @@ const CONTRACT_ABI = [
   },
   {
     "inputs": [],
-    "name": "getCurrentEscalationPrice",
+    "name": "getCurrentRequiredAmount",
     "outputs": [
       {
         "internalType": "uint256",
@@ -95,6 +95,45 @@ const CONTRACT_ABI = [
         "internalType": "bool",
         "name": "",
         "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "gameWon",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastPlayer",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getTimeRemaining",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -343,7 +382,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       const { contract } = get();
       if (!contract) return "0";
       
-      const price = await contract.getCurrentEscalationPrice();
+      const price = await contract.getCurrentRequiredAmount();
       return ethers.formatEther(price);
     } catch (error) {
       console.error("Error getting escalation price:", error);
