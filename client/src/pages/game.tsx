@@ -11,9 +11,32 @@ import { useWeb3Store } from "@/lib/web3";
 import { useState } from 'react';
 
 const fetchEthPrice = async () => {
-  const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-  const data = await response.json();
-  return data.ethereum.usd;
+  try {
+    // Add API key parameter and adjust request with fallback options
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', {
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+      timeout: 5000,
+    });
+    
+    if (!response.ok) {
+      console.warn('ETH price API response not OK:', response.status);
+      return 2450; // Fallback price if API call fails
+    }
+    
+    const data = await response.json();
+    if (data && data.ethereum && data.ethereum.usd) {
+      return data.ethereum.usd;
+    } else {
+      console.warn('ETH price data format unexpected:', data);
+      return 2450; // Fallback price if data format is unexpected
+    }
+  } catch (error) {
+    console.error('Error fetching ETH price:', error);
+    return 2450; // Fallback price if any error occurs
+  }
 };
 
 export default function Game() {
