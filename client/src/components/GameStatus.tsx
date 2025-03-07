@@ -49,6 +49,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   });
   const [displayTime, setDisplayTime] = useState(1800); // 30 minutes in seconds (matching the smart contract's INITIAL_GAME_DURATION)
   const [baseTime, setBaseTime] = useState(0);
+  const [displayEscalationInterval, setDisplayEscalationInterval] = useState(0);
+
 
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
@@ -318,10 +320,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               escalationInterval: 1,
               requiredAmount: ESCALATION_PRICES[0]
             }));
-            
+
             // Reset display time for escalation period
             setDisplayTime(300);
-            
+
             localStorage.setItem('escalationInterval', '1');
             localStorage.setItem('escalationPrice', ESCALATION_PRICES[0]);
             console.log("Forced escalation mode transition from timer check");
@@ -361,7 +363,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
               // Reset display time to 5 minutes (300 seconds) for first escalation period
               setDisplayTime(300);
-              
+
               // Store escalation state in localStorage for persistence
               localStorage.setItem('escalationInterval', '1');
               localStorage.setItem('escalationPrice', ESCALATION_PRICES[0]);
@@ -406,6 +408,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         requiredAmount: currentPrice,
         escalationInterval: currentInterval
       }));
+      setDisplayEscalationInterval(currentInterval);
 
       // Update localStorage with current values
       localStorage.setItem('escalationInterval', currentInterval.toString());
@@ -428,7 +431,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           interval: status.escalationInterval,
           lastGuess: status.lastGuessInterval
         });
-        
+
         // Check if we had any guesses in the current interval
         if (status.lastGuessInterval !== status.escalationInterval) {
           // No guesses in this interval - end the game
@@ -462,11 +465,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             escalationInterval: nextInterval,
             requiredAmount: nextPrice
           }));
+          setDisplayEscalationInterval(nextInterval);
 
           // Reset the timer for the new 5-minute interval
           setDisplayTime(300);
           console.log(`Timer reset to: 300 seconds for new escalation period`);
-          
+
           // Update localStorage with current values for persistence
           localStorage.setItem('escalationInterval', nextInterval.toString());
           localStorage.setItem('escalationPrice', nextPrice);
@@ -605,16 +609,21 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         <CardContent>
           {!status.isGameOver ? (
             <>
-              <div className={`text-2xl font-bold ${textColorClass}`}>
-                {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+              <div className={`text-3xl font-bold ${textColorClass}`}>
+                {hours > 0 ? `${hours}:` : ''}{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
               </div>
-              <Progress value={(displayTime / (status.isEscalation ? 300 : 1800)) * 100} className="mt-2" />
+              {status.isEscalation ? (
+                <div className="mt-2 text-sm text-red-500 font-bold">
+                  ESCALATION PERIOD {displayEscalationInterval} of 10
+                </div>
+              ) : isNearEnd ? (
+                <div className="mt-2 text-sm text-red-500">
+                  Approaching Escalation Period
+                </div>
+              ) : null}
               {status.isEscalation && (
                 <div className="mt-1 text-xs text-red-500">
-                  <div>Escalation Period {status.escalationInterval} of 10</div>
-                  <div>Base cost: {parseFloat(status.requiredAmount).toFixed(4)} ETH</div>
-                  <div>A 10% buffer is added to ensure transaction success</div>
-                  <div>Each interval lasts exactly 5:00 minutes</div>
+                  Current Guess Fee: {status.requiredAmount} ETH
                 </div>
               )}
             </>
