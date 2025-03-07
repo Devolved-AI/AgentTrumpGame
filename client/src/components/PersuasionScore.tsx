@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { useWeb3Store } from "@/lib/web3";
+import { useWeb3Store, CONTRACT_CHANGE_EVENT, ContractChangeEvent } from "@/lib/web3";
 import { Brain, RefreshCw } from "lucide-react";
 
 // Create a custom event for persuasion score updates
@@ -443,6 +443,29 @@ export function PersuasionScore() {
     }
   }, [contract, address]);
   
+  // Listen for contract address changes
+  useEffect(() => {
+    if (!address) return;
+    
+    // Add listener for contract address changes
+    const handleContractChange = (event: Event) => {
+      const contractEvent = event as ContractChangeEvent;
+      const { previousAddress, newAddress } = contractEvent.detail;
+      
+      console.log(`Contract address changed from ${previousAddress || 'none'} to ${newAddress}. Resetting persuasion score.`);
+      
+      // Reset score when contract address changes (new game)
+      resetScore();
+    };
+    
+    // Add the event listener
+    window.addEventListener(CONTRACT_CHANGE_EVENT, handleContractChange);
+    
+    return () => {
+      window.removeEventListener(CONTRACT_CHANGE_EVENT, handleContractChange);
+    };
+  }, [address, resetScore]);
+
   // Listen for custom persuasion events and poll for score updates
   useEffect(() => {
     if (!address) return;

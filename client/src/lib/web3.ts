@@ -969,8 +969,37 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
           });
           return;
         }
+        
+        // Check if contract address has changed
+        const previousContractAddress = get().currentContractAddress;
+        
+        // If this is a different contract address than before, dispatch an event
+        if (previousContractAddress !== CONTRACT_ADDRESS) {
+          // Dispatch custom event for contract address change
+          window.dispatchEvent(
+            new CustomEvent<{previousAddress: string | null; newAddress: string}>(
+              CONTRACT_CHANGE_EVENT, 
+              { 
+                detail: {
+                  previousAddress: previousContractAddress,
+                  newAddress: CONTRACT_ADDRESS
+                }
+              }
+            )
+          );
+          
+          console.log(`Contract address changed from ${previousContractAddress || 'none'} to ${CONTRACT_ADDRESS}`);
+        }
 
-        set({ provider, signer, contract, address, balance, isInitialized: true });
+        set({ 
+          provider, 
+          signer, 
+          contract, 
+          address, 
+          balance, 
+          isInitialized: true,
+          currentContractAddress: CONTRACT_ADDRESS
+        });
 
         toast({
           title: "Wallet Connected",
@@ -1015,13 +1044,18 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     if (window.ethereum) {
       window.ethereum.removeAllListeners('accountsChanged');
     }
+    
+    // Keep track of contract address even when disconnected
+    const currentContractAddress = get().currentContractAddress;
+    
     set({
       provider: null,
       signer: null,
       contract: null,
       address: null,
       balance: null,
-      isInitialized: false
+      isInitialized: false,
+      currentContractAddress // Preserve contract address
     });
     set((state) => {
       state.clearMessages();
@@ -1037,13 +1071,16 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     if (window.ethereum) {
       window.ethereum.removeAllListeners('accountsChanged');
     }
+    
+    // When fully resetting, we also clear the contract address
     set({
       provider: null,
       signer: null,
       contract: null,
       address: null,
       balance: null,
-      isInitialized: false
+      isInitialized: false,
+      currentContractAddress: null
     });
   },
 
