@@ -24,8 +24,18 @@ export function GameOverDialog() {
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
         
-        // Contract's gameWon is a state variable, not a function
-        const isOver = await contract.isGameOver() || time <= 0;
+        // Check if game is over either by time or by gameOver flag
+        let isOver = time <= 0;
+        
+        try {
+          // Try to get the game over status, but handle potential contract errors
+          const gameOverStatus = await contract.isGameOver();
+          if (gameOverStatus) {
+            isOver = true;
+          }
+        } catch (contractError) {
+          console.warn("Could not check isGameOver, using time only:", contractError);
+        }
 
         if (isOver) {
           // Fetch game over info immediately
