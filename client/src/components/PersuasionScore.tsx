@@ -183,70 +183,110 @@ export function PersuasionScore() {
 
     try {
       // First, verify we have a 100 score by checking the API
+      let winnerAddress = address;
       try {
+        // Check current player's score first
         const response = await fetch(`/api/persuasion/${address}`);
         const data = await response.json();
         
+        // If current player doesn't have 100 points, check if any other player does
         if (!data || data.score < 100) {
-          console.log("Score verification failed - we don't have 100 points yet");
-          return; // Don't end the game if we don't actually have 100 points
+          console.log("Current player doesn't have 100 points, checking if any other player does...");
+          
+          // Get all player scores to find who might have 100 points
+          const allScoresResponse = await fetch(`/api/persuasion/all`, {
+            headers: { 'pragma': 'no-cache', 'cache-control': 'no-cache' }
+          });
+          const allScoresData = await allScoresResponse.json();
+          
+          // Find any player with score 100
+          const maxScorePlayer = Object.entries(allScoresData).find(([addr, scoreData]: [string, any]) => 
+            scoreData.score >= 100
+          );
+          
+          if (maxScorePlayer) {
+            winnerAddress = maxScorePlayer[0];
+            console.log("Found player with 100 points:", winnerAddress);
+          } else {
+            console.log("No player has 100 points yet");
+            return; // Don't end the game if no one has 100 points
+          }
         }
       } catch (apiError) {
         console.warn("Error verifying score from API:", apiError);
         // Continue anyway - the contract will handle validation
       }
       
-      console.log("Attempting to end game with winner:", address);
+      console.log("Attempting to end game with winner:", winnerAddress);
+      setHasTriggeredGameEnd(true); // Set this early to prevent multiple attempts
       
-      // Call buttonPushed to trigger game over for everyone
-      const tx = await contract.buttonPushed(address);
-      await tx.wait();
-      setHasTriggeredGameEnd(true);
-      
-      // Ensure local game state reflects game over
-      // Attempt to call endGame directly as a fallback
       try {
-        const gameWonTx = await contract.gameWon();
-        if (!gameWonTx) {
-          console.log("Game won state not set, forcing game end...");
-          // Force the game won state
-          await contract.endGame();
+        // Call buttonPushed to trigger game over for everyone
+        const tx = await contract.buttonPushed(winnerAddress);
+        await tx.wait();
+        console.log("buttonPushed transaction completed successfully");
+        
+        // Ensure local game state reflects game over
+        // Try to check game won state
+        try {
+          const gameWonTx = await contract.gameWon();
+          console.log("Game won state check:", gameWonTx);
+          
+          if (!gameWonTx) {
+            console.log("Game won state not set, forcing game end...");
+            // Force the game won state
+            const endGameTx = await contract.endGame();
+            await endGameTx.wait();
+            console.log("endGame transaction completed");
+          }
+        } catch (endGameError) {
+          console.warn("Error checking or forcing game end state:", endGameError);
+          
+          // Try one more time with a different approach
+          try {
+            console.log("Attempting alternative endGame approach...");
+            await contract.endGame();
+          } catch (finalError) {
+            console.error("Final attempt to end game failed:", finalError);
+          }
         }
-      } catch (endGameError) {
-        console.warn("Error forcing game end state:", endGameError);
+      } catch (contractError) {
+        console.error("Contract interaction error:", contractError);
+        
+        // Even if contract interaction fails, still dispatch game-over event
+        // so the UI can update appropriately
+        console.log("Contract interaction failed, but continuing with UI update");
       }
       
       console.log("Game ended successfully");
       
-      // Get all player scores to find who REALLY has 100 points
-      let verifiedWinner = address;
-      try {
-        const response = await fetch(`/api/persuasion/all`, {
-          headers: { 'pragma': 'no-cache', 'cache-control': 'no-cache' }
-        });
-        const data = await response.json();
-        
-        // Find the player with score 100
-        const maxScorePlayer = Object.entries(data).find(([addr, scoreData]: [string, any]) => 
-          scoreData.score >= 100
-        );
-        
-        if (maxScorePlayer) {
-          verifiedWinner = maxScorePlayer[0];
-          console.log("Verified winner from API with 100 score:", verifiedWinner);
-        }
-      } catch (apiError) {
-        console.warn("Error verifying winner from API:", apiError);
-      }
-      
-      // Force a window refresh to ensure all clients see the game over state
-      // Use the verified winner address
+      // Dispatch game-over event regardless of contract success
+      // to ensure UI updates for all connected clients
       window.dispatchEvent(new CustomEvent('game-over', { 
-        detail: { winner: verifiedWinner }
+        detail: { winner: winnerAddress }
       }));
     } catch (error) {
       console.error("Error ending game:", error);
       setError("Failed to end game");
+      
+      // Even on error, try to update UI if we know someone has 100 points
+      try {
+        const allScoresResponse = await fetch(`/api/persuasion/all`);
+        const allScoresData = await allScoresResponse.json();
+        
+        const maxScorePlayer = Object.entries(allScoresData).find(([addr, scoreData]: [string, any]) => 
+          scoreData.score >= 100
+        );
+        
+        if (maxScorePlayer) {
+          const winnerAddr = maxScorePlayer[0];
+          window.dispatchEvent(new CustomEvent('game-over', { 
+            detail: { winner: winnerAddr }
+          }));
+        }
+      } catch (finalError) {
+        console.error("Failed final attempt to update UI:", finalError);
+      }
     }
   };
 
