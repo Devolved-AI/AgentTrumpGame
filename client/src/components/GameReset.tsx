@@ -26,7 +26,7 @@ export function GameReset() {
       localStorage.removeItem('escalationInterval');
       localStorage.removeItem('escalationPrice');
       
-      // Reset the persuasion score via API
+      // Reset the persuasion score via API - first delete existing score
       const deleteResponse = await fetch(`/api/persuasion/${address}`, {
         method: 'DELETE',
       });
@@ -34,6 +34,23 @@ export function GameReset() {
       if (!deleteResponse.ok) {
         throw new Error("Failed to reset persuasion score");
       }
+      
+      // Then explicitly set score to 50 for a new game
+      const defaultScore = 50;
+      const setResponse = await fetch(`/api/persuasion/${address}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          score: defaultScore,
+          message: 'Game reset by user'
+        })
+      });
+      
+      if (!setResponse.ok) {
+        throw new Error("Failed to set new default score");
+      }
+      
+      console.log("Persuasion score reset to 50 for new game");
       
       toast({
         title: "Game Reset Complete",

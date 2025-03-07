@@ -114,8 +114,7 @@ export function PersuasionScore() {
     return 'WEAK_PROPOSITION';
   };
 
-  // Function to reset the score and cached messages
-  // NOTE: This function is no longer used in normal gameplay to preserve scores between sessions
+  // Function to reset the score and cached messages when contract changes or game restarts
   const resetScore = async () => {
     if (!address) return;
     
@@ -127,17 +126,24 @@ export function PersuasionScore() {
       processedMessagesRef.current.clear();
       setLastProcessedResponse(null);
       
-      // Reset score in API
+      // Delete the existing score in API
       await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
       
-      // Fetch the current default score from API instead of setting to 50
-      const response = await fetch(`/api/persuasion/${address}`);
-      const data = await response.json();
+      // Set score to exactly 50 for new games
+      const defaultScore = 50;
+      setScore(defaultScore);
       
-      if (data && typeof data.score === 'number') {
-        setScore(data.score);
-        console.log("Score reset to default:", data.score);
-      }
+      // Update the score in the API to ensure it's set to 50
+      await fetch(`/api/persuasion/${address}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          score: defaultScore,
+          message: 'New game started'
+        })
+      });
+      
+      console.log("Score explicitly reset to 50 for new game");
       
     } catch (error) {
       console.error("Error resetting score:", error);
