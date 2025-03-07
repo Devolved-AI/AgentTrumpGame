@@ -239,14 +239,16 @@ export function PersuasionScore() {
     const initialize = async () => {
       setIsUpdating(true);
       try {
-        // First try to get the existing score
+        console.log(`Initializing persuasion score for address: ${address}`);
+        
+        // Fetch the existing score from the server
         await fetchCurrentScore();
         
-        // Only reset the score if we're starting a new game session
-        // This ensures the score persists between wallet disconnections
+        // IMPORTANT: We NEVER reset scores automatically when wallet connects
+        // Scores should persist between sessions
       } catch (error) {
-        console.error("Error initializing:", error);
-        setError("Failed to initialize");
+        console.error("Error initializing persuasion score:", error);
+        setError("Failed to initialize score");
       } finally {
         setIsUpdating(false);
       }

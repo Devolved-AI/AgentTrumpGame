@@ -1,22 +1,61 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the directory name in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// File to store persuasion scores persistently
+const SCORES_FILE = path.join(__dirname, '../scores.json');
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Persuasion score endpoints now use in-memory map as fallback
-  const scoreCache = new Map<string, number>();
-
-  // Initialize scoreCache with default scores
-  if (!scoreCache.has('0x5b4ee669bee8093214d5b9e785e011eb93995171')) {
-    scoreCache.set('0x5b4ee669bee8093214d5b9e785e011eb93995171', 47);
+  // Load persistent scores from file or initialize empty map
+  let persistentScores: Record<string, number> = {};
+  
+  try {
+    if (fs.existsSync(SCORES_FILE)) {
+      const fileContent = fs.readFileSync(SCORES_FILE, 'utf8');
+      persistentScores = JSON.parse(fileContent);
+      console.log('Loaded persistent scores:', Object.keys(persistentScores).length);
+    } else {
+      console.log('No existing scores file found, creating a new one');
+      fs.writeFileSync(SCORES_FILE, JSON.stringify({}), 'utf8');
+    }
+  } catch (error) {
+    console.error('Error loading persistent scores:', error);
+    // Continue with empty scores if file can't be loaded
   }
+  
+  // Convert to Map for runtime use
+  const scoreCache = new Map<string, number>(Object.entries(persistentScores));
+
+  // Helper function to save scores to disk
+  const saveScoresToDisk = () => {
+    try {
+      const scoresObject = Object.fromEntries(scoreCache.entries());
+      fs.writeFileSync(SCORES_FILE, JSON.stringify(scoresObject, null, 2), 'utf8');
+      console.log('Saved scores to disk');
+    } catch (error) {
+      console.error('Error saving scores to disk:', error);
+    }
+  };
+
+  // Make sure we save scores when the process is terminated
+  process.on('SIGINT', () => {
+    console.log('Saving scores before shutdown');
+    saveScoresToDisk();
+    process.exit(0);
+  });
 
   app.get('/api/persuasion/:address', async (req, res) => {
     try {
       const { address } = req.params;
-      // For address 0x5b4ee669bee8093214d5b9e785e011eb93995171, ensure we return 47 if no score is set
-      const defaultScore = address.toLowerCase() === '0x5b4ee669bee8093214d5b9e785e011eb93995171'.toLowerCase() ? 47 : 50;
-      const score = scoreCache.get(address) ?? defaultScore;
+      // Get score from cache or use 50 as default
+      const score = scoreCache.get(address) ?? 50;
       res.json({ score });
     } catch (error) {
       console.error('Error getting persuasion score:', error);
@@ -38,7 +77,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Game is over. No more updates allowed.' });
       }
 
+      // Update score in memory
       scoreCache.set(address, score);
+      
+      // Save to disk after updating
+      saveScoresToDisk();
+      
       res.json({ success: true });
     } catch (error) {
       console.error('Error updating persuasion score:', error);
@@ -50,6 +94,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { address } = req.params;
       scoreCache.delete(address);
+      
+      // Save to disk after deletion
+      saveScoresToDisk();
+      
       res.json({ success: true });
     } catch (error) {
       console.error('Error clearing persuasion score:', error);
