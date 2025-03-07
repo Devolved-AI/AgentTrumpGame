@@ -1,11 +1,20 @@
 // Script to reset game state with new contract address
 import fetch from 'node-fetch';
 
-const contractAddress = "0x5d1e763f67bb84960a7f1894c906b89f09280E00";
-const defaultScore = 25; // Set persuasion scores to 25 instead of 50
+const CONTRACT_ADDRESS = "0x5d1e763f67bb84960a7f1894c906b89f09280E00";
+const DEFAULT_SCORE = 25; // Set persuasion scores to 25 instead of 50
+
+// Make sure the persuasion score is valid
+function validateScore(score) {
+  const numScore = Number(score);
+  return !isNaN(numScore) && numScore >= 0 && numScore <= 100 ? numScore : DEFAULT_SCORE;
+}
 
 async function resetGame() {
   try {
+    const contractAddress = CONTRACT_ADDRESS;
+    const defaultScore = validateScore(DEFAULT_SCORE);
+    
     console.log(`Resetting game with new contract address: ${contractAddress} and persuasion score: ${defaultScore}`);
     
     // First update the contract address on the server
@@ -16,7 +25,7 @@ async function resetGame() {
       },
       body: JSON.stringify({ 
         contractAddress,
-        defaultScore // Pass the default score to use for reset
+        defaultScore
       })
     });
     
@@ -34,23 +43,27 @@ async function resetGame() {
       console.log('Raw contract response:', contractResponseText);
     }
     
-    // Now reset all scores to 25 explicitly
-    const resetResponse = await fetch('http://localhost:5000/api/persuasion/reset-all', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        contractAddress,
-        defaultScore
-      })
-    });
-    
-    if (!resetResponse.ok) {
-      console.error('Failed to reset scores explicitly');
-    } else {
-      const resetData = await resetResponse.json();
-      console.log('Score reset response:', resetData);
+    // Now reset all scores to the default score explicitly
+    try {
+      const resetResponse = await fetch('http://localhost:5000/api/persuasion/reset-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          contractAddress,
+          defaultScore
+        })
+      });
+      
+      if (!resetResponse.ok) {
+        console.error('Failed to reset scores explicitly, but contract address was updated');
+      } else {
+        const resetData = await resetResponse.json();
+        console.log('Score reset response:', resetData);
+      }
+    } catch (error) {
+      console.error('Error during score reset:', error.message);
     }
     
     console.log('Game reset successful!');

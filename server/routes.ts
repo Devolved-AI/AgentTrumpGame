@@ -111,22 +111,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add an endpoint to handle contract address changes
   app.post('/api/contract', async (req, res) => {
     try {
-      const { contractAddress, defaultScore = 50 } = req.body;
+      const { contractAddress, defaultScore = 25 } = req.body;
+      const scoreValue = Number(defaultScore);
       
       if (!contractAddress) {
         return res.status(400).json({ error: 'Contract address is required' });
       }
       
+      // Validate the score
+      if (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 100) {
+        console.error(`Invalid score value provided: ${defaultScore}, using default of 25`);
+        // Use 25 as a fallback
+        const fallbackScore = 25;
+        
+        // Reset all scores for users with a different contract
+        Array.from(scoreCache.entries()).forEach(([address, data]) => {
+          if (data.contractAddress !== contractAddress) {
+            scoreCache.set(address, {
+              score: fallbackScore,
+              contractAddress: contractAddress,
+              lastUpdated: Date.now()
+            });
+            console.log(`Reset score for ${address} to ${fallbackScore} due to contract change to ${contractAddress}`);
+          }
+        });
+        
+        // Save updated scores to disk
+        saveScoresToDisk();
+        
+        return res.json({ 
+          success: true, 
+          message: `Contract address updated and scores reset to ${fallbackScore}`,
+          defaultScore: fallbackScore,
+          contractAddress
+        });
+      }
+      
       // Reset all scores for any users associated with a different contract
       Array.from(scoreCache.entries()).forEach(([address, data]) => {
         if (data.contractAddress !== contractAddress) {
-          // Reset to defaultScore (or 50 if not specified) for new contract
+          // Reset to provided default score (25 if not specified)
           scoreCache.set(address, {
-            score: defaultScore,
+            score: scoreValue,
             contractAddress: contractAddress,
             lastUpdated: Date.now()
           });
-          console.log(`Reset score for ${address} to ${defaultScore} due to contract change to ${contractAddress}`);
+          console.log(`Reset score for ${address} to ${scoreValue} due to contract change to ${contractAddress}`);
         }
       });
       
@@ -135,8 +165,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ 
         success: true, 
-        message: `Contract address updated and scores reset to ${defaultScore}`,
-        defaultScore,
+        message: `Contract address updated and scores reset to ${scoreValue}`,
+        defaultScore: scoreValue,
         contractAddress
       });
     } catch (error) {
@@ -185,15 +215,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/persuasion/reset-all', async (req, res) => {
     try {
       const { contractAddress, defaultScore = 25 } = req.body;
+      const scoreValue = Number(defaultScore);
       
       if (!contractAddress) {
         return res.status(400).json({ error: 'Contract address is required' });
       }
       
+      // Validate the score
+      if (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 100) {
+        console.error(`Invalid score value provided: ${defaultScore}, using default of 25`);
+        // Use 25 as a fallback
+        const fallbackScore = 25;
+        
+        // Reset all scores to the fallback value
+        Array.from(scoreCache.keys()).forEach((address) => {
+          scoreCache.set(address, {
+            score: fallbackScore,
+            contractAddress: contractAddress,
+            lastUpdated: Date.now()
+          });
+        });
+        
+        // Save updated scores to disk
+        saveScoresToDisk();
+        
+        console.log(`Reset all persuasion scores to ${fallbackScore} for contract ${contractAddress}`);
+        return res.json({ 
+          success: true, 
+          message: `All persuasion scores reset to ${fallbackScore} for contract ${contractAddress}`,
+          affectedAddresses: Array.from(scoreCache.keys())
+        });
+      }
+      
       // Reset all scores to the default value (25 if not specified)
       Array.from(scoreCache.keys()).forEach((address) => {
         scoreCache.set(address, {
-          score: defaultScore,
+          score: scoreValue,
           contractAddress: contractAddress,
           lastUpdated: Date.now()
         });
@@ -202,10 +259,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save updated scores to disk
       saveScoresToDisk();
       
-      console.log(`Reset all persuasion scores to ${defaultScore} for contract ${contractAddress}`);
+      console.log(`Reset all persuasion scores to ${scoreValue} for contract ${contractAddress}`);
       res.json({ 
         success: true, 
-        message: `All persuasion scores reset to ${defaultScore} for contract ${contractAddress}`,
+        message: `All persuasion scores reset to ${scoreValue} for contract ${contractAddress}`,
         affectedAddresses: Array.from(scoreCache.keys())
       });
     } catch (error) {
