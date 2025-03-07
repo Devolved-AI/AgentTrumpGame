@@ -161,16 +161,17 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     const checkGameState = async () => {
       try {
-        const [gameWon, timeRemaining] = await Promise.all([
+        const [gameWon, timeRemaining, escalationActive] = await Promise.all([
           contract.gameWon(),
-          contract.getTimeRemaining()
+          contract.getTimeRemaining(),
+          contract.escalationActive()
         ]);
         const time = Number(timeRemaining.toString());
         const isOver = gameWon || time <= 0;
         
-        console.log("Game state check:", { gameWon, time, isOver });
+        console.log("Game state check:", { gameWon, time, isOver, escalationActive });
 
-        if (isOver) {
+        if (isOver && !escalationActive) {
           console.log("Game is determined to be over");
           setIsGameOver(true);
           if (onTimerEnd) {
@@ -202,11 +203,22 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       }
     };
     
+    // Listen for escalation mode events
+    const handleEscalationStarted = (event: Event) => {
+      console.log("Escalation mode started event received in GuessForm", 
+        (event as CustomEvent<{interval: number, price: string}>).detail);
+      
+      // Reset game over state since we're now in escalation mode
+      setIsGameOver(false);
+    };
+    
     window.addEventListener('game-over', handleGameOver);
+    document.addEventListener('escalation-started', handleEscalationStarted);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('game-over', handleGameOver);
+      document.removeEventListener('escalation-started', handleEscalationStarted);
     };
   }, [contract, onTimerEnd]);
 
@@ -286,9 +298,10 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     try {
       // Double check game state before submitting
-      const [gameWon, timeRemaining] = await Promise.all([
+      const [gameWon, timeRemaining, escalationActive] = await Promise.all([
         contract.gameWon(),
-        contract.getTimeRemaining()
+        contract.getTimeRemaining(),
+        contract.escalationActive()
       ]);
 
       // Also check if any player has reached max persuasion (100/100)
@@ -308,7 +321,20 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       }
 
       const time = Number(timeRemaining.toString());
-      const isOver = gameWon || time <= 0 || maxPersuasion;
+      
+      // Game is over if:
+      // 1. Someone has already won the game, OR
+      // 2. Timer is at 0 AND we're not in escalation mode yet (giving time for escalation to start), OR
+      // 3. Player has reached maximum persuasion score
+      const isOver = gameWon || (time <= 0 && !escalationActive) || maxPersuasion;
+      
+      console.log("Game status check before submission:", { 
+        gameWon, 
+        time, 
+        escalationActive, 
+        maxPersuasion,
+        isOver
+      });
 
       if (isOver) {
         setIsGameOver(true);

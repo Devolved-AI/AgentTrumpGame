@@ -341,6 +341,13 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             localStorage.setItem('escalationInterval', '1');
             localStorage.setItem('escalationPrice', ESCALATION_PRICES[0]);
 
+            // Create and dispatch a custom event to notify other components
+            const escalationEvent = new CustomEvent('escalation-started', {
+              detail: { interval: 1, price: ESCALATION_PRICES[0] }
+            });
+            document.dispatchEvent(escalationEvent);
+            console.log("Dispatched escalation-started event");
+
             // Don't end game or clear the timer - we're now in escalation mode
           }
           return newTime;
@@ -389,16 +396,25 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     // Check the timer for interval transitions or game end
     const checkInterval = setInterval(() => {
       if (displayTime <= 0) {
+        console.log("Escalation timer reached zero, handling interval transition or game end");
         // Check if we had any guesses in the current interval
         if (status.lastGuessInterval !== status.escalationInterval) {
           // No guesses in this interval - end the game
+          console.log("No guesses in current interval - ending game");
           setStatus(prev => ({...prev, isGameOver: true}));
-          if (onTimerEnd) onTimerEnd();
+          if (onTimerEnd) {
+            console.log("Calling onTimerEnd callback from escalation interval end");
+            onTimerEnd();
+          }
           clearInterval(checkInterval);
         } else if (status.escalationInterval >= 10) {
           // We've completed all 10 intervals - end the game
+          console.log("All 10 escalation intervals completed - ending game");
           setStatus(prev => ({...prev, isGameOver: true}));
-          if (onTimerEnd) onTimerEnd();
+          if (onTimerEnd) {
+            console.log("Calling onTimerEnd callback from final escalation interval");
+            onTimerEnd();
+          }
           clearInterval(checkInterval);
         } else {
           // Move to the next escalation interval
