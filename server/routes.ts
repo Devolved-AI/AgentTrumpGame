@@ -20,9 +20,16 @@ interface Winner {
   score: number;
 }
 
+// Enhanced interface for score data with contract association
+interface ScoreData {
+  score: number;
+  contractAddress: string | null;
+  lastUpdated: number;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Load persistent scores from file or initialize empty map
-  let persistentScores: Record<string, number> = {};
+  let persistentScores: Record<string, ScoreData | number> = {};
   
   try {
     if (fs.existsSync(SCORES_FILE)) {
@@ -38,8 +45,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Continue with empty scores if file can't be loaded
   }
   
-  // Convert to Map for runtime use
-  const scoreCache = new Map<string, number>(Object.entries(persistentScores));
+  // Convert to Map for runtime use with proper ScoreData objects
+  const scoreCache = new Map<string, ScoreData>();
+  
+  // Process existing scores and convert any legacy format (just number) to ScoreData
+  Object.entries(persistentScores).forEach(([address, data]) => {
+    // Handle legacy format (just number)
+    if (typeof data === 'number') {
+      scoreCache.set(address, {
+        score: data,
+        contractAddress: null,
+        lastUpdated: Date.now()
+      });
+    } else {
+      // Already in ScoreData format
+      scoreCache.set(address, data);
+    }
+  });
   
   // Load past winners
   let winners: Winner[] = [];
@@ -86,14 +108,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     process.exit(0);
   });
 
+  // Add an endpoint to handle contract address changes
+  app.post('/api/contract', async (req, res) => {
+    try {
+      const { contractAddress } = req.body;
+      
+      if (!contractAddress) {
+        return res.status(400).json({ error: 'Contract address is required' });
+      }
+      
+      // Reset all scores for any users associated with a different contract
+      Array.from(scoreCache.entries()).forEach(([address, data]) => {
+        if (data.contractAddress !== contractAddress) {
+          // Reset to 50 for new contract
+          scoreCache.set(address, {
+            score: 50,
+            contractAddress: contractAddress,
+            lastUpdated: Date.now()
+          });
+          console.log(`Reset score for ${address} due to contract change to ${contractAddress}`);
+        }
+      });
+      
+      // Save updated scores to disk
+      saveScoresToDisk();
+      
+      res.json({ success: true, message: 'Contract address updated and scores reset' });
+    } catch (error) {
+      console.error('Error updating contract address:', error);
+      res.status(500).json({ error: 'Failed to update contract address' });
+    }
+  });
+
   // Endpoint to get all persuasion scores - this must come BEFORE the dynamic :address route
   app.get('/api/persuasion/all', async (req, res) => {
     try {
-      // Convert Map to Object for JSON response
+      // Include the contract address in the response
       const scores = Object.fromEntries(
-        Array.from(scoreCache.entries()).map(([address, score]) => [
+        Array.from(scoreCache.entries()).map(([address, data]) => [
           address, 
-          { score }
+          { 
+            score: data.score,
+            contractAddress: data.contractAddress
+          }
         ])
       );
       
@@ -107,10 +164,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/persuasion/:address', async (req, res) => {
     try {
       const { address } = req.params;
+      const { contractAddress } = req.query;
       
-      // Get score from cache or use 50 as default
-      const score = scoreCache.get(address) ?? 50;
-      res.json({ score });
+      // Get score data or create default
+      const scoreData = scoreCache.get(address) || {
+        score: 50,
+        contractAddress: null,
+        lastUpdated: Date.now()
+      };
+      
+      // If contract address is provided and different from stored one, reset score
+      if (contractAddress && contractAddress !== scoreData.contractAddress) {
+        console.log(`Contract address change detected: ${scoreData.contractAddress} -> ${contractAddress}`);
+        
+        // Reset score for new contract
+        scoreData.score = 50;
+        scoreData.contractAddress = contractAddress as string;
+        scoreData.lastUpdated = Date.now();
+        
+        // Update cache
+        scoreCache.set(address, scoreData);
+        saveScoresToDisk();
+      }
+      
+      res.json({ 
+        score: scoreData.score,
+        contractAddress: scoreData.contractAddress,
+        lastUpdated: scoreData.lastUpdated 
+      });
     } catch (error) {
       console.error('Error getting persuasion score:', error);
       res.status(500).json({ error: 'Failed to get persuasion score' });
@@ -253,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/persuasion/:address', async (req, res) => {
     try {
       const { address } = req.params;
-      const { score, gameOver, message } = req.body;
+      const { score, gameOver, message, contractAddress } = req.body;
 
       if (typeof score !== 'number' || score < 0 || score > 100) {
         return res.status(400).json({ error: 'Invalid score value' });
@@ -264,6 +345,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Game is over. No more updates allowed.' });
       }
       
+      // Get existing score data or create default
+      const existingData = scoreCache.get(address) || {
+        score: 50,
+        contractAddress: null,
+        lastUpdated: Date.now()
+      };
+      
       // Apply rate limiting if message is provided (genuine user interaction)
       if (message) {
         // Check if rate limit is exceeded
@@ -271,13 +359,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!rateLimitCheck.allowed) {
           console.log(`Rate limit exceeded for ${address}: ${rateLimitCheck.reason}`);
           
-          // Get current score for penalty
-          const currentScore = scoreCache.get(address) ?? 50;
           // Apply moderate penalty for rate limit violations
-          const penalizedScore = Math.max(0, currentScore - 25);
+          const penalizedScore = Math.max(0, existingData.score - 25);
           
           // Update score with penalty
-          scoreCache.set(address, penalizedScore);
+          const penalizedData = {
+            ...existingData,
+            score: penalizedScore,
+            lastUpdated: Date.now()
+          };
+          
+          scoreCache.set(address, penalizedData);
           saveScoresToDisk();
           
           return res.status(429).json({ 
@@ -294,14 +386,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // This ensures that even if client-side detection is bypassed, the server will catch it
           console.log(`Server detected AI content from ${address}, applying penalty`);
           
-          // Get current score
-          const currentScore = scoreCache.get(address) ?? 50;
-          
           // Apply significant penalty (more severe than client-side penalty)
-          const penalizedScore = Math.max(0, currentScore - 75);
+          const penalizedScore = Math.max(0, existingData.score - 75);
           
           // Update with penalized score
-          scoreCache.set(address, penalizedScore);
+          const penalizedData = {
+            ...existingData,
+            score: penalizedScore,
+            lastUpdated: Date.now()
+          };
+          
+          scoreCache.set(address, penalizedData);
           saveScoresToDisk();
           
           return res.status(403).json({ 
@@ -312,8 +407,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Update score data
+      const updatedData: ScoreData = {
+        score: score,
+        contractAddress: contractAddress || existingData.contractAddress,
+        lastUpdated: Date.now()
+      };
+      
       // Update score in memory
-      scoreCache.set(address, score);
+      scoreCache.set(address, updatedData);
       
       // Save to disk after updating
       saveScoresToDisk();
@@ -359,13 +461,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Winner address is required' });
       }
       
-      // Get score for this address
-      const score = scoreCache.get(address) ?? 0;
+      // Get score data for this address
+      const scoreData = scoreCache.get(address) || {
+        score: 50,
+        contractAddress: null,
+        lastUpdated: Date.now()
+      };
       
       // Create new winner entry
       const newWinner: Winner = {
         address,
-        score,
+        score: scoreData.score,
         timestamp: Date.now()
       };
       

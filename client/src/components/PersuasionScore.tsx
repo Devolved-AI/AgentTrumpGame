@@ -115,7 +115,7 @@ export function PersuasionScore() {
   };
 
   // Function to reset the score and cached messages when contract changes or game restarts
-  const resetScore = async () => {
+  const resetScore = async (newContractAddress?: string) => {
     if (!address) return;
     
     try {
@@ -126,8 +126,31 @@ export function PersuasionScore() {
       processedMessagesRef.current.clear();
       setLastProcessedResponse(null);
       
-      // Delete the existing score in API
-      await fetch(`/api/persuasion/${address}`, { method: 'DELETE' });
+      // Get current contract address if not provided
+      let contractAddress = newContractAddress;
+      if (!contractAddress && contract) {
+        try {
+          contractAddress = await contract.getAddress();
+        } catch (e) {
+          console.error("Failed to get contract address:", e);
+        }
+      }
+      
+      // If we're resetting for a contract change, notify the server
+      if (contractAddress) {
+        try {
+          // First, update global contract state
+          await fetch('/api/contract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractAddress })
+          });
+          
+          console.log(`Notified server of contract address change to ${contractAddress}`);
+        } catch (contractError) {
+          console.error("Error updating contract address on server:", contractError);
+        }
+      }
       
       // Set score to exactly 50 for new games
       const defaultScore = 50;
@@ -139,11 +162,12 @@ export function PersuasionScore() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           score: defaultScore,
+          contractAddress,
           message: 'New game started'
         })
       });
       
-      console.log("Score explicitly reset to 50 for new game");
+      console.log(`Score explicitly reset to 50 for new game with contract ${contractAddress || 'unknown'}`);
       
     } catch (error) {
       console.error("Error resetting score:", error);
@@ -296,12 +320,23 @@ export function PersuasionScore() {
       // Update UI immediately
       setScore(currentScore);
       
+      // Get current contract address if available
+      let contractAddress = null;
+      if (contract) {
+        try {
+          contractAddress = await contract.getAddress();
+        } catch (e) {
+          console.error("Failed to get contract address:", e);
+        }
+      }
+      
       // Update score in API with message content for server-side AI detection
       const response = await fetch(`/api/persuasion/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           score: currentScore,
+          contractAddress, // Include contract address for tracking
           message: message // Include the message for server-side analysis
         })
       });
@@ -404,8 +439,8 @@ export function PersuasionScore() {
         if (previousContractRef.current !== null && previousContractRef.current !== contractAddress) {
           console.log(`Contract address changed from ${previousContractRef.current} to ${contractAddress}. Resetting score.`);
           
-          // Reset score for new contract
-          await resetScore();
+          // Reset score for new contract with the new contract address
+          await resetScore(contractAddress);
         } else {
           // Fetch the existing score from the server
           await fetchCurrentScore();
@@ -454,8 +489,8 @@ export function PersuasionScore() {
       
       console.log(`Contract address changed from ${previousAddress || 'none'} to ${newAddress}. Resetting persuasion score.`);
       
-      // Reset score when contract address changes (new game)
-      resetScore();
+      // Reset score when contract address changes (new game) - pass the new contract address
+      resetScore(newAddress);
     };
     
     // Add the event listener
