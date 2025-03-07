@@ -436,7 +436,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     currency: 'USD'
   }) : '...';
 
-  const minutes = Math.floor(displayTime / 60);
+  const hours = Math.floor(displayTime / 3600);
+  const minutes = Math.floor((displayTime % 3600) / 60);
   const seconds = displayTime % 60;
   const isNearEnd = !status.isEscalation && displayTime <= 300;
   const textColorClass = status.isGameOver ? 'text-red-500' : (status.isEscalation || isNearEnd ? 'text-red-500' : 'text-black dark:text-white');
@@ -480,7 +481,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           {!status.isGameOver ? (
             <>
               <div className={`text-2xl font-bold ${textColorClass}`}>
-                {minutes}:{seconds.toString().padStart(2, '0')}
+                {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
               </div>
               <Progress
                 value={(displayTime / (status.isEscalation ? 300 : 3600)) * 100}
@@ -546,7 +547,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           {!status.isGameOver ? (
             <>
               <div className={`text-2xl font-bold ${textColorClass}`}>
-                {minutes}:{seconds.toString().padStart(2, '0')}
+                {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
               </div>
               <Progress value={(displayTime / (status.isEscalation ? 300 : 3600)) * 100} className="mt-2" />
               {status.isEscalation && (
