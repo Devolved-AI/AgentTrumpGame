@@ -1,6 +1,30 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { useWeb3Store } from "@/lib/web3";
-import { useEffect, useState } from "react";
+import { useEffect, useState, forwardRef } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { cn } from "@/lib/utils";
+
+// Custom DialogContent without a close button
+const DialogContent = forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      {/* No close button here */}
+    </DialogPrimitive.Content>
+  </DialogPortal>
+));
+DialogContent.displayName = "DialogContent";
 
 interface GameOverInfo {
   lastGuessAddress: string;
@@ -81,19 +105,12 @@ export function GameOverDialog() {
             }
           }
           
-          // Method 4: If we still don't have a valid block number, try to get current block number
+          // We no longer need to try to fetch the block number since we're not displaying it
+          // Just using a placeholder value now
           if (finalBlock === "Block information unavailable") {
-            try {
-              const provider = contract.provider;
-              if (provider) {
-                const currentBlockNumber = await provider.getBlockNumber();
-                finalBlock = currentBlockNumber.toString();
-                console.log("Using current block number as fallback:", finalBlock);
-                localStorage.setItem('finalGameBlock', finalBlock);
-              }
-            } catch (blockError) {
-              console.error("Error getting current block number:", blockError);
-            }
+            finalBlock = "Final block";
+            console.log("Using placeholder block value");
+            localStorage.setItem('finalGameBlock', finalBlock);
           }
         }
       }
