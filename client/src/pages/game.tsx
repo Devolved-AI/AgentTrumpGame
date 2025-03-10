@@ -17,8 +17,7 @@ const fetchEthPrice = async () => {
       headers: {
         'Accept': 'application/json',
         'Cache-Control': 'no-cache',
-      },
-      timeout: 5000,
+      }
     });
     
     if (!response.ok) {
@@ -158,35 +157,14 @@ export default function Game() {
                 </p>
 
                 <p>
-                  You have 8 minutes to convince Agent Trump (AGT) to give the Prize Pool Money to you.
+                  You have 10 minutes to convince Agent Trump (AGT) to give the Prize Pool Money to you.
                 </p>
 
                 <div>
                   <h3 className="text-lg font-semibold mb-2">How to Win:</h3>
                   <ul className="list-disc list-inside space-y-1">
                     <li>Your persuasion score must reach 100 to win immediately.</li>
-                    <li>If no one wins within 8 minutes, the game enters Escalation Mode (Sudden Death).</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Escalation Mode (Sudden Death):</h3>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>The game enters 10 consecutive 5-minute intervals with increasing costs:</li>
-                    <ul className="list-none ml-6 text-sm mt-1 mb-2 grid grid-cols-2 gap-x-4">
-                      <li>.0018 ETH - First 5 minutes</li>
-                      <li>.0036 ETH - Second 5 minutes</li>
-                      <li>.0072 ETH - Third 5 minutes</li>
-                      <li>.0144 ETH - Fourth 5 minutes</li>
-                      <li>.0288 ETH - Fifth 5 minutes</li>
-                      <li>.0576 ETH - Sixth 5 minutes</li>
-                      <li>.1152 ETH - Seventh 5 minutes</li>
-                      <li>.2304 ETH - Eighth 5 minutes</li>
-                      <li>.4608 ETH - Ninth 5 minutes</li>
-                      <li>.9216 ETH - Tenth 5 minutes</li>
-                    </ul>
-                    <li>Each interval lasts exactly 5:00 minutes regardless of guesses made.</li>
-                    <li>If an interval passes with no guesses, or after the 10th interval completes, the game ends for everyone.</li>
+                    <li>If no one wins within 10 minutes, the game ends for everyone.</li>
                   </ul>
                 </div>
 

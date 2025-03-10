@@ -370,7 +370,7 @@ export function GameOverDialog() {
             Thanks for Playing
           </p>
 
-          <div className="space-y-6 w-full text-left">
+          <div className="space-y-6 w-full text-center">
             {gameInfo.winner && (
               <div className="bg-green-900 p-4 rounded-md">
                 <p className="font-semibold mb-1 text-green-400">Winner:</p>
@@ -380,14 +380,6 @@ export function GameOverDialog() {
                 </p>
               </div>
             )}
-            
-            <div className="bg-blue-900/30 p-4 rounded-md border border-blue-800">
-              <p className="font-semibold mb-1">Last Address:</p>
-              <p className="font-mono break-all">{gameInfo.lastGuessAddress || "0x78C0B8846050fB80C2Cd5A8652f40661C798d0dE"}</p>
-              <p className="text-sm mt-2 text-blue-300/80">
-                This is the address of the last player to interact with the game
-              </p>
-            </div>
           </div>
         </div>
       </DialogContent>

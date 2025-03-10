@@ -53,8 +53,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       console.log("Updated prize pool from Web3Store:", prizePool);
     }
   }, [prizePool]);
-  const [displayTime, setDisplayTime] = useState(480); // 8 minutes in seconds (custom timer for this game)
-  const [baseTime, setBaseTime] = useState(480); // Match the 8-minute timer
+  const [displayTime, setDisplayTime] = useState(600); // 10 minutes in seconds (fixed game timer)
+  const [baseTime, setBaseTime] = useState(600); // Match the 10-minute timer
 
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
@@ -79,6 +79,15 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         let calculatedDisplayTime = 0;
         const savedState = localStorage.getItem('gameTimerState');
 
+        // Cap the max time to 10 minutes (600 seconds) for this game
+        const MAX_GAME_TIME = 600;
+        // Cap the contract time to our max game time
+        const cappedContractTime = Math.min(time, MAX_GAME_TIME);
+        
+        if (time > MAX_GAME_TIME) {
+          console.log(`Contract returned ${time} seconds, capping to ${MAX_GAME_TIME} seconds`);
+        }
+
         if (savedState) {
           try {
             const parsedState = JSON.parse(savedState);
@@ -89,24 +98,23 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             const elapsedSeconds = Math.floor((Date.now() - timestamp) / 1000);
             const adjustedSavedTime = Math.max(0, savedTime - elapsedSeconds);
 
-            if (adjustedSavedTime > time) {
-              calculatedDisplayTime = adjustedSavedTime;
-              console.log("Using saved time:", calculatedDisplayTime);
+            if (adjustedSavedTime > cappedContractTime) {
+              calculatedDisplayTime = Math.min(adjustedSavedTime, MAX_GAME_TIME);
+              console.log("Using saved time (capped):", calculatedDisplayTime);
             } else {
-              // If contract time is better, use that (handles case where server might have
-              // a more accurate timer than what was stored locally)
-              calculatedDisplayTime = time;
-              console.log("Using contract time (better than saved):", calculatedDisplayTime);
+              // If capped contract time is better, use that
+              calculatedDisplayTime = cappedContractTime;
+              console.log("Using capped contract time:", calculatedDisplayTime);
             }
           } catch (e) {
-            // If parsing fails, use contract time
-            calculatedDisplayTime = time;
-            console.log("Using contract time (parsing error):", calculatedDisplayTime);
+            // If parsing fails, use capped contract time
+            calculatedDisplayTime = cappedContractTime;
+            console.log("Using capped contract time (parsing error):", calculatedDisplayTime);
           }
         } else {
-          // No saved state, use contract time
-          calculatedDisplayTime = time;
-          console.log("No saved state, using contract time:", calculatedDisplayTime);
+          // No saved state, use capped contract time
+          calculatedDisplayTime = cappedContractTime;
+          console.log("No saved state, using capped contract time:", calculatedDisplayTime);
         }
 
         // Make sure we have a valid time
@@ -167,10 +175,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           lastPlayer;
 
         const time = Number(timeRemaining.toString());
+        // Cap the time to 10 minutes
+        const MAX_GAME_TIME = 600;
+        const cappedTime = Math.min(time, MAX_GAME_TIME);
+        
+        if (time > MAX_GAME_TIME) {
+          console.log(`Contract returned ${time} seconds, capping to ${MAX_GAME_TIME} seconds`);
+        }
 
         // Add debug logging
         console.log("GameStatus - Contract State:", {
           timeRemaining: time,
+          cappedTimeRemaining: cappedTime,
           won,
           gameOver,
           lastPlayer,
@@ -180,8 +196,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           prizePool
         });
 
-        // Update the baseTime
-        setBaseTime(time);
+        // Update the baseTime with capped value
+        setBaseTime(cappedTime);
 
         // Calculate the escalation period number (1-10)
         const periodNumber = Number(escalationPeriod.toString());
@@ -195,7 +211,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         
         setStatus(prev => ({
           ...prev,
-          timeRemaining: time,
+          timeRemaining: cappedTime, // Use the capped time value
           lastPlayer: lastPlayerAddress, // Use the converted address
           // totalBalance is now updated via the prizePool useEffect
           won,
@@ -280,6 +296,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
         
+        // Cap the time to 10 minutes for this game
+        const MAX_GAME_TIME = 600;
+        const cappedTime = Math.min(time, MAX_GAME_TIME);
+        
+        if (time > MAX_GAME_TIME) {
+          console.log(`GuessEvent: Contract returned ${time} seconds, capping to ${MAX_GAME_TIME} seconds`);
+        }
+        
         // Update the prize pool using the centralized Web3Store method
         await updatePrizePool();
 
@@ -288,7 +312,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           lastPlayer: player,
           lastBlock: blockNumber ? blockNumber.toString() : "Unknown block",
           lastTimestamp: Date.now(),
-          timeRemaining: time
+          timeRemaining: cappedTime // Use the capped time value
         };
         
         localStorage.setItem('gameState', JSON.stringify(gameState));
@@ -353,45 +377,32 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           escalationPeriod: status.escalationPeriod
         }));
 
-        // When timer reaches zero:
-        // 1. If not in escalation period, transition to escalation
-        // 2. If already in escalation, end the game
+        // When timer reaches zero, end the game for everyone
         if (newTime <= 0) {
-          // Check if we can transition to escalation
-          if (!status.inEscalationPeriod) {
-            console.log("Timer reached zero, checking if escalation can start");
-            
-            // Instead of ending the game immediately, let the contract determine if
-            // escalation should start. This will be detected in the next API call cycle.
-            // Just keep the timer at 0 for now
-            return 0;
-          } else {
-            // Already in escalation and timer hit zero again
-            console.log("Escalation period ended, game over for everyone");
-            
-            // Set game over state
-            setStatus(prev => ({ 
-              ...prev, 
-              isGameOver: true
-            }));
+          console.log("Timer reached zero, game over for everyone");
+          
+          // Set game over state
+          setStatus(prev => ({ 
+            ...prev, 
+            isGameOver: true
+          }));
 
-            // Clear the timer
-            clearInterval(timer);
-            
-            // Trigger the game over callback
-            if (onTimerEnd) {
-              console.log("Calling onTimerEnd callback");
-              onTimerEnd();
-            }
-
-            // Create and dispatch a custom game-over event
-            const gameOverEvent = new CustomEvent('game-over');
-            document.dispatchEvent(gameOverEvent);
-            window.dispatchEvent(gameOverEvent);
-            console.log("Dispatched game-over event");
-            
-            return 0;
+          // Clear the timer
+          clearInterval(timer);
+          
+          // Trigger the game over callback
+          if (onTimerEnd) {
+            console.log("Calling onTimerEnd callback");
+            onTimerEnd();
           }
+
+          // Create and dispatch a custom game-over event
+          const gameOverEvent = new CustomEvent('game-over');
+          document.dispatchEvent(gameOverEvent);
+          window.dispatchEvent(gameOverEvent);
+          console.log("Dispatched game-over event");
+          
+          return 0;
         }
 
         return newTime;
@@ -479,7 +490,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               ) : (
                 <>
                   <Progress
-                    value={(displayTime / 480) * 100} // 8 minutes for main period
+                    value={(displayTime / 600) * 100} // 10 minutes for main period
                     className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                   />
                   {isNearEnd ? (
@@ -556,7 +567,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               
               {!status.inEscalationPeriod && (
                 <Progress
-                  value={(displayTime / 480) * 100} // 8 minutes for main period
+                  value={(displayTime / 600) * 100} // 10 minutes for main period
                   className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                 />
               )}

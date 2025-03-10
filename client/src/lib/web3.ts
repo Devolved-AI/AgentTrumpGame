@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
-const CONTRACT_ADDRESS = "0xeCBd67B1331F0125C4931C66aDaBE673f1eC4D45";
+const CONTRACT_ADDRESS = "0x3d86eBFBA84ED806f5004E6E42c715658aB5494f";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -939,11 +939,9 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     const { contract } = get();
     if (!contract) return false;
     try {
-      const [gameWon, timeRemaining, escalationActive, period] = await Promise.all([
+      const [gameWon, timeRemaining] = await Promise.all([
         contract.gameWon(),
-        contract.getTimeRemaining(),
-        contract.escalationActive(),
-        contract.getCurrentEscalationPeriod ? contract.getCurrentEscalationPeriod() : Promise.resolve(0)
+        contract.getTimeRemaining()
       ]);
       
       const time = Number(timeRemaining.toString());
@@ -954,13 +952,8 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         return true;
       }
       
-      // 2. Escalation is active but we've passed the 10th period
-      if (escalationActive && Number(period) > 10) {
-        return true;
-      }
-      
-      // 3. Time is up AND escalation is not active
-      if (time <= 0 && !escalationActive) {
+      // 2. Time is up (10 minutes have passed)
+      if (time <= 0) {
         return true;
       }
       
