@@ -1,18 +1,18 @@
 {
   "0xd7bc9888a66bf8683521d65a7938a839406c2e0e": {
-    "score": 20,
-    "contractAddress": "0xb8B7Bf29078D4d87C8c07eE6BD116C89aa00026A",
-    "lastUpdated": 1741644611980
-  },
-  "0xcce8be503efd8308bb39e043591b8a78c1227d48": {
-    "score": 25,
-    "contractAddress": "0xb8B7Bf29078D4d87C8c07eE6BD116C89aa00026A",
-    "lastUpdated": 1741644543301
-  },
-  "0xc495bd69b313ca48865effba6c597535f6dc41a2": {
     "score": 25,
     "contractAddress": "0x719f4Af302ef2fC6AB45f21A7348617685ec00fe",
-    "lastUpdated": 1741646312076
+    "lastUpdated": 1741646336466
+  },
+  "0xcce8be503efd8308bb39e043591b8a78c1227d48": {
+    "score": 2,
+    "contractAddress": "0x719f4Af302ef2fC6AB45f21A7348617685ec00fe",
+    "lastUpdated": 1741646483679
+  },
+  "0xc495bd69b313ca48865effba6c597535f6dc41a2": {
+    "score": 16,
+    "contractAddress": "0x719f4Af302ef2fC6AB45f21A7348617685ec00fe",
+    "lastUpdated": 1741646397625
   },
   "0x5b4ee669bee8093214d5b9e785e011eb93995171": {
     "score": 25,
