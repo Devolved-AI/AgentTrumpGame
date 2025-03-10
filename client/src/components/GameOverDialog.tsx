@@ -12,9 +12,9 @@ export function GameOverDialog() {
   const { contract, address, isGameOver } = useWeb3Store();
   const [open, setOpen] = useState(false);
   const [gameInfo, setGameInfo] = useState<GameOverInfo>({
-    lastGuessAddress: "0xcce8be503efd8308bb39e043591b8a78c1227d48",
+    lastGuessAddress: "",
     lastBlock: "Fetching block information...",
-    winner: "0xcce8be503efd8308bb39e043591b8a78c1227d48"
+    winner: undefined
   });
 
   // Function to fetch game over info and show the dialog
@@ -76,24 +76,24 @@ export function GameOverDialog() {
         console.warn("Error finding player with 100 score:", apiError);
       }
       
-      // If we couldn't find a winner from scores, use passed winner or the specific wallets
+      // If we couldn't find a winner with 100 score, there probably isn't one
       if (!winner || winner === "0x0000000000000000000000000000000000000000") {
-        // Try using known address with 100 points from your screenshot
-        const knownWinners = ["0xcce8be503efd8308bb39e043591b8a78c1227d48", "0xd7bc9888a66bf8683521d65a7938a839406c2e0e"];
-        winner = knownWinners[0]; // Use primary known winner
-        console.log("Using known winner address:", winner);
+        winner = undefined; // No winner
+        console.log("No winner found with 100 points");
       }
       
-      // Register this winner in database
-      try {
-        await fetch('/api/winners', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: winner })
-        });
-        console.log("Registered winner in database:", winner);
-      } catch (regError) {
-        console.warn("Error registering winner:", regError);
+      // Only register a winner in the database if there actually is one
+      if (winner) {
+        try {
+          await fetch('/api/winners', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: winner })
+          });
+          console.log("Registered winner in database:", winner);
+        } catch (regError) {
+          console.warn("Error registering winner:", regError);
+        }
       }
       
       // Try to get additional information about the block
@@ -138,15 +138,13 @@ export function GameOverDialog() {
     } catch (error) {
       console.error("Error fetching game over info:", error);
       
-      // Use the known winner from the screenshot as a fallback
-      const fallbackWinner = "0xcce8be503efd8308bb39e043591b8a78c1227d48";
-      
-      // On error, use the known values from the screenshot
-      setGameInfo({
-        lastGuessAddress: fallbackWinner,
-        lastBlock: "12345678",
-        winner: fallbackWinner
-      });
+      // On error, use the last player we know about
+      setGameInfo(prev => ({
+        ...prev,
+        lastBlock: "Unable to fetch block information",
+        // Don't set a winner unless we actually know there's a winner
+        winner: undefined
+      }));
       
       // Still show the dialog
       setOpen(true);
@@ -275,9 +273,11 @@ export function GameOverDialog() {
             
             <div className="bg-gray-900 p-4 rounded-md">
               <p className="font-semibold mb-1 text-amber-400">Last Address:</p>
-              <p className="font-mono break-all">{gameInfo.winner}</p>
+              <p className="font-mono break-all">{gameInfo.lastGuessAddress || "Unknown"}</p>
               <p className="text-sm mt-2 text-amber-300">
-                This is the winner's wallet address that reached 100/100
+                {gameInfo.winner 
+                  ? "This is the winner's wallet address that reached 100/100" 
+                  : "This is the address of the last player to interact with the game"}
               </p>
             </div>
 
