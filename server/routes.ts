@@ -27,7 +27,19 @@ interface ScoreData {
   lastUpdated: number;
 }
 
+// Interface for game timer state
+interface GameTimerState {
+  contractAddress: string;
+  startTime: number;
+  gameStarted: boolean;
+  gameId: string;
+  gameEndTime?: number;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Game timer state - used to track game start times for each contract
+  let gameTimerState: Record<string, GameTimerState> = {};
+  
   // Load persistent scores from file or initialize empty map
   let persistentScores: Record<string, ScoreData | number> = {};
   
@@ -113,10 +125,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { contractAddress, defaultScore = 25 } = req.body;
       const scoreValue = Number(defaultScore);
+      const currentTime = Date.now();
       
       if (!contractAddress) {
         return res.status(400).json({ error: 'Contract address is required' });
       }
+      
+      // Create or update game timer state for this contract
+      const gameId = `game_${currentTime}`;
+      gameTimerState[contractAddress] = {
+        contractAddress,
+        startTime: currentTime,
+        gameStarted: true,
+        gameId
+      };
+      
+      console.log(`Set up new game timer for contract ${contractAddress} with gameId ${gameId}`);
       
       // Validate the score
       if (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 100) {
@@ -130,7 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             scoreCache.set(address, {
               score: fallbackScore,
               contractAddress: contractAddress,
-              lastUpdated: Date.now()
+              lastUpdated: currentTime
             });
             console.log(`Reset score for ${address} to ${fallbackScore} due to contract change to ${contractAddress}`);
           }
@@ -143,7 +167,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: true, 
           message: `Contract address updated and scores reset to ${fallbackScore}`,
           defaultScore: fallbackScore,
-          contractAddress
+          contractAddress,
+          gameTimerState: gameTimerState[contractAddress]
         });
       }
       
@@ -154,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           scoreCache.set(address, {
             score: scoreValue,
             contractAddress: contractAddress,
-            lastUpdated: Date.now()
+            lastUpdated: currentTime
           });
           console.log(`Reset score for ${address} to ${scoreValue} due to contract change to ${contractAddress}`);
         }
@@ -167,7 +192,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         message: `Contract address updated and scores reset to ${scoreValue}`,
         defaultScore: scoreValue,
-        contractAddress
+        contractAddress,
+        gameTimerState: gameTimerState[contractAddress]
       });
     } catch (error) {
       console.error('Error updating contract address:', error);
@@ -289,6 +315,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error getting all persuasion scores:', error);
       res.status(500).json({ error: 'Failed to get all persuasion scores' });
+    }
+  });
+  
+  // Endpoint to get game timer state for a specific contract
+  app.get('/api/game/timer/:contractAddress', async (req, res) => {
+    try {
+      const { contractAddress } = req.params;
+      
+      if (!contractAddress) {
+        return res.status(400).json({ error: 'Contract address is required' });
+      }
+      
+      // Get game timer state for this contract
+      const timerState = gameTimerState[contractAddress];
+      
+      if (!timerState) {
+        // If no timer state exists, create one with the current time
+        const currentTime = Date.now();
+        const gameId = `game_${currentTime}`;
+        
+        gameTimerState[contractAddress] = {
+          contractAddress,
+          startTime: currentTime,
+          gameStarted: true,
+          gameId
+        };
+        
+        console.log(`Created new game timer for ${contractAddress} on first request`);
+        return res.json(gameTimerState[contractAddress]);
+      }
+      
+      // Calculate elapsed time since game started
+      const elapsedTime = Math.floor((Date.now() - timerState.startTime) / 1000);
+      const gameLength = 300; // 5 minutes in seconds
+      const remainingTime = Math.max(0, gameLength - elapsedTime);
+      
+      // Return timer state with remaining time calculation
+      res.json({
+        ...timerState,
+        elapsedTime,
+        remainingTime,
+        gameLength
+      });
+    } catch (error) {
+      console.error('Error getting game timer state:', error);
+      res.status(500).json({ error: 'Failed to get game timer state' });
     }
   });
 
