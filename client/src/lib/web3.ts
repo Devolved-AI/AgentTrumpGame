@@ -5,7 +5,7 @@ import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
 const CONTRACT_ADDRESS = "0x1FDe9B28F8f3f2F4d36Be7135295dcC526688Ddd";
 // Using the checksummed address format to prevent errors
-const CONTRACT_OWNER = "0x5B4EE669BEe8093214D5b9E785e011EB93995171"; // Owner's wallet address
+const CONTRACT_OWNER = "0xd7Bc9888A66Bf8683521d65A7938A839406C2e0E"; // Owner's wallet address (same as the connected wallet)
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
