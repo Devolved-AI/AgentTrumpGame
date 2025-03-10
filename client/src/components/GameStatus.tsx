@@ -176,20 +176,22 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           if (typeof lastPlayer === 'string') {
             lastPlayerAddress = lastPlayer;
           } else if (lastPlayer && typeof lastPlayer === 'object') {
-            if (typeof lastPlayer.toString === 'function') {
-              lastPlayerAddress = lastPlayer.toString();
-            } else if ('address' in lastPlayer) {
-              lastPlayerAddress = lastPlayer.address;
+            const lastPlayerObj = lastPlayer as any; // Type assertion to bypass strict checking
+            
+            if (typeof lastPlayerObj.toString === 'function') {
+              lastPlayerAddress = lastPlayerObj.toString();
+            } else if (lastPlayerObj.address) {
+              lastPlayerAddress = lastPlayerObj.address;
             } else {
               // Try to access address as a property (some contracts return structured data)
-              const addressStr = JSON.stringify(lastPlayer);
+              const addressStr = JSON.stringify(lastPlayerObj);
               console.log("Last player object:", addressStr);
               lastPlayerAddress = addressStr;
             }
           }
         } catch (err) {
           console.error("Error processing lastPlayer address:", err);
-          lastPlayerAddress = lastPlayer?.toString() || "Unknown address";
+          lastPlayerAddress = String(lastPlayer) || "Unknown address";
         }
         
         console.log("Processed lastPlayer to:", lastPlayerAddress);
@@ -203,7 +205,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           console.log(`Contract returned ${time} seconds, capping to ${MAX_GAME_TIME} seconds`);
         }
 
-        // Add debug logging
+        // Add debug logging with safer toString handling
         console.log("GameStatus - Contract State:", {
           timeRemaining: time,
           cappedTimeRemaining: cappedTime,
@@ -211,7 +213,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           gameOver,
           lastPlayer,
           lastPlayerType: typeof lastPlayer,
-          lastPlayerToString: lastPlayer ? lastPlayer.toString() : null,
+          lastPlayerToString: lastPlayer ? String(lastPlayer) : null,
           // Now using prizePool from Web3Store
           prizePool
         });
@@ -327,24 +329,26 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         // Update the prize pool using the centralized Web3Store method
         await updatePrizePool();
 
-        // Process player address safely with type checking
+        // Process player address with simple type assertions to avoid TypeScript errors
         let processedAddress = '';
         
         try {
           if (typeof player === 'string') {
             processedAddress = player;
           } else if (player && typeof player === 'object') {
-            if (typeof player.toString === 'function') {
-              processedAddress = player.toString();
-            } else if ('address' in player) {
-              processedAddress = player.address;
+            const playerObj = player as any; // Type assertion to bypass strict type checking
+            
+            if (typeof playerObj.toString === 'function') {
+              processedAddress = playerObj.toString();
+            } else if (playerObj.address) {
+              processedAddress = playerObj.address;
             } else {
-              processedAddress = JSON.stringify(player);
+              processedAddress = JSON.stringify(playerObj);
             }
           }
         } catch (err) {
           console.error("Error processing player address:", err);
-          processedAddress = player?.toString() || "Unknown address";
+          processedAddress = String(player) || "Unknown address";
         }
         
         console.log("Processed player address to:", processedAddress);

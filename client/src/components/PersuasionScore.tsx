@@ -404,9 +404,9 @@ export function PersuasionScore() {
         console.log(`Subtracted ${penaltyPoints} points for WEAK_PROPOSITION response`);
       } 
       else if (responseType === 'THREATENING') {
-        const penaltyPoints = 50; // Changed from 75 to 50
+        const penaltyPoints = 5; // Changed from 50 to 5 (reduced AI detection penalty)
         currentScore = Math.max(0, currentScore - penaltyPoints);
-        console.log(`Subtracted ${penaltyPoints} points for THREATENING response`);
+        console.log(`Subtracted ${penaltyPoints} points for THREATENING response (reduced AI penalty)`);
       }
       
       // Update UI immediately
