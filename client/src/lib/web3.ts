@@ -1105,28 +1105,51 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
           console.error("Error getting initial prize pool balance:", error);
         }
         
-        // Check if this is a fresh contract by examining gameEndBlock vs currentBlock
+        // Check if this is a fresh contract by examining various contract properties
         try {
+          // Step 1: Check if contract address has changed compared to stored address
+          const isNewContractAddress = previousContractAddress !== CONTRACT_ADDRESS;
+          
+          // Step 2: Check if game end block is close to current block (fresh deployment)
           const gameEndBlock = await contract.gameEndBlock();
           const currentBlock = await provider.getBlockNumber();
           const blockDifference = Number(gameEndBlock.toString()) - currentBlock;
           
+          // Step 3: Check if the time remaining calculation would yield a normal game length
+          const timeRemaining = await contract.getTimeRemaining();
+          const timeRemainingValue = Number(timeRemaining.toString());
+          const hasFullGameTime = timeRemainingValue >= 250; // 5 minutes is 300, so anything close means fresh game
+          
           console.log("Contract state check:", {
             gameEndBlock: Number(gameEndBlock.toString()),
             currentBlock,
-            blockDifference
+            blockDifference,
+            timeRemaining: timeRemainingValue,
+            isNewContractAddress,
+            hasFullGameTime,
+            previousAddress: previousContractAddress,
+            newAddress: CONTRACT_ADDRESS
           });
           
-          // If the game end block is very close to or equal to the current block,
-          // this indicates a freshly deployed contract or one that has just been reset
-          if (blockDifference <= 3 && blockDifference >= 0) {
+          // Detect fresh contract if ANY of our checks suggest it's a new game
+          // This increases our chances of properly detecting a new contract
+          const isFreshContract = 
+            (blockDifference <= 10 && blockDifference >= 0) || // More lenient block difference
+            hasFullGameTime ||
+            isNewContractAddress;
+            
+          if (isFreshContract) {
             console.log("Detected fresh contract deployment or reset!");
             
-            // Add a small delay to ensure state is consistent
+            // Always force a reset - better to restart a game unnecessarily than miss a new game start
             setTimeout(() => {
               // Create a single event object for consistency
               const freshContractEvent = new CustomEvent('fresh-contract-detected', {
-                detail: { contractAddress: CONTRACT_ADDRESS }
+                detail: { 
+                  contractAddress: CONTRACT_ADDRESS,
+                  reason: isNewContractAddress ? 'new-address' : 
+                         (hasFullGameTime ? 'full-time' : 'block-difference')
+                }
               });
               
               // Dispatch to both window and document to ensure all listeners receive it

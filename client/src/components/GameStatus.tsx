@@ -439,36 +439,67 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     
     // Handle fresh contract detection
     const handleFreshContract = (event: Event) => {
-      const customEvent = event as CustomEvent<{contractAddress: string}>;
+      const customEvent = event as CustomEvent<{
+        contractAddress: string, 
+        reason: 'new-address' | 'full-time' | 'block-difference'
+      }>;
+      
       console.log("Fresh contract detected in GameStatus:", customEvent.detail);
       
-      // Reset the game timer to 5 minutes for the new game
-      setDisplayTime(300); // 5 minutes
+      // Generate a new unique game ID for this session
+      const newGameId = Date.now().toString();
+      
+      // Reset the game timer to 5 minutes (300 seconds) for the new game
+      setDisplayTime(300);
       setBaseTime(300);
       
-      // Save the new state to localStorage
+      // Reset game over state
+      setStatus(prev => ({
+        ...prev,
+        isGameOver: false,
+        won: false,
+        timeRemaining: 300,
+        lastGuessTimestamp: Date.now(),
+        inEscalationPeriod: false,
+        escalationPeriod: 0
+      }));
+      
+      // Save the new state to localStorage with a new game ID to ensure fresh state
       localStorage.setItem('gameTimerState', JSON.stringify({ 
         displayTime: 300,
+        savedTime: 300,
+        timestamp: Date.now(),
         lastUpdated: Date.now(),
-        baseTime: 300
+        baseTime: 300,
+        gameId: newGameId,
+        isGameOver: false,
+        inEscalation: false,
+        escalationPeriod: 0
+      }));
+      
+      // Also reset the game state in localStorage
+      localStorage.setItem('gameState', JSON.stringify({
+        lastPlayer: "",
+        lastBlock: "",
+        lastTimestamp: Date.now(),
+        timeRemaining: 300,
+        gameId: newGameId,
+        isNewGame: true
       }));
       
       // Force a status update with fresh game data
-      // Call the appropriate contract functions to get updated data
       if (contract) {
         try {
           // Update prize pool using the Web3Store method
           updatePrizePool();
           
-          // Force a refresh of the game state
-          setStatus(prev => ({
-            ...prev,
-            isGameOver: false,
-            timeRemaining: 300, // 5 minutes for a fresh game
-            lastGuessTimestamp: Date.now(),
-          }));
-          
-          console.log("Reset game state for fresh contract");
+          // Log the reset operation with relevant details
+          console.log("Reset game state for fresh contract:", {
+            contractAddress: customEvent.detail.contractAddress,
+            reason: customEvent.detail.reason,
+            newGameId,
+            timestamp: new Date().toISOString()
+          });
         } catch (error) {
           console.error("Error updating game state for fresh contract:", error);
         }
