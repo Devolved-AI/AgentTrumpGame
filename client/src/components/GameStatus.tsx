@@ -454,7 +454,25 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       }));
       
       // Force a status update with fresh game data
-      updateGameData();
+      // Call the appropriate contract functions to get updated data
+      if (contract) {
+        try {
+          // Update prize pool using the Web3Store method
+          updatePrizePool();
+          
+          // Force a refresh of the game state
+          setStatus(prev => ({
+            ...prev,
+            isGameOver: false,
+            timeRemaining: 300, // 5 minutes for a fresh game
+            lastGuessTimestamp: Date.now(),
+          }));
+          
+          console.log("Reset game state for fresh contract");
+        } catch (error) {
+          console.error("Error updating game state for fresh contract:", error);
+        }
+      }
     };
     
     // Listen for fresh contract event

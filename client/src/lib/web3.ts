@@ -1124,12 +1124,18 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
             
             // Add a small delay to ensure state is consistent
             setTimeout(() => {
-              // Dispatch a custom event to reset UI components
-              window.dispatchEvent(
-                new CustomEvent('fresh-contract-detected', {
-                  detail: { contractAddress: CONTRACT_ADDRESS }
-                })
-              );
+              // Create a single event object for consistency
+              const freshContractEvent = new CustomEvent('fresh-contract-detected', {
+                detail: { contractAddress: CONTRACT_ADDRESS }
+              });
+              
+              // Dispatch to both window and document to ensure all listeners receive it
+              console.log("Dispatching fresh-contract-detected event");
+              window.dispatchEvent(freshContractEvent);
+              document.dispatchEvent(freshContractEvent);
+              
+              // For debugging
+              console.log("Fresh contract detected and event dispatched:", CONTRACT_ADDRESS);
             }, 500);
           }
           
