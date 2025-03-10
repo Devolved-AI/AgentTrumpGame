@@ -38,8 +38,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       console.log("Updated prize pool from Web3Store:", prizePool);
     }
   }, [prizePool]);
-  const [displayTime, setDisplayTime] = useState(300); // 5 minutes in seconds (updated for testing)
-  const [baseTime, setBaseTime] = useState(300); // Match the 5-minute timer
+  const [displayTime, setDisplayTime] = useState(600); // 10 minutes in seconds (updated for testing)
+  const [baseTime, setBaseTime] = useState(600); // Match the 10-minute timer
 
   const { data: ethPrice } = useEthPrice();
 
@@ -56,8 +56,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         const time = Number(timeRemaining.toString());
 
-        // Cap the max time to 5 minutes (300 seconds) for testing
-        const MAX_GAME_TIME = 300;
+        // Cap the max time to 10 minutes (600 seconds) for testing
+        const MAX_GAME_TIME = 600;
         
         // Log time from contract for debugging
         console.log("Contract returned time:", time);
@@ -275,8 +275,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         console.log("Final processed lastPlayer address:", lastPlayerAddress);
 
         const time = Number(timeRemaining.toString());
-        // Cap the time to 5 minutes (300 seconds) for testing
-        const MAX_GAME_TIME = 300;
+        // Cap the time to 10 minutes (600 seconds) for testing
+        const MAX_GAME_TIME = 600;
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
@@ -396,8 +396,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
         
-        // Cap the time to 5 minutes (300 seconds) for testing
-        const MAX_GAME_TIME = 300;
+        // Cap the time to 10 minutes (600 seconds) for testing
+        const MAX_GAME_TIME = 600;
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
@@ -667,7 +667,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               ) : (
                 <>
                   <Progress
-                    value={(displayTime / 300) * 100} // 5 minutes for testing
+                    value={(displayTime / 600) * 100} // 10 minutes for testing
                     className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                   />
                   {isNearEnd ? (
