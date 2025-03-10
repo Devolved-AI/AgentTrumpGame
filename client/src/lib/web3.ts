@@ -838,6 +838,8 @@ interface Web3State {
   resetPersuasionScores: () => Promise<void>;
   getRequiredAmount: () => Promise<string>;
   isGameOver: () => Promise<boolean>;
+  isInEscalationPeriod: () => Promise<boolean>;
+  getEscalationTimeRemaining: () => Promise<number>;
   getContractBalance: () => Promise<string>;
   prizePool: string;
   updatePrizePool: () => Promise<void>;
@@ -937,14 +939,87 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     const { contract } = get();
     if (!contract) return false;
     try {
-      const [gameWon, timeRemaining] = await Promise.all([
+      const [gameWon, timeRemaining, escalationActive] = await Promise.all([
         contract.gameWon(),
-        contract.getTimeRemaining()
+        contract.getTimeRemaining(),
+        contract.escalationActive ? contract.escalationActive() : Promise.resolve(false)
       ]);
-      return gameWon || Number(timeRemaining.toString()) <= 0;
+      
+      const time = Number(timeRemaining.toString());
+      
+      // Game is only over when the timer reaches zero AND the escalation period is over
+      // or when someone has won the game
+      if (gameWon) {
+        return true;
+      }
+      
+      // If time is up but escalation is active, game is still running
+      if (time <= 0 && escalationActive) {
+        return false;
+      }
+      
+      // Otherwise, game is over if timer is at zero
+      return time <= 0;
     } catch (error) {
       console.error("Error checking game over status:", error);
       return false;
+    }
+  },
+  
+  isInEscalationPeriod: async () => {
+    const { contract } = get();
+    if (!contract) return false;
+    try {
+      // Check if escalation is active
+      const escalationActive = await contract.escalationActive ? 
+        await contract.escalationActive() : false;
+      
+      // If escalation is not active, we're not in an escalation period
+      if (!escalationActive) {
+        return false;
+      }
+      
+      // Otherwise, check if the time remaining has reached zero
+      const timeRemaining = await contract.getTimeRemaining();
+      return Number(timeRemaining.toString()) <= 0 && escalationActive;
+    } catch (error) {
+      console.error("Error checking escalation period:", error);
+      return false;
+    }
+  },
+  
+  getEscalationTimeRemaining: async () => {
+    const { contract } = get();
+    if (!contract) return 0;
+    try {
+      // Check if escalation is active
+      const escalationActive = await contract.escalationActive ? 
+        await contract.escalationActive() : false;
+      
+      // If escalation is not active, return 0
+      if (!escalationActive) {
+        return 0;
+      }
+      
+      // Get current block and escalation start block
+      const currentBlock = await contract.provider.getBlockNumber();
+      const escalationStartBlock = await contract.escalationStartBlock();
+      
+      // Get escalation period (blocks)
+      const escalationPeriod = await contract.ESCALATION_PERIOD();
+      
+      // Calculate total escalation blocks (5 minutes at ~12 second blocks = ~25 blocks)
+      const totalEscalationBlocks = Number(escalationPeriod) * 10; // 10 periods total
+      
+      // Calculate blocks remaining in escalation period
+      const blocksPassed = currentBlock - Number(escalationStartBlock);
+      const blocksRemaining = Math.max(0, totalEscalationBlocks - blocksPassed);
+      
+      // Convert blocks to seconds (approximate, assuming 12 seconds per block)
+      return blocksRemaining * 12;
+    } catch (error) {
+      console.error("Error getting escalation time remaining:", error);
+      return 0;
     }
   },
 
