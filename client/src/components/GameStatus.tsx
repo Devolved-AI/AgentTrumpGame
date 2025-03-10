@@ -29,7 +29,7 @@ interface GameStatusProps {
 }
 
 export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastGuessOnly, onTimerEnd }: GameStatusProps) {
-  const { contract, isGameOver, prizePool, updatePrizePool } = useWeb3Store();
+  const { contract, isGameOver, isInEscalationPeriod, getEscalationTimeRemaining, prizePool, updatePrizePool } = useWeb3Store();
   const [status, setStatus] = useState({
     timeRemaining: 0,
     lastPlayer: "",
@@ -37,7 +37,10 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     won: false,
     requiredAmount: "0.0018",
     lastGuessTimestamp: 0,
-    isGameOver: false
+    isGameOver: false,
+    inEscalationPeriod: false,
+    escalationTimeRemaining: 0,
+    escalationPeriod: 0
   });
   
   // Update local state with prize pool from Web3Store
@@ -143,13 +146,19 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           lastPlayer,
           won,
           gameOver,
-          requiredAmount
+          requiredAmount,
+          inEscalation,
+          escalationTime,
+          escalationPeriod
         ] = await Promise.all([
           contract.getTimeRemaining(),
           contract.lastPlayer(),
           contract.gameWon(),
           isGameOver(),
-          contract.getCurrentRequiredAmount()
+          contract.getCurrentRequiredAmount(),
+          isInEscalationPeriod(),
+          getEscalationTimeRemaining(),
+          contract.getCurrentEscalationPeriod ? contract.getCurrentEscalationPeriod() : Promise.resolve(0)
         ]);
         
         // Convert lastPlayer to string if it's an address object
