@@ -53,13 +53,29 @@ export function TransactionVisualization({ hash, status, value, ownerHash, split
         <span className="font-medium">{config.message}</span>
       </div>
       
-      {value && (
+      {value && !splitDetails && (
         <div className="text-sm text-muted-foreground mb-2">
           Amount: {formatEther(value)} ETH
         </div>
       )}
+      
+      {splitDetails && (
+        <div className="text-sm text-muted-foreground mb-4">
+          <div className="mb-1 font-medium">Transaction Split (70/30):</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="text-xs text-green-500 font-semibold">Prize Pool (70%)</div>
+              <div>{splitDetails.contractAmount} ETH</div>
+            </div>
+            <div>
+              <div className="text-xs text-blue-500 font-semibold">Contract Owner (30%)</div>
+              <div>{splitDetails.ownerAmount} ETH</div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-2">
         <motion.div 
           className="h-1 flex-1 rounded-full bg-secondary overflow-hidden"
         >
@@ -88,6 +104,21 @@ export function TransactionVisualization({ hash, status, value, ownerHash, split
           <ExternalLink className="h-3 w-3" />
         </a>
       </div>
+      
+      {ownerHash && (
+        <div className="text-xs text-gray-500 flex items-center justify-between">
+          <span>Owner Transaction:</span>
+          <a 
+            href={ownerExplorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-500 flex items-center gap-1"
+          >
+            View
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      )}
     </motion.div>
   );
 }
