@@ -102,15 +102,25 @@ export function PersuasionScore() {
     const threatTermCount = THREAT_TERMS.filter(term => textLower.includes(term.toLowerCase())).length;
     
     // Apply normal classification logic
-    if (threatTermCount >= 2) {
+    if (threatTermCount >= 1) {
+      console.log(`Threat terms detected (${threatTermCount}). Classifying as THREATENING.`);
       return 'THREATENING';
     }
+    
+    // Make it more likely to classify as WEAK_PROPOSITION unless there are clear 
+    // indicators of a good deal/business proposition
     if (dealTermCount >= 3 && powerTermCount >= 2) {
+      console.log(`Strong deal terms (${dealTermCount}) and power terms (${powerTermCount}). Classifying as DEAL_MAKER.`);
       return 'DEAL_MAKER';
     }
-    if (dealTermCount >= 2 || powerTermCount >= 3) {
+    
+    if (dealTermCount >= 2 && powerTermCount >= 2) {
+      console.log(`Decent deal terms (${dealTermCount}) and power terms (${powerTermCount}). Classifying as BUSINESS_SAVVY.`);
       return 'BUSINESS_SAVVY';
     }
+    
+    // More likely to classify responses as weak propositions
+    console.log(`Weak terms detected. Deal: ${dealTermCount}, Power: ${powerTermCount}, Threat: ${threatTermCount}. Classifying as WEAK_PROPOSITION.`);
     return 'WEAK_PROPOSITION';
   };
 
@@ -381,19 +391,22 @@ export function PersuasionScore() {
         }
       }
       
-      // Apply positive point changes
-      if (pointsToAdd > 0) {
+      // Apply positive point changes for positive responses only
+      if (pointsToAdd > 0 && (responseType === 'DEAL_MAKER' || responseType === 'BUSINESS_SAVVY')) {
         currentScore = Math.min(100, currentScore + pointsToAdd);
+        console.log(`Added ${pointsToAdd} points for positive response`);
       }
       
-      // Apply negative point changes
-      switch (responseType) {
-        case 'WEAK_PROPOSITION':
-          currentScore = Math.max(0, currentScore - 4);
-          break;
-        case 'THREATENING':
-          currentScore = Math.max(0, currentScore - 75);
-          break;
+      // Apply negative point changes for negative responses
+      if (responseType === 'WEAK_PROPOSITION') {
+        const penaltyPoints = 4;
+        currentScore = Math.max(0, currentScore - penaltyPoints);
+        console.log(`Subtracted ${penaltyPoints} points for WEAK_PROPOSITION response`);
+      } 
+      else if (responseType === 'THREATENING') {
+        const penaltyPoints = 75;
+        currentScore = Math.max(0, currentScore - penaltyPoints);
+        console.log(`Subtracted ${penaltyPoints} points for THREATENING response`);
       }
       
       // Update UI immediately
