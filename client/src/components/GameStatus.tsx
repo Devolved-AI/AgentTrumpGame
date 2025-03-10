@@ -246,6 +246,17 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         // The timer is not reset when a guess is submitted during escalation mode
         // Each interval is exactly 5 minutes regardless of guesses
+        // Save the game state to localStorage with the last block number
+        const gameState = {
+          lastPlayer: player,
+          lastBlock: blockNumber ? blockNumber.toString() : "Unknown block",
+          lastTimestamp: Date.now(),
+          timeRemaining: time
+        };
+        
+        localStorage.setItem('gameState', JSON.stringify(gameState));
+        console.log("Saved game state to localStorage:", gameState);
+        
         if (escalationActive) {
           // Don't reset the timer but record that a guess was made in this interval
           setStatus(prev => {
@@ -254,6 +265,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               ...prev,
               lastGuessTimestamp: Date.now(),
               lastPlayer: player,
+              lastBlock: blockNumber ? blockNumber.toString() : "Unknown block",
               timeRemaining: time,
               lastGuessInterval: prev.escalationInterval // Track that a guess was made in current interval
             };
@@ -264,6 +276,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             ...prev,
             lastGuessTimestamp: Date.now(),
             lastPlayer: player,
+            lastBlock: blockNumber ? blockNumber.toString() : "Unknown block",
             timeRemaining: time
           }));
         }
