@@ -4,22 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { useWeb3Store, formatEther } from "@/lib/web3";
 import { Clock, User, Banknote } from "lucide-react";
 import { SiEthereum } from "react-icons/si";
-import { useQuery } from "@tanstack/react-query";
-
-const fetchEthPrice = async () => {
-  try {
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-    if (!response.ok) {
-      console.log('ETH price API returned non-200 response, using fallback price');
-      return 3000; // Fallback price
-    }
-    const data = await response.json();
-    return data.ethereum.usd;
-  } catch (error) {
-    console.log('Error fetching ETH price, using fallback price:', error);
-    return 3000; // Fallback price if API fails
-  }
-};
+import { useEthPrice } from "@/lib/ethPrice";
 
 interface GameStatusProps {
   showPrizePoolOnly?: boolean;
@@ -56,11 +41,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   const [displayTime, setDisplayTime] = useState(240); // 4 minutes in seconds (fixed game timer)
   const [baseTime, setBaseTime] = useState(240); // Match the 4-minute timer
 
-  const { data: ethPrice } = useQuery({
-    queryKey: ['ethPrice'],
-    queryFn: fetchEthPrice,
-    refetchInterval: 60000,
-  });
+  const { data: ethPrice } = useEthPrice();
 
   useEffect(() => {
     if (!contract) return;

@@ -5,45 +5,13 @@ import { Globe, ExternalLink } from "lucide-react";
 import { SiX, SiTelegram, SiEthereum } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PersuasionScore } from "@/components/PersuasionScore";
-import { useQuery } from "@tanstack/react-query";
 import { GameOverDialog } from "@/components/GameOverDialog";
 import { useWeb3Store } from "@/lib/web3";
 import { useState } from 'react';
-
-const fetchEthPrice = async () => {
-  try {
-    // Add API key parameter and adjust request with fallback options
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd', {
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache',
-      }
-    });
-    
-    if (!response.ok) {
-      console.warn('ETH price API response not OK:', response.status);
-      return 2450; // Fallback price if API call fails
-    }
-    
-    const data = await response.json();
-    if (data && data.ethereum && data.ethereum.usd) {
-      return data.ethereum.usd;
-    } else {
-      console.warn('ETH price data format unexpected:', data);
-      return 2450; // Fallback price if data format is unexpected
-    }
-  } catch (error) {
-    console.error('Error fetching ETH price:', error);
-    return 2450; // Fallback price if any error occurs
-  }
-};
+import { useEthPrice } from "@/lib/ethPrice";
 
 export default function Game() {
-  const { data: ethPrice = 0 } = useQuery({
-    queryKey: ['ethPrice'],
-    queryFn: fetchEthPrice,
-    refetchInterval: 60000,
-  });
+  const { data: ethPrice = 0 } = useEthPrice();
 
   const { address, isInitialized } = useWeb3Store();
   const [gameOver, setGameOver] = useState(false);
