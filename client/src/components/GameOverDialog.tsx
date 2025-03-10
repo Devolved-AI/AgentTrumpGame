@@ -371,16 +371,6 @@ export function GameOverDialog() {
                 This is the address of the last player to interact with the game
               </p>
             </div>
-
-            <div className="bg-blue-900/30 p-4 rounded-md border border-blue-800">
-              <p className="font-semibold mb-1">Last Block:</p>
-              <p className="font-mono text-lg">{gameInfo.lastBlock && gameInfo.lastBlock !== "Block information unavailable" 
-                ? gameInfo.lastBlock 
-                : "Loading block information..."}</p>
-              <p className="text-sm mt-2 text-blue-300/80">
-                This is the final blockchain block that concluded the game
-              </p>
-            </div>
             
             <p className="text-center mt-4 text-sm">
               The prize pool has been distributed to {gameInfo.winner ? "the winner" : "the last player"}.
