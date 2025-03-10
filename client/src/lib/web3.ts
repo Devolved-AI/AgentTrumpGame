@@ -1105,6 +1105,38 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
           console.error("Error getting initial prize pool balance:", error);
         }
         
+        // Check if this is a fresh contract by examining gameEndBlock vs currentBlock
+        try {
+          const gameEndBlock = await contract.gameEndBlock();
+          const currentBlock = await provider.getBlockNumber();
+          const blockDifference = Number(gameEndBlock.toString()) - currentBlock;
+          
+          console.log("Contract state check:", {
+            gameEndBlock: Number(gameEndBlock.toString()),
+            currentBlock,
+            blockDifference
+          });
+          
+          // If the game end block is very close to or equal to the current block,
+          // this indicates a freshly deployed contract or one that has just been reset
+          if (blockDifference <= 3 && blockDifference >= 0) {
+            console.log("Detected fresh contract deployment or reset!");
+            
+            // Add a small delay to ensure state is consistent
+            setTimeout(() => {
+              // Dispatch a custom event to reset UI components
+              window.dispatchEvent(
+                new CustomEvent('fresh-contract-detected', {
+                  detail: { contractAddress: CONTRACT_ADDRESS }
+                })
+              );
+            }, 500);
+          }
+          
+        } catch (error) {
+          console.error("Error checking contract freshness:", error);
+        }
+        
         set({ 
           provider, 
           signer, 

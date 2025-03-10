@@ -167,7 +167,16 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         
         const time = Number(timeRemaining.toString());
         const endBlock = Number(gameEndBlock.toString());
-        const isOver = gameWon || time <= 0;
+        
+        // Calculate block difference to detect fresh contracts
+        const blockDifference = endBlock - currentBlock;
+        
+        // Special case: if this is a fresh contract (blockDifference is small but positive),
+        // we do NOT consider the game as over, even if time is 0
+        const isFreshContract = blockDifference >= 0 && blockDifference <= 5;
+        
+        // Only consider a game over if it's not a fresh contract
+        const isOver = gameWon || (time <= 0 && !isFreshContract);
         
         console.log("GuessForm Game state check:", { 
           gameWon, 
@@ -175,7 +184,8 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           isOver, 
           gameEndBlock: endBlock,
           currentBlock,
-          blockDifference: endBlock - currentBlock,
+          blockDifference,
+          isFreshContract,
           contractAddress: await contract.getAddress()
         });
 
@@ -202,7 +212,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     // Check more frequently (every 2 seconds) to ensure we catch game over states quickly
     const interval = setInterval(checkGameState, 2000);
     
-    // Also listen for custom game-over events
+    // Handle game-over events
     const handleGameOver = (event: Event) => {
       const customEvent = event as CustomEvent<{reason?: string; timestamp?: number}>;
       console.log("Game over event received in GuessForm:", customEvent.detail);
@@ -230,14 +240,50 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       setIsTyping(false);
     };
     
-    // Listen for game over events
+    // Handle fresh contract detection
+    const handleFreshContract = (event: Event) => {
+      const customEvent = event as CustomEvent<{contractAddress: string}>;
+      console.log("Fresh contract detected in GuessForm:", customEvent.detail);
+      
+      // Reset game over state since this is a fresh contract
+      setIsGameOver(false);
+      
+      // Clear any pending responses or state
+      form.reset();
+      setIsSubmitting(false);
+      setIsTyping(false);
+      
+      // Reset messages for the new game
+      setMessages([
+        {
+          text: "I'm Donald Trump. Convince me to make a deal with you, and I might reward you with some cryptocurrency. The better your persuasion, the higher the rewards. Remember - I have the best deals, and I know a winning proposition when I see one!",
+          timestamp: Math.floor(Date.now() / 1000),
+          isUser: false
+        }
+      ]);
+      
+      // Show a toast notification
+      toast({
+        title: "New Game Started",
+        description: "Fresh contract detected. A new game has started!",
+      });
+      
+      // Force a game state check
+      checkGameState();
+    };
+    
+    // Listen for events
     window.addEventListener('game-over', handleGameOver);
     document.addEventListener('game-over', handleGameOver);
+    window.addEventListener('fresh-contract-detected', handleFreshContract);
+    document.addEventListener('fresh-contract-detected', handleFreshContract);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('game-over', handleGameOver);
       document.removeEventListener('game-over', handleGameOver);
+      window.removeEventListener('fresh-contract-detected', handleFreshContract);
+      document.removeEventListener('fresh-contract-detected', handleFreshContract);
     };
   }, [contract, onTimerEnd]);
 
@@ -327,9 +373,10 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     try {
       // Double check game state before submitting
-      const [gameWon, timeRemaining] = await Promise.all([
+      const [gameWon, timeRemaining, gameEndBlock] = await Promise.all([
         contract.gameWon(),
         contract.getTimeRemaining(),
+        contract.gameEndBlock()
       ]);
 
       // Also check if any player has reached max persuasion (100/100)
@@ -350,16 +397,32 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
       const time = Number(timeRemaining.toString());
       
+      // Check for fresh contract (same as in useEffect)
+      let currentBlock = 0;
+      try {
+        if (contract.runner && contract.runner.provider) {
+          currentBlock = await contract.runner.provider.getBlockNumber();
+        }
+      } catch (error) {
+        console.error("Error getting block number:", error);
+      }
+      
+      const endBlock = Number(gameEndBlock.toString());
+      const blockDifference = endBlock - currentBlock;
+      const isFreshContract = blockDifference >= 0 && blockDifference <= 5;
+      
       // Game is over if:
       // 1. Someone has already won the game, OR
-      // 2. Timer is at 0, OR
+      // 2. Timer is at 0 (but not if it's a fresh contract), OR
       // 3. Player has reached maximum persuasion score
-      const isOver = gameWon || time <= 0 || maxPersuasion;
+      const isOver = gameWon || (time <= 0 && !isFreshContract) || maxPersuasion;
       
       console.log("Game status check before submission:", { 
         gameWon, 
         time, 
         maxPersuasion,
+        blockDifference,
+        isFreshContract,
         isOver
       });
 
