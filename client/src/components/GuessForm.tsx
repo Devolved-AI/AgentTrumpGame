@@ -161,17 +161,16 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     const checkGameState = async () => {
       try {
-        const [gameWon, timeRemaining, escalationActive] = await Promise.all([
+        const [gameWon, timeRemaining] = await Promise.all([
           contract.gameWon(),
           contract.getTimeRemaining(),
-          contract.escalationActive()
         ]);
         const time = Number(timeRemaining.toString());
         const isOver = gameWon || time <= 0;
         
-        console.log("Game state check:", { gameWon, time, isOver, escalationActive });
+        console.log("Game state check:", { gameWon, time, isOver });
 
-        if (isOver && !escalationActive) {
+        if (isOver) {
           console.log("Game is determined to be over");
           setIsGameOver(true);
           if (onTimerEnd) {
@@ -203,34 +202,14 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       }
     };
     
-    // Listen for escalation mode events
-    const handleEscalationStarted = (event: Event) => {
-      const detail = (event as CustomEvent<{interval: number, price: string}>).detail;
-      console.log("Escalation mode started event received in GuessForm", detail);
-      
-      // Reset game over state since we're now in escalation mode
-      setIsGameOver(false);
-      
-      // Update messages with escalation info
-      const escalationStartMessage: Message = {
-        text: `⚠️ ESCALATION PERIOD ${detail.interval} STARTED! ⚠️\n\nThe cost to guess is now ${detail.price} ETH. Each escalation period lasts exactly 5 minutes.`,
-        timestamp: Math.floor(Date.now() / 1000),
-        isUser: false
-      };
-      
-      setMessages(prevMessages => [...prevMessages, escalationStartMessage]);
-    };
-    
-    // Listen on both window and document to ensure we catch the event
+    // Listen for game over events
     window.addEventListener('game-over', handleGameOver);
-    document.addEventListener('escalation-started', handleEscalationStarted);
-    window.addEventListener('escalation-started', handleEscalationStarted);
+    document.addEventListener('game-over', handleGameOver);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('game-over', handleGameOver);
-      document.removeEventListener('escalation-started', handleEscalationStarted);
-      window.removeEventListener('escalation-started', handleEscalationStarted);
+      document.removeEventListener('game-over', handleGameOver);
     };
   }, [contract, onTimerEnd]);
 
