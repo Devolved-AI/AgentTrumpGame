@@ -150,14 +150,34 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     const checkGameState = async () => {
       try {
-        const [gameWon, timeRemaining] = await Promise.all([
+        const [gameWon, timeRemaining, gameEndBlock] = await Promise.all([
           contract.gameWon(),
           contract.getTimeRemaining(),
+          contract.gameEndBlock()
         ]);
+        
+        let currentBlock = 0;
+        try {
+          if (contract.runner && contract.runner.provider) {
+            currentBlock = await contract.runner.provider.getBlockNumber();
+          }
+        } catch (error) {
+          console.error("Error getting block number:", error);
+        }
+        
         const time = Number(timeRemaining.toString());
+        const endBlock = Number(gameEndBlock.toString());
         const isOver = gameWon || time <= 0;
         
-        console.log("Game state check:", { gameWon, time, isOver });
+        console.log("GuessForm Game state check:", { 
+          gameWon, 
+          time, 
+          isOver, 
+          gameEndBlock: endBlock,
+          currentBlock,
+          blockDifference: endBlock - currentBlock,
+          contractAddress: await contract.getAddress()
+        });
 
         if (isOver) {
           console.log("Game is determined to be over");

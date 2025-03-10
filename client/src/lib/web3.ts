@@ -939,25 +939,47 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
     const { contract } = get();
     if (!contract) return false;
     try {
-      const [gameWon, timeRemaining] = await Promise.all([
+      const [gameWon, timeRemaining, endBlock] = await Promise.all([
         contract.gameWon(),
-        contract.getTimeRemaining()
+        contract.getTimeRemaining(),
+        contract.gameEndBlock()
       ]);
       
+      let currentBlock = 0;
+      try {
+        if (contract.runner && contract.runner.provider) {
+          currentBlock = await contract.runner.provider.getBlockNumber();
+        }
+      } catch (error) {
+        console.error("Error getting block number:", error);
+      }
+      
       const time = Number(timeRemaining.toString());
+      const gameEndBlockNum = Number(endBlock.toString());
+      
+      console.log("Game state debug:", {
+        gameWon,
+        timeRemaining: time,
+        gameEndBlock: gameEndBlockNum,
+        currentBlock,
+        contractAddress: CONTRACT_ADDRESS
+      });
       
       // Game is over when:
       // 1. Someone has won the game
       if (gameWon) {
+        console.log("Game is over because someone has won");
         return true;
       }
       
       // 2. Time is up (5 minutes have passed)
       if (time <= 0) {
+        console.log("Game is over because time is up");
         return true;
       }
       
       // Otherwise, game is still running
+      console.log("Game is still running");
       return false;
     } catch (error) {
       console.error("Error checking game over status:", error);
