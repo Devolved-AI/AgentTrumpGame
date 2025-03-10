@@ -390,15 +390,44 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         return updated;
       });
 
+      // Setup AI response generation with better error handling
       let trumpResponse: string | null = null;
+      let aiError = false;
+      
       try {
+        // Show Trump "typing" while waiting for response
+        setIsTyping(true);
+        
         // Pass both the message and wallet address to enable pattern detection
         // Add a unique timestamp to ensure we always get a unique response
         const uniqueInput = `${data.response} [Timestamp: ${new Date().toISOString()}]`;
-        console.log(`Sending uniqueInput to OpenAI: ${uniqueInput.substring(0, 50)}...`);
-        trumpResponse = await generateTrumpResponse(uniqueInput, address || undefined);
+        
+        // Add randomness to prevent cached responses
+        const randomSeed = Math.random().toString(36).substring(2, 10);
+        const processedInput = `${uniqueInput} [Random: ${randomSeed}]`;
+        
+        console.log(`Sending to AI: "${processedInput.substring(0, 50)}..."`);
+        
+        // Set a timeout for AI response (10 seconds)
+        const timeoutPromise = new Promise<string>((_, reject) => {
+          setTimeout(() => reject(new Error("AI response timed out")), 10000);
+        });
+        
+        // Race between the AI response and the timeout
+        trumpResponse = await Promise.race([
+          generateTrumpResponse(processedInput, address || undefined),
+          timeoutPromise
+        ]);
+        
+        console.log(`Received AI response: "${trumpResponse?.substring(0, 50)}..."`);
       } catch (error) {
-        console.error("Error generating response:", error);
+        aiError = true;
+        console.error("Error generating AI response:", error);
+        // We'll still continue with the transaction, just with a fallback message
+        trumpResponse = "Believe me, we're having some technical difficulties with my responses right now. But your payment went through! Keep trying to convince me.";
+      } finally {
+        // Always stop the typing indicator
+        setIsTyping(false);
       }
 
       const receipt = await tx.wait();

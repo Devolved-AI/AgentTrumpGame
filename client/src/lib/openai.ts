@@ -1,9 +1,31 @@
 import OpenAI from "openai";
+import { ETH_PRICE_FALLBACK } from "./ethPrice";
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // Allow client-side usage
-});
+// Timeout for OpenAI API calls (in ms)
+const API_TIMEOUT = 10000;
+
+// Safely initialize OpenAI with proper error handling
+const createOpenAIClient = () => {
+  try {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      console.warn("OpenAI API key not found in environment variables");
+      return null;
+    }
+    
+    return new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: true, // Allow client-side usage
+      timeout: API_TIMEOUT, // Set timeout to prevent hanging requests
+    });
+  } catch (error) {
+    console.error("Failed to initialize OpenAI client:", error);
+    return null;
+  }
+};
+
+const openai = createOpenAIClient();
 
 // Cache of recent user inputs to detect repetitive patterns or AI-driven behavior
 const recentUserInputs: Map<string, { text: string, timestamp: number }[]> = new Map();
@@ -85,7 +107,59 @@ function detectSuspiciousPatterns(address: string, currentInput: string): boolea
   */
 }
 
+// Default responses to use when API is unavailable
+const DEFAULT_TRUMP_RESPONSES = [
+  "Look, I can't give you a detailed response right now. The server's busy making deals - tremendous deals. Come back in a moment, folks!",
+  "We're experiencing some technical difficulties, but believe me, they're the best technical difficulties. Try again soon!",
+  "My team of experts is working on this. Nobody works harder or faster than my team, believe me. Give us a second and we'll be back.",
+  "Sometimes you have to wait for greatness. And let me tell you, I know about greatness. We'll be back online shortly!",
+  "The system is currently negotiating a better deal. And I know deals - I wrote the book on them! Try again soon.",
+];
+
+// Get a random fallback response with tracking to avoid repetition
+let lastResponseIndex = -1;
+const getRandomTrumpResponse = (): string => {
+  let newIndex;
+  do {
+    newIndex = Math.floor(Math.random() * DEFAULT_TRUMP_RESPONSES.length);
+  } while (newIndex === lastResponseIndex && DEFAULT_TRUMP_RESPONSES.length > 1);
+  
+  lastResponseIndex = newIndex;
+  return DEFAULT_TRUMP_RESPONSES[newIndex];
+};
+
+// Retries a function with exponential backoff
+const retryWithBackoff = async <T>(
+  fn: () => Promise<T>,
+  retries = 2,
+  delay = 300,
+  maxDelay = 3000
+): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries <= 0) {
+      throw error;
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, Math.min(delay, maxDelay)));
+    return retryWithBackoff(fn, retries - 1, delay * 2, maxDelay);
+  }
+};
+
+/**
+ * Generates a Trump-like response to user input with improved error handling and retry logic
+ * @param userGuess The user's message to respond to
+ * @param address User's wallet address for tracking (optional)
+ * @returns AI-generated Trump response or fallback message
+ */
 export async function generateTrumpResponse(userGuess: string, address?: string | null): Promise<string> {
+  // If OpenAI client failed to initialize, return a default response
+  if (!openai) {
+    console.warn("OpenAI client not initialized, using fallback response");
+    return getRandomTrumpResponse();
+  }
+  
   try {
     // If address is provided, check for suspicious patterns
     if (address) {
@@ -120,51 +194,90 @@ export async function generateTrumpResponse(userGuess: string, address?: string 
     // Log the request for debugging
     console.log(`Generating Trump response for input: "${userGuess.substring(0, 30)}..." with unique factors: ${JSON.stringify(uniqueFactors)}`);
     
-    // Normal response generation with added uniqueness
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: `You are Donald Trump responding to someone trying to convince you to give them prize money from a game's prize pool. 
-          Current request time: ${timestamp}. Request ID: ${uniqueFactors.randomSeed}.
+    // Use retry logic for the API call
+    return await retryWithBackoff(async () => {
+      // Add AbortController for timeout management
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+      
+      try {
+        // Normal response generation with added uniqueness
+        const response = await openai!.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: `You are Donald Trump responding to someone trying to convince you to give them prize money from a game's prize pool. 
+              Current request time: ${timestamp}. Request ID: ${uniqueFactors.randomSeed}.
 
-          Guidelines for your responses:
-          1. Stay in character as Trump with his unique speaking style
-          2. Use his characteristic phrases, mannerisms, and speech patterns
-          3. Reference his well-known accomplishments and business experience
-          4. Maintain his confident, bold personality
-          5. Make specific references to what the person said - be extremely specific about their exact wording
-          6. Every response must be completely unique and different from any previous response
-          7. Keep responses under 150 words
-          8. Use CAPS for emphasis occasionally
-          9. Include Trump-style nicknames or commentary
+              Guidelines for your responses:
+              1. Stay in character as Trump with his unique speaking style
+              2. Use his characteristic phrases, mannerisms, and speech patterns
+              3. Reference his well-known accomplishments and business experience
+              4. Maintain his confident, bold personality
+              5. Make specific references to what the person said - be extremely specific about their exact wording
+              6. Every response must be completely unique and different from any previous response
+              7. Keep responses under 150 words
+              8. Use CAPS for emphasis occasionally
+              9. Include Trump-style nicknames or commentary
 
-          Response structure:
-          1. Acknowledge their specific attempt/argument with direct reference to their words
-          2. Connect it to one of your experiences or achievements
-          3. Give a reason why they haven't convinced you YET, but encourage them to keep trying
+              Response structure:
+              1. Acknowledge their specific attempt/argument with direct reference to their words
+              2. Connect it to one of your experiences or achievements
+              3. Give a reason why they haven't convinced you YET, but encourage them to keep trying
 
-          Example response format:
-          "Folks, when you said [exact quote from their message], it reminds me of when I [related Trump achievement]. But let me tell you, I've seen BETTER deals in my sleep! Keep trying though, maybe next time you'll really show me something TREMENDOUS!"`
-        },
-        {
-          role: "user",
-          content: userGuess
+              Example response format:
+              "Folks, when you said [exact quote from their message], it reminds me of when I [related Trump achievement]. But let me tell you, I've seen BETTER deals in my sleep! Keep trying though, maybe next time you'll really show me something TREMENDOUS!"`
+            },
+            {
+              role: "user",
+              content: userGuess
+            }
+          ],
+          temperature: 1.0, // Increased temperature for more randomness
+          max_tokens: 200,
+          presence_penalty: 0.6, // Add penalties to reduce repetition
+          frequency_penalty: 0.6
+        });
+
+        // Clear the timeout
+        clearTimeout(timeoutId);
+
+        // Validate response format
+        if (!response.choices?.[0]?.message?.content) {
+          console.warn("OpenAI returned an empty or invalid response");
+          return getRandomTrumpResponse();
         }
-      ],
-      temperature: 1.0, // Increased temperature for more randomness
-      max_tokens: 200,
-      presence_penalty: 0.6, // Add penalties to reduce repetition
-      frequency_penalty: 0.6
-    });
 
-    // Log the response for debugging
-    console.log(`Generated Trump response: "${response.choices[0].message.content?.substring(0, 30)}..."`);
+        // Log the response for debugging
+        console.log(`Generated Trump response: "${response.choices[0].message.content.substring(0, 30)}..."`);
 
-    return response.choices[0].message.content || "Believe me, that was not a good try. NEXT!";
+        return response.choices[0].message.content;
+      } catch (error) {
+        // Always clear the timeout
+        clearTimeout(timeoutId);
+        
+        // Re-throw to let retry logic handle it
+        throw error;
+      }
+    }, 2, 300);
+    
   } catch (error) {
-    console.error("Error generating Trump response:", error);
-    return "Listen folks, we're having some technical difficulties. But we'll be back, bigger and better than ever before!";
+    // Detailed error logging
+    if (error instanceof Error) {
+      console.error(`Error generating Trump response: ${error.name} - ${error.message}`);
+      
+      // Check for specific error types
+      if (error.name === 'AbortError') {
+        console.error("OpenAI request timed out");
+      } else if (error.message.includes('rate limit')) {
+        console.error("OpenAI rate limit exceeded");
+      }
+    } else {
+      console.error("Unknown error generating Trump response:", error);
+    }
+    
+    // Return a fallback response
+    return getRandomTrumpResponse();
   }
 }
