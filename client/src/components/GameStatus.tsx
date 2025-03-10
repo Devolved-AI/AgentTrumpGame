@@ -436,6 +436,40 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
   useEffect(() => {
     if (!contract) return;
+    
+    // Handle fresh contract detection
+    const handleFreshContract = (event: Event) => {
+      const customEvent = event as CustomEvent<{contractAddress: string}>;
+      console.log("Fresh contract detected in GameStatus:", customEvent.detail);
+      
+      // Reset the game timer to 5 minutes for the new game
+      setDisplayTime(300); // 5 minutes
+      setBaseTime(300);
+      
+      // Save the new state to localStorage
+      localStorage.setItem('gameTimerState', JSON.stringify({ 
+        displayTime: 300,
+        lastUpdated: Date.now(),
+        baseTime: 300
+      }));
+      
+      // Force a status update with fresh game data
+      updateGameData();
+    };
+    
+    // Listen for fresh contract event
+    window.addEventListener('fresh-contract-detected', handleFreshContract);
+    document.addEventListener('fresh-contract-detected', handleFreshContract);
+    
+    // Return cleanup function
+    return () => {
+      window.removeEventListener('fresh-contract-detected', handleFreshContract);
+      document.removeEventListener('fresh-contract-detected', handleFreshContract);
+    };
+  }, [contract]);
+  
+  useEffect(() => {
+    if (!contract) return;
 
     // Listener for GuessSubmitted that handles game state and last player updates
     const handleGuessEvent = async (
