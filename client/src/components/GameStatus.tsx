@@ -160,6 +160,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           won,
           gameOver,
           lastPlayer,
+          lastPlayerType: typeof lastPlayer,
+          lastPlayerToString: lastPlayer ? lastPlayer.toString() : null,
           // Now using prizePool from Web3Store
           prizePool
         });
