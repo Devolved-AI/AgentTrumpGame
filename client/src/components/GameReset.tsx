@@ -24,9 +24,6 @@ export function GameReset() {
     try {
       // Clear local storage items related to game state
       localStorage.removeItem('gameTimerState');
-      localStorage.removeItem('escalationInterval');
-      localStorage.removeItem('escalationCount');
-      localStorage.removeItem('escalationPrice');
       
       // Reset the persuasion score via API - first delete existing score
       const deleteResponse = await fetch(`/api/persuasion/${address}`, {
