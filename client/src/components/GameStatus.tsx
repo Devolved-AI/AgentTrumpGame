@@ -169,10 +169,30 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           contract.getCurrentEscalationPeriod ? contract.getCurrentEscalationPeriod() : Promise.resolve(0)
         ]);
         
-        // Convert lastPlayer to string if it's an address object
-        const lastPlayerAddress = typeof lastPlayer === 'object' ? 
-          (lastPlayer.toString ? lastPlayer.toString() : null) : 
-          lastPlayer;
+        // Enhanced conversion of lastPlayer to string with better object handling
+        let lastPlayerAddress = '';
+        
+        try {
+          if (typeof lastPlayer === 'string') {
+            lastPlayerAddress = lastPlayer;
+          } else if (lastPlayer && typeof lastPlayer === 'object') {
+            if (typeof lastPlayer.toString === 'function') {
+              lastPlayerAddress = lastPlayer.toString();
+            } else if ('address' in lastPlayer) {
+              lastPlayerAddress = lastPlayer.address;
+            } else {
+              // Try to access address as a property (some contracts return structured data)
+              const addressStr = JSON.stringify(lastPlayer);
+              console.log("Last player object:", addressStr);
+              lastPlayerAddress = addressStr;
+            }
+          }
+        } catch (err) {
+          console.error("Error processing lastPlayer address:", err);
+          lastPlayerAddress = lastPlayer?.toString() || "Unknown address";
+        }
+        
+        console.log("Processed lastPlayer to:", lastPlayerAddress);
 
         const time = Number(timeRemaining.toString());
         // Cap the time to 10 minutes
@@ -284,7 +304,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     // Listener for GuessSubmitted that handles game state and last player updates
     const handleGuessEvent = async (
-      player: string,
+      player: any, // Using 'any' type for player to handle different contract return formats
       amount: any,
       multiplier: any,
       response: string,
@@ -307,9 +327,31 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         // Update the prize pool using the centralized Web3Store method
         await updatePrizePool();
 
+        // Process player address safely with type checking
+        let processedAddress = '';
+        
+        try {
+          if (typeof player === 'string') {
+            processedAddress = player;
+          } else if (player && typeof player === 'object') {
+            if (typeof player.toString === 'function') {
+              processedAddress = player.toString();
+            } else if ('address' in player) {
+              processedAddress = player.address;
+            } else {
+              processedAddress = JSON.stringify(player);
+            }
+          }
+        } catch (err) {
+          console.error("Error processing player address:", err);
+          processedAddress = player?.toString() || "Unknown address";
+        }
+        
+        console.log("Processed player address to:", processedAddress);
+        
         // Save the game state to localStorage with the last block number
         const gameState = {
-          lastPlayer: player,
+          lastPlayer: processedAddress,
           lastBlock: blockNumber ? blockNumber.toString() : "Unknown block",
           lastTimestamp: Date.now(),
           timeRemaining: cappedTime // Use the capped time value
@@ -322,7 +364,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         setStatus(prev => ({
           ...prev,
           lastGuessTimestamp: Date.now(),
-          lastPlayer: player,
+          lastPlayer: processedAddress,
           lastBlock: blockNumber ? blockNumber.toString() : "Unknown block",
           timeRemaining: time,
           // Prize pool is updated via the prizePool useEffect
