@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 // Files to store game data persistently
 const SCORES_FILE = path.join(__dirname, '../scores.json');
 const WINNERS_FILE = path.join(__dirname, '../winners.json');
+const GAME_TIMERS_FILE = path.join(__dirname, '../game_timers.json');
 
 // Interface for winner data
 interface Winner {
@@ -42,6 +43,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Load persistent scores from file or initialize empty map
   let persistentScores: Record<string, ScoreData | number> = {};
+  
+  // Load game timer states if available
+  try {
+    if (fs.existsSync(GAME_TIMERS_FILE)) {
+      const fileContent = fs.readFileSync(GAME_TIMERS_FILE, 'utf8');
+      gameTimerState = JSON.parse(fileContent);
+      console.log('Loaded game timer states:', Object.keys(gameTimerState).length);
+    } else {
+      console.log('No existing game timers file found, creating a new one');
+      fs.writeFileSync(GAME_TIMERS_FILE, JSON.stringify({}), 'utf8');
+    }
+  } catch (error) {
+    console.error('Error loading game timer states:', error);
+    // Continue with empty game timer state if file can't be loaded
+  }
   
   try {
     if (fs.existsSync(SCORES_FILE)) {
@@ -110,6 +126,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Saved winners to disk');
     } catch (error) {
       console.error('Error saving winners to disk:', error);
+    }
+  };
+  
+  // Helper function to save game timer states to disk
+  const saveGameTimersToDisk = () => {
+    try {
+      fs.writeFileSync(GAME_TIMERS_FILE, JSON.stringify(gameTimerState, null, 2), 'utf8');
+      console.log('Saved game timer states to disk');
+    } catch (error) {
+      console.error('Error saving game timer states to disk:', error);
     }
   };
 
@@ -342,14 +368,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gameId
         };
         
+        // Save the timer state to persistence
+        try {
+          fs.writeFileSync(
+            path.join(__dirname, '../game_timers.json'),
+            JSON.stringify(gameTimerState, null, 2)
+          );
+        } catch (e) {
+          console.error('Failed to save game timer state to file:', e);
+        }
+        
         console.log(`Created new game timer for ${contractAddress} on first request`);
-        return res.json(gameTimerState[contractAddress]);
+        
+        // Calculate game values
+        const elapsedTime = 0;
+        const gameLength = 300; // 5 minutes in seconds
+        const remainingTime = gameLength;
+        
+        return res.json({
+          ...gameTimerState[contractAddress],
+          elapsedTime,
+          remainingTime,
+          gameLength
+        });
       }
       
       // Calculate elapsed time since game started
       const elapsedTime = Math.floor((Date.now() - timerState.startTime) / 1000);
       const gameLength = 300; // 5 minutes in seconds
       const remainingTime = Math.max(0, gameLength - elapsedTime);
+      
+      // Check if the game is over based on timer
+      if (remainingTime <= 0 && !timerState.gameEndTime) {
+        // Mark game as ended
+        timerState.gameEndTime = Date.now();
+        
+        // Save the updated state
+        try {
+          fs.writeFileSync(
+            path.join(__dirname, '../game_timers.json'),
+            JSON.stringify(gameTimerState, null, 2)
+          );
+        } catch (e) {
+          console.error('Failed to save game end time to file:', e);
+        }
+        
+        console.log(`Game timer expired for contract ${contractAddress}`);
+      }
       
       // Return timer state with remaining time calculation
       res.json({
@@ -361,6 +426,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error getting game timer state:', error);
       res.status(500).json({ error: 'Failed to get game timer state' });
+    }
+  });
+  
+  // Endpoint to reset the game timer for a contract
+  app.post('/api/game/timer/reset/:contractAddress', async (req, res) => {
+    try {
+      const { contractAddress } = req.params;
+      
+      if (!contractAddress) {
+        return res.status(400).json({ error: 'Contract address is required' });
+      }
+      
+      // Create a new game timer state
+      const currentTime = Date.now();
+      const gameId = `game_${currentTime}`;
+      
+      gameTimerState[contractAddress] = {
+        contractAddress,
+        startTime: currentTime,
+        gameStarted: true,
+        gameId
+      };
+      
+      // Save the timer state to persistence
+      try {
+        fs.writeFileSync(
+          path.join(__dirname, '../game_timers.json'),
+          JSON.stringify(gameTimerState, null, 2)
+        );
+      } catch (e) {
+        console.error('Failed to save reset game timer state to file:', e);
+      }
+      
+      console.log(`Reset game timer for ${contractAddress}`);
+      
+      // Return the new timer state
+      const gameLength = 300; // 5 minutes in seconds
+      res.json({
+        ...gameTimerState[contractAddress],
+        elapsedTime: 0,
+        remainingTime: gameLength,
+        gameLength
+      });
+    } catch (error) {
+      console.error('Error resetting game timer:', error);
+      res.status(500).json({ error: 'Failed to reset game timer' });
     }
   });
 
