@@ -13,8 +13,18 @@ interface GameStatusProps {
   onTimerEnd?: () => void;
 }
 
+interface ServerTimerState {
+  contractAddress: string;
+  startTime: number;
+  gameStarted: boolean;
+  gameId: string;
+  elapsedTime?: number;
+  remainingTime?: number;
+  gameLength?: number;
+}
+
 export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastGuessOnly, onTimerEnd }: GameStatusProps) {
-  const { contract, isGameOver, isInEscalationPeriod, getEscalationTimeRemaining, prizePool, updatePrizePool } = useWeb3Store();
+  const { contract, isGameOver, isInEscalationPeriod, getEscalationTimeRemaining, prizePool, updatePrizePool, currentContractAddress } = useWeb3Store();
   const [status, setStatus] = useState({
     timeRemaining: 0,
     lastPlayer: "",
@@ -38,46 +48,60 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       console.log("Updated prize pool from Web3Store:", prizePool);
     }
   }, [prizePool]);
-  const [displayTime, setDisplayTime] = useState(300); // 5 minutes in seconds (updated for testing)
+  
+  const [displayTime, setDisplayTime] = useState(300); // 5 minutes in seconds (default)
   const [baseTime, setBaseTime] = useState(300); // Match the 5-minute timer
+  const [serverTimerState, setServerTimerState] = useState<ServerTimerState | null>(null);
+  const [lastServerRefresh, setLastServerRefresh] = useState(0);
 
   const { data: ethPrice } = useEthPrice();
 
-  // Initial timer initialization - happens once on component mount
+  // Initial timer initialization from server - happens once on component mount and when contract changes
   useEffect(() => {
-    // Try to restore timer from localStorage first
-    const savedState = localStorage.getItem('gameTimerState');
+    if (!currentContractAddress) return;
     
-    if (savedState) {
+    // Function to fetch game timer state from server
+    const fetchGameTimerState = async () => {
       try {
-        const parsedState = JSON.parse(savedState);
-        const { savedTime, timestamp, gameId } = parsedState;
+        const response = await fetch(`/api/game/timer/${currentContractAddress}`);
         
-        // Calculate elapsed time since last save
-        const elapsedSeconds = Math.floor((Date.now() - timestamp) / 1000);
-        const adjustedSavedTime = Math.max(0, savedTime - elapsedSeconds);
+        if (!response.ok) {
+          console.error("Failed to fetch game timer state:", response.statusText);
+          return;
+        }
         
-        console.log("Initial load: Found saved timer state:", { 
-          savedTime, 
-          elapsed: elapsedSeconds,
-          adjustedTime: adjustedSavedTime,
-          gameId
-        });
+        const timerState = await response.json();
+        setServerTimerState(timerState);
+        setLastServerRefresh(Date.now());
         
-        // Update display time with the time from localStorage
-        setDisplayTime(adjustedSavedTime);
-        setBaseTime(adjustedSavedTime);
+        console.log("Server timer state:", timerState);
         
-        // Pre-populate status with saved time
-        setStatus(prev => ({
-          ...prev,
-          timeRemaining: adjustedSavedTime
-        }));
+        // Set the display time based on server's remaining time calculation
+        if (timerState.remainingTime !== undefined) {
+          setDisplayTime(timerState.remainingTime);
+          setBaseTime(timerState.remainingTime);
+          
+          // Update status with the time from server
+          setStatus(prev => ({
+            ...prev,
+            timeRemaining: timerState.remainingTime || 0
+          }));
+        }
       } catch (e) {
-        console.error("Error parsing initial saved time:", e);
+        console.error("Error fetching game timer state:", e);
       }
-    }
-  }, []);  // Empty dependency array means this only runs once at component mount
+    };
+    
+    // Fetch game timer state on mount and when contract changes
+    fetchGameTimerState();
+    
+    // Set up interval to periodically refresh the server timer state (every 30 seconds)
+    const refreshInterval = setInterval(fetchGameTimerState, 30000);
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [currentContractAddress]);
 
   // Timer initialization after contract connection
   useEffect(() => {
