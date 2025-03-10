@@ -53,8 +53,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       console.log("Updated prize pool from Web3Store:", prizePool);
     }
   }, [prizePool]);
-  const [displayTime, setDisplayTime] = useState(600); // 10 minutes in seconds (fixed game timer)
-  const [baseTime, setBaseTime] = useState(600); // Match the 10-minute timer
+  const [displayTime, setDisplayTime] = useState(240); // 4 minutes in seconds (fixed game timer)
+  const [baseTime, setBaseTime] = useState(240); // Match the 4-minute timer
 
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
@@ -79,8 +79,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         let calculatedDisplayTime = 0;
         const savedState = localStorage.getItem('gameTimerState');
 
-        // Cap the max time to 10 minutes (600 seconds) for this game
-        const MAX_GAME_TIME = 600;
+        // Cap the max time to 4 minutes (240 seconds) for this game
+        const MAX_GAME_TIME = 240;
         // Cap the contract time to our max game time
         const cappedContractTime = Math.min(time, MAX_GAME_TIME);
         
@@ -197,8 +197,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         console.log("Processed lastPlayer to:", lastPlayerAddress);
 
         const time = Number(timeRemaining.toString());
-        // Cap the time to 10 minutes
-        const MAX_GAME_TIME = 600;
+        // Cap the time to 4 minutes
+        const MAX_GAME_TIME = 240;
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
@@ -318,8 +318,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
         
-        // Cap the time to 10 minutes for this game
-        const MAX_GAME_TIME = 600;
+        // Cap the time to 4 minutes for this game
+        const MAX_GAME_TIME = 240;
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
