@@ -49,16 +49,20 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     }
   }, [prizePool]);
   
-  const [displayTime, setDisplayTime] = useState(300); // 5 minutes in seconds (default)
-  const [baseTime, setBaseTime] = useState(300); // Match the 5-minute timer
+  // Using null for initial state to indicate loading
+  const [displayTime, setDisplayTime] = useState<number | null>(null);
+  const [baseTime, setBaseTime] = useState<number | null>(null);
   const [serverTimerState, setServerTimerState] = useState<ServerTimerState | null>(null);
   const [lastServerRefresh, setLastServerRefresh] = useState(0);
+  const [timerLoadingState, setTimerLoadingState] = useState(true);
 
   const { data: ethPrice } = useEthPrice();
 
   // Initial timer initialization from server - happens once on component mount and when contract changes
   useEffect(() => {
     if (!currentContractAddress) return;
+    
+    setTimerLoadingState(true); // Start in loading state
     
     // Function to fetch game timer state from server
     const fetchGameTimerState = async () => {
@@ -86,9 +90,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
             ...prev,
             timeRemaining: timerState.remainingTime || 0
           }));
+          
+          // Timer has loaded successfully
+          setIsTimerLoading(false);
         }
       } catch (e) {
         console.error("Error fetching game timer state:", e);
+        // On error, if we don't have time yet, use default 5 min time
+        if (displayTime === null) {
+          setDisplayTime(300);
+          setBaseTime(300);
+          setIsTimerLoading(false);
+        }
       }
     };
     
@@ -101,7 +114,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     return () => {
       clearInterval(refreshInterval);
     };
-  }, [currentContractAddress]);
+  }, [currentContractAddress, displayTime]);
 
   // Timer initialization after contract connection
   useEffect(() => {
@@ -726,15 +739,21 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   // It now uses server-side timer state to ensure consistency across all clients
   useEffect(() => {
     if (status.isGameOver) return;
+    
+    // Wait until we have a valid timer value from server before starting countdown
+    if (displayTime === null) return;
 
     // Get the current game ID from server timer state if available
-    let currentGameId = serverTimerState?.gameId || "default";
+    const currentGameId = serverTimerState?.gameId || "default";
     
     console.log("Setting up countdown timer with gameId:", currentGameId);
 
     // Set up a single timer for consistent countdown
     const timer = setInterval(() => {
       setDisplayTime(prev => {
+        // If still loading, don't update
+        if (prev === null) return prev;
+        
         // Calculate time elapsed since last server refresh
         let newTime = prev;
         
@@ -803,12 +822,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       });
 
       // Update baseTime in sync with displayTime
-      setBaseTime(displayTime);
+      if (displayTime !== null) {
+        setBaseTime(displayTime);
+      }
     }, 1000);
 
     // Cleanup on unmount
     return () => {
-      console.log("Cleaning up timer - current displayTime:", displayTime);
+      console.log("Cleaning up timer - current displayTime:", displayTime !== null ? displayTime : 'loading');
       clearInterval(timer);
     };
   }, [
@@ -824,10 +845,15 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     currency: 'USD'
   }) : '...';
 
-  const hours = Math.floor(displayTime / 3600);
-  const minutes = Math.floor((displayTime % 3600) / 60);
-  const seconds = displayTime % 60;
-  const isNearEnd = displayTime <= 120; // 2 minutes remaining
+  // Handle null displayTime with default values
+  const timeValue = displayTime ?? 300; // Default to 5 minutes if still loading
+  const hours = Math.floor(timeValue / 3600);
+  const minutes = Math.floor((timeValue % 3600) / 60);
+  const seconds = timeValue % 60;
+  const isNearEnd = timeValue <= 120; // 2 minutes remaining
+  
+  // Show loading indicator if timer hasn't initialized yet
+  const isTimerLoading = displayTime === null;
   
   // Make sure the text is clearly red when near the end
   const textColorClass = status.isGameOver 
@@ -884,7 +910,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                     Escalation Period {status.escalationPeriod}/10
                   </div>
                   <Progress
-                    value={(displayTime / 300) * 100} // 5 minutes (300 seconds) for escalation period
+                    value={(timeValue / 300) * 100} // 5 minutes (300 seconds) for escalation period
                     className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                   />
                 </>
