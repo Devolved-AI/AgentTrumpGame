@@ -58,12 +58,14 @@ export function GameOverDialog() {
       }));
       
       // Fetch game over info immediately from contract
-      // We specifically need lastGuessBlock which is the exact block that ended the game
-      const [lastPlayer, block, gameWon] = await Promise.all([
+      // Use only functions we know exist in the contract
+      const [lastPlayer, gameWon] = await Promise.all([
         contract.lastPlayer(),
-        contract.lastGuessBlock(),
         contract.gameWon()
       ]);
+      
+      // We'll use a placeholder for the block instead of trying to get it from the contract
+      const block = { toString: () => "Game finished" };
       
       console.log("Contract data retrieved:", { 
         lastPlayer, 
@@ -169,28 +171,17 @@ export function GameOverDialog() {
       
       // Try to get additional information about the block
       let blockInfo = block ? block.toString() : "Block information unavailable";
+      // Instead of fetching block data which might not be available or cause errors,
+      // let's just use a timestamp to make each game over event unique and informative
       try {
-        if (block) {
-          // Get more blockchain info if available
-          const provider = contract.runner?.provider;
-          if (provider) {
-            console.log("Fetching detailed block information for block:", block.toString());
-            try {
-              // Get actual block information if possible
-              const blockData = await provider.getBlock(Number(block.toString()));
-              if (blockData) {
-                console.log("Block data retrieved:", blockData);
-                // Format block info with extra details if available
-                blockInfo = `${block.toString()} (${new Date(Number(blockData.timestamp) * 1000).toLocaleTimeString()})`;
-              }
-            } catch (blockError) {
-              console.warn("Unable to fetch detailed block info:", blockError);
-              // Continue with just the number
-            }
-          }
-        }
+        // Use the current timestamp to create a unique identifier for this game end
+        const timestamp = new Date().toLocaleTimeString();
+        blockInfo = `Game finished at ${timestamp}`;
+        console.log("Using timestamp for game finish:", blockInfo);
       } catch (error) {
-        console.warn("Error getting additional block information:", error);
+        console.warn("Error creating timestamp:", error);
+        // Use a default message if there's any issue
+        blockInfo = "Game finished";
       }
       
       // Update the game info state with winner and block data
