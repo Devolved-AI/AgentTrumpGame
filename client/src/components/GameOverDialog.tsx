@@ -12,8 +12,8 @@ export function GameOverDialog() {
   const { contract, address, isGameOver } = useWeb3Store();
   const [open, setOpen] = useState(false);
   const [gameInfo, setGameInfo] = useState<GameOverInfo>({
-    lastGuessAddress: "",
-    lastBlock: "Fetching block information...",
+    lastGuessAddress: "Unknown",
+    lastBlock: "Unable to fetch block information",
     winner: undefined
   });
 
@@ -138,10 +138,11 @@ export function GameOverDialog() {
     } catch (error) {
       console.error("Error fetching game over info:", error);
       
-      // On error, use the last player we know about
+      // On error, use the last player we know about and display unable to fetch block message
       setGameInfo(prev => ({
         ...prev,
         lastBlock: "Unable to fetch block information",
+        lastGuessAddress: prev.lastGuessAddress || "Unknown",
         // Don't set a winner unless we actually know there's a winner
         winner: undefined
       }));
@@ -243,22 +244,16 @@ export function GameOverDialog() {
       modal={true}
     >
       <DialogContent 
-        className="bg-black text-white border-white" 
+        className="bg-black/95 text-white border-gray-800" 
         onInteractOutside={(e) => { e.preventDefault(); }}
         onEscapeKeyDown={(e) => { e.preventDefault(); }}
       >
-        <div className="flex flex-col items-center space-y-6 p-6 text-center">
-          <h2 className="text-4xl font-bold mb-4">Game Over</h2>
+        <div className="flex flex-col items-center space-y-4 p-4 text-center">
+          <h2 className="text-3xl font-bold">Game Over</h2>
           
-          {gameInfo.winner ? (
-            <p className="text-xl mb-4 text-green-400">
-              🏆 A player has reached 100/100 persuasion!
-            </p>
-          ) : (
-            <p className="text-xl mb-4">
-              {Number(gameInfo.lastBlock) > 0 ? "Time's up!" : "Thanks for Playing"}
-            </p>
-          )}
+          <p className="text-xl mb-2">
+            Thanks for Playing
+          </p>
 
           <div className="space-y-6 w-full text-left">
             {gameInfo.winner && (
@@ -271,20 +266,18 @@ export function GameOverDialog() {
               </div>
             )}
             
-            <div className="bg-gray-900 p-4 rounded-md">
-              <p className="font-semibold mb-1 text-amber-400">Last Address:</p>
+            <div className="bg-blue-900/30 p-4 rounded-md border border-blue-800">
+              <p className="font-semibold mb-1">Last Address:</p>
               <p className="font-mono break-all">{gameInfo.lastGuessAddress || "Unknown"}</p>
-              <p className="text-sm mt-2 text-amber-300">
-                {gameInfo.winner 
-                  ? "This is the winner's wallet address that reached 100/100" 
-                  : "This is the address of the last player to interact with the game"}
+              <p className="text-sm mt-2 text-blue-300/80">
+                This is the address of the last player to interact with the game
               </p>
             </div>
 
-            <div className="bg-gray-900 p-4 rounded-md">
-              <p className="font-semibold mb-1 text-blue-400">Last Block:</p>
-              <p className="font-mono">{gameInfo.lastBlock || "Fetching block information..."}</p>
-              <p className="text-sm mt-2 text-blue-300">
+            <div className="bg-blue-900/30 p-4 rounded-md border border-blue-800">
+              <p className="font-semibold mb-1">Last Block:</p>
+              <p className="font-mono">{gameInfo.lastBlock || "Unable to fetch block information"}</p>
+              <p className="text-sm mt-2 text-blue-300/80">
                 This is the final blockchain block that concluded the game
               </p>
             </div>
