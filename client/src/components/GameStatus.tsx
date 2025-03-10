@@ -92,7 +92,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           }));
           
           // Timer has loaded successfully
-          setIsTimerLoading(false);
+          setTimerLoadingState(false);
         }
       } catch (e) {
         console.error("Error fetching game timer state:", e);
@@ -100,7 +100,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         if (displayTime === null) {
           setDisplayTime(300);
           setBaseTime(300);
-          setIsTimerLoading(false);
+          setTimerLoadingState(false);
         }
       }
     };
@@ -917,7 +917,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               ) : (
                 <>
                   <Progress
-                    value={(displayTime / 300) * 100} // 5 minutes (300 seconds)
+                    value={(timeValue / 300) * 100} // 5 minutes (300 seconds)
                     className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                   />
                   {isNearEnd ? (
@@ -987,14 +987,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               
               {status.inEscalationPeriod && (
                 <Progress
-                  value={(displayTime / 300) * 100} // 5 minutes (300 seconds) for escalation period
+                  value={(timeValue / 300) * 100} // 5 minutes (300 seconds) for escalation period
                   className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                 />
               )}
               
               {!status.inEscalationPeriod && (
                 <Progress
-                  value={(displayTime / 300) * 100} // 5 minutes (300 seconds)
+                  value={(timeValue / 300) * 100} // 5 minutes (300 seconds)
                   className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                 />
               )}
