@@ -723,39 +723,36 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   }, [contract, updatePrizePool]);
 
   // This effect sets up the countdown timer logic
-  // It no longer depends on the contract to ensure continuity during wallet changes
+  // It now uses server-side timer state to ensure consistency across all clients
   useEffect(() => {
     if (status.isGameOver) return;
 
-    // Get the current game ID from localStorage if available
-    let currentGameId = "default";
-    try {
-      const savedState = localStorage.getItem('gameTimerState');
-      if (savedState) {
-        const { gameId } = JSON.parse(savedState);
-        if (gameId) currentGameId = gameId;
-      }
-    } catch (e) {
-      console.error("Error reading gameId from localStorage:", e);
-    }
-
+    // Get the current game ID from server timer state if available
+    let currentGameId = serverTimerState?.gameId || "default";
+    
     console.log("Setting up countdown timer with gameId:", currentGameId);
 
     // Set up a single timer for consistent countdown
     const timer = setInterval(() => {
       setDisplayTime(prev => {
-        const newTime = Math.max(0, prev - 1);
-
-        // Save timer state to localStorage for persistence across reconnects
-        // IMPORTANT: The timestamp is updated every tick to ensure accurate time tracking
-        localStorage.setItem('gameTimerState', JSON.stringify({
-          savedTime: newTime,
-          timestamp: Date.now(),
-          inEscalation: status.inEscalationPeriod,
-          escalationPeriod: status.escalationPeriod,
-          gameId: currentGameId, // Preserve game ID for continuity
-          lastUpdate: Date.now() // Add last update time
-        }));
+        // Calculate time elapsed since last server refresh
+        let newTime = prev;
+        
+        if (serverTimerState?.remainingTime !== undefined && lastServerRefresh > 0) {
+          // Calculate elapsed time since last server update
+          const elapsedSinceRefresh = Math.floor((Date.now() - lastServerRefresh) / 1000);
+          
+          // Calculate current time based on server time minus elapsed time
+          newTime = Math.max(0, serverTimerState.remainingTime - elapsedSinceRefresh);
+          
+          // Log every 5 seconds for debugging
+          if (elapsedSinceRefresh % 5 === 0) {
+            console.log(`Timer update: ${newTime}s remaining (${elapsedSinceRefresh}s since last server refresh)`);
+          }
+        } else {
+          // Fallback to simple countdown if server state isn't available
+          newTime = Math.max(0, prev - 1);
+        }
 
         // When timer reaches zero, end the game for everyone
         if (newTime <= 0) {
@@ -770,12 +767,13 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           // Clear the timer
           clearInterval(timer);
           
-          // Clean up localStorage to prevent restarting timer
+          // Store end state in localStorage as a backup
           localStorage.setItem('gameTimerState', JSON.stringify({
             savedTime: 0,
             timestamp: Date.now(),
             gameId: currentGameId,
-            isGameOver: true
+            isGameOver: true,
+            fromServer: !!serverTimerState
           }));
           
           // Trigger the game over callback
@@ -805,30 +803,21 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       });
 
       // Update baseTime in sync with displayTime
-      setBaseTime(prev => {
-        const newTime = Math.max(0, prev - 1);
-        return newTime;
-      });
+      setBaseTime(displayTime);
     }, 1000);
 
     // Cleanup on unmount
     return () => {
       console.log("Cleaning up timer - current displayTime:", displayTime);
-      
-      // Store the current time on unmount to ensure timer continuity
-      localStorage.setItem('gameTimerState', JSON.stringify({
-        savedTime: displayTime,
-        timestamp: Date.now(),
-        inEscalation: status.inEscalationPeriod,
-        escalationPeriod: status.escalationPeriod,
-        gameId: currentGameId, // Preserve game ID
-        lastUpdate: Date.now(),
-        isUnmount: true // Flag that this was from unmount
-      }));
-      
       clearInterval(timer);
     };
-  }, [status.isGameOver, status.inEscalationPeriod, status.escalationPeriod, onTimerEnd, displayTime]); // No longer depends on contract
+  }, [
+    status.isGameOver, 
+    onTimerEnd, 
+    displayTime, 
+    serverTimerState, 
+    lastServerRefresh
+  ]); // Depends on server timer state
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',

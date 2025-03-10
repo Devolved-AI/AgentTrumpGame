@@ -43,6 +43,25 @@ async function resetGame() {
       console.log('Raw contract response:', contractResponseText);
     }
     
+    // Reset the game timer for this contract
+    try {
+      const timerResponse = await fetch(`http://localhost:5000/api/game/timer/reset/${contractAddress}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!timerResponse.ok) {
+        console.error('Failed to reset game timer, but contract address was updated');
+      } else {
+        const timerData = await timerResponse.json();
+        console.log('Timer reset response:', timerData);
+      }
+    } catch (error) {
+      console.error('Error during timer reset:', error.message);
+    }
+    
     // Now reset all scores to the default score explicitly
     try {
       const resetResponse = await fetch('http://localhost:5000/api/persuasion/reset-all', {
@@ -68,6 +87,7 @@ async function resetGame() {
     
     console.log('Game reset successful!');
     console.log(`All player persuasion scores have been reset to ${defaultScore}`);
+    console.log('Game timer has been reset to 5 minutes (300 seconds)');
     console.log('Contract address updated to:', contractAddress);
   } catch (error) {
     console.error('Error resetting game:', error);
