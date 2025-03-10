@@ -952,7 +952,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         return true;
       }
       
-      // 2. Time is up (10 minutes have passed)
+      // 2. Time is up (5 minutes have passed)
       if (time <= 0) {
         return true;
       }

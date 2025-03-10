@@ -660,7 +660,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                     Escalation Period {status.escalationPeriod}/10
                   </div>
                   <Progress
-                    value={(displayTime / 300) * 100} // 5 minutes for escalation period
+                    value={(displayTime / 300) * 100} // 5 minutes (300 seconds) for escalation period
                     className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                   />
                 </>
@@ -737,14 +737,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               
               {status.inEscalationPeriod && (
                 <Progress
-                  value={(displayTime / 300) * 100} // 5 minutes for escalation period
+                  value={(displayTime / 300) * 100} // 5 minutes (300 seconds) for escalation period
                   className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                 />
               )}
               
               {!status.inEscalationPeriod && (
                 <Progress
-                  value={(displayTime / 300) * 100} // 5 minutes for testing
+                  value={(displayTime / 300) * 100} // 5 minutes (300 seconds)
                   className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                 />
               )}
