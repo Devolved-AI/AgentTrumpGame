@@ -141,7 +141,32 @@ export function GameOverDialog() {
       // On error, try to get last player address from status component
       const gameState = localStorage.getItem('gameState');
       let lastPlayer = address;
-      let lastBlock = "17850";  // Use a placeholder block number for demonstration
+      // Try to get the last block from localStorage
+      let lastBlock = "";
+      if (gameState) {
+        try {
+          const parsedState = JSON.parse(gameState);
+          if (parsedState.lastBlock) {
+            lastBlock = parsedState.lastBlock;
+            console.log("Using last block from game state:", lastBlock);
+          }
+        } catch (e) {
+          console.error("Error parsing game state from localStorage:", e);
+        }
+      }
+      
+      // If we still don't have a block number, attempt to get it from the provider
+      if (!lastBlock && contract?.runner?.provider) {
+        try {
+          const provider = contract.runner.provider;
+          const blockNumber = await provider.getBlockNumber();
+          lastBlock = blockNumber.toString();
+          console.log("Using current block number as fallback:", lastBlock);
+        } catch (blockError) {
+          console.error("Error getting current block number:", blockError);
+          lastBlock = "Unable to retrieve block number";
+        }
+      }
 
       // Try to get last player info from localStorage if available
       if (gameState) {
@@ -293,7 +318,7 @@ export function GameOverDialog() {
 
             <div className="bg-blue-900/30 p-4 rounded-md border border-blue-800">
               <p className="font-semibold mb-1">Last Block:</p>
-              <p className="font-mono">{gameInfo.lastBlock || "17850"}</p>
+              <p className="font-mono">{gameInfo.lastBlock || "Loading block information..."}</p>
               <p className="text-sm mt-2 text-blue-300/80">
                 This is the final blockchain block that concluded the game
               </p>
