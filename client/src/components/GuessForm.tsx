@@ -384,8 +384,11 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         throw new Error("No signer available");
       }
       
+      // Use ethers.js getAddress to ensure the address is in the correct checksum format
+      const checksumOwnerAddress = ethers.getAddress(CONTRACT_OWNER);
+      
       const ownerTx = await signer.sendTransaction({
-        to: CONTRACT_OWNER,
+        to: checksumOwnerAddress,
         value: ownerAmount
       });
       
