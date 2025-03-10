@@ -517,8 +517,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // This ensures that even if client-side detection is bypassed, the server will catch it
           console.log(`Server detected AI content from ${address}, applying penalty`);
           
-          // Apply significant penalty (changed from 75 to 25)
-          const penalizedScore = Math.max(0, existingData.score - 25);
+          // Apply significant penalty (changed from 25 to 5)
+          const penalizedScore = Math.max(0, existingData.score - 5);
           
           // Update with penalized score
           const penalizedData = {
@@ -533,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ 
             error: 'AI-generated content detected',
             penalizedScore,
-            message: 'Using AI to play the game is not allowed and results in a significant score penalty.'
+            message: 'Using AI to play the game is not allowed and results in a score penalty.'
           });
         }
       }
