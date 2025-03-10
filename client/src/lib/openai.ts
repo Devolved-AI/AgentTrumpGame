@@ -13,6 +13,12 @@ const MAX_STORED_INPUTS = 10;
 
 // Check for suspicious patterns in user input history
 function detectSuspiciousPatterns(address: string, currentInput: string): boolean {
+  // For the new contract, we'll temporarily disable suspicious pattern detection
+  // to ensure users always get unique AI-generated responses
+  return false;
+  
+  // Keep the code below for future use if needed
+  /*
   // Get user's history or initialize it
   const userHistory = recentUserInputs.get(address) || [];
   
@@ -26,7 +32,7 @@ function detectSuspiciousPatterns(address: string, currentInput: string): boolea
   recentUserInputs.set(address, newHistory);
   
   // Not enough history to analyze patterns
-  if (newHistory.length < 3) {
+  if (newHistory.length < 5) { // Increased from 3 to 5 for more data before triggering
     return false;
   }
   
@@ -45,19 +51,19 @@ function detectSuspiciousPatterns(address: string, currentInput: string): boolea
   // Look for unusually repetitive phrases (high-value keywords repeated across multiple messages)
   const highValueWords = Object.entries(wordFrequency)
     .filter(([word, count]) => {
-      // Repeated unusual words are a strong indicator of AI or script usage
-      return count >= 3 && word.length >= 6;
+      // More strict criteria - needs more repetitions and longer words
+      return count >= 5 && word.length >= 8;
     })
     .map(([word]) => word);
   
-  // If we find repeated unusual words, this might be an AI-generated pattern
-  if (highValueWords.length >= 2) {
+  // Require more high-value repetitive words to trigger
+  if (highValueWords.length >= 3) {
     console.log(`Suspicious pattern detected for ${address}: repeated unusual words:`, highValueWords);
     return true;
   }
   
   // Check for suspiciously consistent message length/structure
-  if (newHistory.length >= 5) {
+  if (newHistory.length >= 7) { // Increased from 5 to 7
     const messageLengths = newHistory.map(entry => entry.text.length);
     const averageLength = messageLengths.reduce((sum, len) => sum + len, 0) / messageLengths.length;
     
@@ -65,34 +71,18 @@ function detectSuspiciousPatterns(address: string, currentInput: string): boolea
     const variance = messageLengths.reduce((sum, len) => sum + Math.pow(len - averageLength, 2), 0) / messageLengths.length;
     const stdDev = Math.sqrt(variance);
     
-    // Very consistent message lengths across multiple messages can indicate AI or scripts
-    // Human typing has natural variation
-    if (stdDev < averageLength * 0.2 && averageLength > 100) {
+    // Relaxed consistency requirement
+    if (stdDev < averageLength * 0.1 && averageLength > 150) {
       console.log(`Suspicious pattern detected for ${address}: very consistent message lengths (stdDev: ${stdDev.toFixed(2)}, avg: ${averageLength.toFixed(2)})`);
       return true;
     }
   }
   
-  // Check submission timing patterns
-  if (newHistory.length >= 3) {
-    const intervals: number[] = [];
-    for (let i = 1; i < newHistory.length; i++) {
-      intervals.push(newHistory[i].timestamp - newHistory[i-1].timestamp);
-    }
-    
-    // Calculate average and standard deviation of intervals
-    const avgInterval = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
-    const varianceInterval = intervals.reduce((sum, interval) => sum + Math.pow(interval - avgInterval, 2), 0) / intervals.length;
-    const stdDevInterval = Math.sqrt(varianceInterval);
-    
-    // Very consistent timing between messages can indicate automation
-    if (stdDevInterval < avgInterval * 0.3 && intervals.length >= 3) {
-      console.log(`Suspicious pattern detected for ${address}: very consistent submission timing (stdDev: ${stdDevInterval.toFixed(2)}, avg: ${avgInterval.toFixed(2)})`);
-      return true;
-    }
-  }
+  // Check submission timing patterns - disabled for now as it's too strict
+  // and normal user interaction can trigger this
   
   return false;
+  */
 }
 
 export async function generateTrumpResponse(userGuess: string, address?: string | null): Promise<string> {
@@ -118,40 +108,59 @@ export async function generateTrumpResponse(userGuess: string, address?: string 
       }
     }
     
-    // Normal response generation
+    // Current timestamp to ensure uniqueness in each request
+    const timestamp = new Date().toISOString();
+    
+    // Add uniqueness factors to prevent OpenAI from returning cached responses
+    const uniqueFactors = {
+      timestamp,
+      randomSeed: Math.random().toString().slice(2, 8)
+    };
+    
+    // Log the request for debugging
+    console.log(`Generating Trump response for input: "${userGuess.substring(0, 30)}..." with unique factors: ${JSON.stringify(uniqueFactors)}`);
+    
+    // Normal response generation with added uniqueness
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
           content: `You are Donald Trump responding to someone trying to convince you to give them prize money from a game's prize pool. 
+          Current request time: ${timestamp}. Request ID: ${uniqueFactors.randomSeed}.
 
           Guidelines for your responses:
           1. Stay in character as Trump with his unique speaking style
           2. Use his characteristic phrases, mannerisms, and speech patterns
           3. Reference his well-known accomplishments and business experience
           4. Maintain his confident, bold personality
-          5. Make specific references to what the person said
-          6. Keep responses under 150 words
-          7. Use CAPS for emphasis occasionally
-          8. Include Trump-style nicknames or commentary
+          5. Make specific references to what the person said - be extremely specific about their exact wording
+          6. Every response must be completely unique and different from any previous response
+          7. Keep responses under 150 words
+          8. Use CAPS for emphasis occasionally
+          9. Include Trump-style nicknames or commentary
 
           Response structure:
-          1. Acknowledge their specific attempt/argument
+          1. Acknowledge their specific attempt/argument with direct reference to their words
           2. Connect it to one of your experiences or achievements
           3. Give a reason why they haven't convinced you YET, but encourage them to keep trying
 
           Example response format:
-          "Folks, this [reference their specific point] reminds me of when I [related Trump achievement]. But let me tell you, I've seen BETTER deals in my sleep! Keep trying though, maybe next time you'll really show me something TREMENDOUS!"`
+          "Folks, when you said [exact quote from their message], it reminds me of when I [related Trump achievement]. But let me tell you, I've seen BETTER deals in my sleep! Keep trying though, maybe next time you'll really show me something TREMENDOUS!"`
         },
         {
           role: "user",
           content: userGuess
         }
       ],
-      temperature: 0.9,
-      max_tokens: 200
+      temperature: 1.0, // Increased temperature for more randomness
+      max_tokens: 200,
+      presence_penalty: 0.6, // Add penalties to reduce repetition
+      frequency_penalty: 0.6
     });
+
+    // Log the response for debugging
+    console.log(`Generated Trump response: "${response.choices[0].message.content?.substring(0, 30)}..."`);
 
     return response.choices[0].message.content || "Believe me, that was not a good try. NEXT!";
   } catch (error) {

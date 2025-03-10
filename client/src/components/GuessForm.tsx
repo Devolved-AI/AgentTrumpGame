@@ -444,7 +444,10 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       let trumpResponse: string | null = null;
       try {
         // Pass both the message and wallet address to enable pattern detection
-        trumpResponse = await generateTrumpResponse(data.response, address || undefined);
+        // Add a unique timestamp to ensure we always get a unique response
+        const uniqueInput = `${data.response} [Timestamp: ${new Date().toISOString()}]`;
+        console.log(`Sending uniqueInput to OpenAI: ${uniqueInput.substring(0, 50)}...`);
+        trumpResponse = await generateTrumpResponse(uniqueInput, address || undefined);
       } catch (error) {
         console.error("Error generating response:", error);
       }
@@ -478,6 +481,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
           detail: { message: trumpResponse || "Interesting... Keep trying to convince me! 🤔" }
         });
         document.dispatchEvent(persuasionEvent);
+        console.log("Persuasion update event dispatched with Trump's response:", trumpResponse);
         console.log("Persuasion update event dispatched with Trump's response:", trumpResponse);
 
         toast({
