@@ -53,8 +53,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       console.log("Updated prize pool from Web3Store:", prizePool);
     }
   }, [prizePool]);
-  const [displayTime, setDisplayTime] = useState(180); // 3 minutes in seconds (custom timer for this game)
-  const [baseTime, setBaseTime] = useState(180); // Match the 3-minute timer
+  const [displayTime, setDisplayTime] = useState(480); // 8 minutes in seconds (custom timer for this game)
+  const [baseTime, setBaseTime] = useState(480); // Match the 8-minute timer
 
   const { data: ethPrice } = useQuery({
     queryKey: ['ethPrice'],
@@ -479,7 +479,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               ) : (
                 <>
                   <Progress
-                    value={(displayTime / 180) * 100} // 3 minutes for main period
+                    value={(displayTime / 480) * 100} // 8 minutes for main period
                     className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                   />
                   {isNearEnd ? (
@@ -556,7 +556,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               
               {!status.inEscalationPeriod && (
                 <Progress
-                  value={(displayTime / 180) * 100} // 3 minutes for main period
+                  value={(displayTime / 480) * 100} // 8 minutes for main period
                   className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                 />
               )}
