@@ -1143,19 +1143,45 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
             
             // Always force a reset - better to restart a game unnecessarily than miss a new game start
             setTimeout(() => {
-              // Create a single event object for consistency
-              const freshContractEvent = new CustomEvent('fresh-contract-detected', {
-                detail: { 
-                  contractAddress: CONTRACT_ADDRESS,
-                  reason: isNewContractAddress ? 'new-address' : 
-                         (hasFullGameTime ? 'full-time' : 'block-difference')
-                }
-              });
+              try {
+                // Store contract info in localStorage to help detect on page refresh
+                localStorage.setItem('contract_address', CONTRACT_ADDRESS);
+                localStorage.setItem('contract_fresh_timestamp', Date.now().toString());
+                localStorage.setItem('contract_detection_reason', 
+                  isNewContractAddress ? 'new-address' : 
+                  (hasFullGameTime ? 'full-time' : 'block-difference')
+                );
               
-              // Dispatch to both window and document to ensure all listeners receive it
-              console.log("Dispatching fresh-contract-detected event");
-              window.dispatchEvent(freshContractEvent);
-              document.dispatchEvent(freshContractEvent);
+                // Generate a new unique gameId for this fresh contract
+                const gameId = `game_${Date.now()}`;
+                localStorage.setItem('current_game_id', gameId);
+                
+                // Create a single event object for consistency
+                const freshContractEvent = new CustomEvent('fresh-contract-detected', {
+                  detail: { 
+                    contractAddress: CONTRACT_ADDRESS,
+                    reason: isNewContractAddress ? 'new-address' : 
+                           (hasFullGameTime ? 'full-time' : 'block-difference'),
+                    gameId
+                  }
+                });
+                
+                // Dispatch to both window and document to ensure all listeners receive it
+                console.log("Dispatching fresh-contract-detected event with gameId:", gameId);
+                window.dispatchEvent(freshContractEvent);
+                document.dispatchEvent(freshContractEvent);
+                
+                // For additional redundancy, dispatch a window-level message
+                window.postMessage({
+                  type: 'fresh-contract-detected',
+                  detail: {
+                    contractAddress: CONTRACT_ADDRESS,
+                    gameId
+                  }
+                }, '*');
+              } catch (error) {
+                console.error("Error dispatching fresh contract event:", error);
+              }
               
               // For debugging
               console.log("Fresh contract detected and event dispatched:", CONTRACT_ADDRESS);

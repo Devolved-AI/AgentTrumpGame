@@ -242,7 +242,11 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     
     // Handle fresh contract detection
     const handleFreshContract = (event: Event) => {
-      const customEvent = event as CustomEvent<{contractAddress: string}>;
+      const customEvent = event as CustomEvent<{
+        contractAddress: string,
+        reason?: 'new-address' | 'full-time' | 'block-difference',
+        gameId?: string
+      }>;
       console.log("Fresh contract detected in GuessForm:", customEvent.detail);
       
       // Reset game over state since this is a fresh contract
@@ -253,20 +257,54 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       setIsSubmitting(false);
       setIsTyping(false);
       
+      // Store the game ID for future reference
+      if (customEvent.detail.gameId) {
+        localStorage.setItem('current_game_id', customEvent.detail.gameId);
+        console.log(`Game ID set: ${customEvent.detail.gameId}`);
+      }
+      
+      // Create an appropriate welcome message based on detection reason
+      let welcomeMessage = "I'm Donald Trump. Convince me to make a deal with you, and I might reward you with some cryptocurrency. The better your persuasion, the higher the rewards. Remember - I have the best deals, and I know a winning proposition when I see one!";
+      
+      // Customize message based on detection reason if available
+      if (customEvent.detail.reason === 'new-address') {
+        welcomeMessage = "Well, well, well! A brand new contract has been deployed! I'm Donald Trump and I have the BEST deals in the world. Convince me that you deserve the prize money. You only have 5 minutes - make it count!";
+      } else if (customEvent.detail.reason === 'full-time') {
+        welcomeMessage = "The timer has been reset! I'm Donald Trump and I'm looking for the GREATEST dealmakers. Show me you're worthy of this prize pool - you have 5 minutes to make your case!";
+      }
+      
       // Reset messages for the new game
       setMessages([
         {
-          text: "I'm Donald Trump. Convince me to make a deal with you, and I might reward you with some cryptocurrency. The better your persuasion, the higher the rewards. Remember - I have the best deals, and I know a winning proposition when I see one!",
+          text: welcomeMessage,
           timestamp: Math.floor(Date.now() / 1000),
-          isUser: false
+          isUser: false,
+          exists: true // Mark as existing message
         }
       ]);
       
+      // Customize toast based on detection reason
+      let toastTitle = "New Game Started";
+      let toastDesc = "Fresh contract detected. A new game has started!";
+      
+      if (customEvent.detail.reason === 'new-address') {
+        toastTitle = "New Contract Deployed";
+        toastDesc = "A fresh contract has been deployed. The game has restarted!";
+      } else if (customEvent.detail.reason === 'full-time') {
+        toastTitle = "Game Timer Reset";
+        toastDesc = "The game timer has been reset to 5 minutes!";
+      }
+      
       // Show a toast notification
       toast({
-        title: "New Game Started",
-        description: "Fresh contract detected. A new game has started!",
+        title: toastTitle,
+        description: toastDesc,
       });
+      
+      // Force a UI refresh - sometimes needed for React to properly re-render
+      setTimeout(() => {
+        window.dispatchEvent(new Event('storage'));
+      }, 200);
       
       // Force a game state check
       checkGameState();
