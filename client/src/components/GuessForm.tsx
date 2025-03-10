@@ -46,18 +46,7 @@ interface Message {
   transaction?: TransactionState;
 }
 
-const ESCALATION_PRICES = [
-    "0.0018", // Period 1
-    "0.0036", // Period 2
-    "0.0072", // Period 3
-    "0.0144", // Period 4
-    "0.0288", // Period 5
-    "0.0576", // Period 6
-    "0.1152", // Period 7
-    "0.2304", // Period 8
-    "0.4608", // Period 9
-    "0.9216"  // Period 10
-  ];
+// Standard game fee is 0.0018 ETH
 
 
 export function GuessForm({ onTimerEnd }: GuessFormProps) {
@@ -289,10 +278,9 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
     try {
       // Double check game state before submitting
-      const [gameWon, timeRemaining, escalationActive] = await Promise.all([
+      const [gameWon, timeRemaining] = await Promise.all([
         contract.gameWon(),
         contract.getTimeRemaining(),
-        contract.escalationActive()
       ]);
 
       // Also check if any player has reached max persuasion (100/100)
@@ -315,14 +303,13 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       
       // Game is over if:
       // 1. Someone has already won the game, OR
-      // 2. Timer is at 0 AND we're not in escalation mode yet (giving time for escalation to start), OR
+      // 2. Timer is at 0, OR
       // 3. Player has reached maximum persuasion score
-      const isOver = gameWon || (time <= 0 && !escalationActive) || maxPersuasion;
+      const isOver = gameWon || time <= 0 || maxPersuasion;
       
       console.log("Game status check before submission:", { 
         gameWon, 
         time, 
-        escalationActive, 
         maxPersuasion,
         isOver
       });
@@ -343,60 +330,20 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       setIsSubmitting(true);
       setIsTyping(true);
 
-      // Get the correct required amount based on the current escalation interval
-      const isEscalation = await contract.escalationActive();
+      // Get the required amount from the contract
       let requiredAmount;
+      
+      try {
+        // Get the required amount directly from the contract
+        requiredAmount = await contract.currentRequiredAmount();
+        console.log(`Using required amount from contract: ${formatEther(requiredAmount)} ETH`);
+      } catch (error) {
+        console.error("Error getting required amount from contract:", error);
 
-      if (isEscalation) {
-        console.log("Getting required amount for escalation mode");
-        try {
-          // Check which escalation period we're in from localStorage
-          const escalationInterval = localStorage.getItem('escalationInterval');
-          const periodIndex = escalationInterval ? parseInt(escalationInterval) - 1 : 0;
-
-          // Ensure we have a valid period index
-          if (periodIndex >= 0 && periodIndex < ESCALATION_PRICES.length) {
-            // Use the exact price from our predefined table
-            const { parseEther } = await import('@/lib/web3');
-            const exactPrice = ESCALATION_PRICES[periodIndex];
-            requiredAmount = parseEther(exactPrice);
-
-            console.log(`Using exact price from table for period ${periodIndex + 1}: ${exactPrice} ETH`);
-
-            // Add a 10% buffer for gas price fluctuations
-            // This should help prevent "insufficient payment" errors and match the UI message
-            const buffer = requiredAmount * BigInt(110) / BigInt(100); // 10% buffer
-            requiredAmount = buffer;
-            console.log(`With 10% buffer: ${formatEther(requiredAmount)} ETH (original: ${exactPrice} ETH)`);
-          } else {
-            // Fallback to contract value if period is invalid
-            requiredAmount = await contract.currentRequiredAmount();
-            console.log(`Using contract amount: ${formatEther(requiredAmount)} ETH`);
-          }
-        } catch (error) {
-          console.error("Error setting required amount:", error);
-
-          // Fallback to contract value
-          requiredAmount = await contract.currentRequiredAmount();
-          console.log(`Fallback to contract amount: ${formatEther(requiredAmount)} ETH`);
-        }
-      } else {
-        // Not in escalation mode, use contract value
-        try {
-          // Get the required amount directly from the contract
-          requiredAmount = await contract.currentRequiredAmount();
-          console.log(`Using required amount from contract: ${formatEther(requiredAmount)} ETH`);
-
-          // No overrides - always use the contract's required amount
-          // This ensures we're sending exactly what the contract expects
-        } catch (error) {
-          console.error("Error getting required amount from contract:", error);
-
-          // Fallback to the base game fee if contract call fails
-          const { parseEther } = await import('@/lib/web3');
-          requiredAmount = parseEther("0.0009"); // Use the GAME_FEE value from contract
-          console.log(`Using fallback amount: ${formatEther(requiredAmount)} ETH`);
-        }
+        // Fallback to the base game fee if contract call fails
+        const { parseEther } = await import('@/lib/web3');
+        requiredAmount = parseEther("0.0018"); // Use the standard fee value
+        console.log(`Using fallback amount: ${formatEther(requiredAmount)} ETH`);
       }
 
       const userMessage: Message = {
