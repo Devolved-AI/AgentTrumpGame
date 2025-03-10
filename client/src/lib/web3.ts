@@ -836,7 +836,7 @@ interface Web3State {
   reset: () => void;
   clearMessages: () => void;
   resetPersuasionScores: () => Promise<void>;
-  getEscalationPrice: () => Promise<string>;
+  getRequiredAmount: () => Promise<string>;
   isGameOver: () => Promise<boolean>;
 }
 
@@ -893,14 +893,14 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   isInitialized: false,
   currentContractAddress: null,
 
-  getEscalationPrice: async () => {
+  getRequiredAmount: async () => {
     const { contract } = get();
     if (!contract) return "0";
     try {
       const amount = await contract.currentRequiredAmount();
       return ethers.formatEther(amount);
     } catch (error) {
-      console.error("Error getting escalation price:", error);
+      console.error("Error getting required amount:", error);
       return "0";
     }
   },
