@@ -232,7 +232,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       console.error("Error setting up event listeners:", error);
       return () => clearInterval(statusInterval);
     }
-  }, [contract]);
+  }, [contract, updatePrizePool]);
 
   useEffect(() => {
     if (!contract) return;

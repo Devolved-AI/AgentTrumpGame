@@ -50,7 +50,7 @@ interface Message {
 
 
 export function GuessForm({ onTimerEnd }: GuessFormProps) {
-  const { contract, address } = useWeb3Store();
+  const { contract, address, getRequiredAmount } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -257,6 +257,16 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     // Store the timestamp when user submits
     localStorage.setItem('lastInputTimestamp', Date.now().toString());
     
+    // Ensure dependencies are available
+    if (!contract || !getRequiredAmount) {
+      toast({
+        title: "Error",
+        description: "Contract or required amount functions not available",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Check if the response appears to be pasted text
     if (detectPastedText(data.response)) {
       toast({
@@ -330,20 +340,22 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       setIsSubmitting(true);
       setIsTyping(true);
 
-      // Get the required amount from the contract
+      // Get the required amount from the Web3Store
       let requiredAmount;
       
       try {
-        // Get the required amount directly from the contract
-        requiredAmount = await contract.currentRequiredAmount();
-        console.log(`Using required amount from contract: ${formatEther(requiredAmount)} ETH`);
+        // Use the centralized getRequiredAmount method from Web3Store
+        const requiredAmountEther = await getRequiredAmount();
+        const { parseEther } = await import('@/lib/web3');
+        requiredAmount = parseEther(requiredAmountEther);
+        console.log(`Using required amount from Web3Store: ${requiredAmountEther} ETH`);
       } catch (error) {
-        console.error("Error getting required amount from contract:", error);
+        console.error("Error getting required amount from Web3Store:", error);
 
-        // Fallback to the base game fee if contract call fails
+        // Fallback to the base game fee if method call fails
         const { parseEther } = await import('@/lib/web3');
         requiredAmount = parseEther("0.0018"); // Use the standard fee value
-        console.log(`Using fallback amount: ${formatEther(requiredAmount)} ETH`);
+        console.log(`Using fallback amount: 0.0018 ETH`);
       }
 
       const userMessage: Message = {
