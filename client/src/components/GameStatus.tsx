@@ -183,6 +183,16 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         // Update the baseTime
         setBaseTime(time);
 
+        // Calculate the escalation period number (1-10)
+        const periodNumber = Number(escalationPeriod.toString());
+        
+        // Enhanced debug logging with escalation info
+        console.log("GameStatus - Escalation Info:", {
+          inEscalation,
+          escalationTime: Number(escalationTime.toString()),
+          escalationPeriod: periodNumber
+        });
+        
         setStatus(prev => ({
           ...prev,
           timeRemaining: time,
@@ -191,6 +201,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           won,
           isGameOver: gameOver,
           requiredAmount: formatEther(requiredAmount),
+          inEscalationPeriod: inEscalation,
+          escalationTimeRemaining: Number(escalationTime.toString()),
+          escalationPeriod: periodNumber
         }));
 
       } catch (error) {
@@ -335,35 +348,50 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         // Save timer state to localStorage for persistence across reconnects
         localStorage.setItem('gameTimerState', JSON.stringify({
           savedTime: newTime,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          inEscalation: status.inEscalationPeriod,
+          escalationPeriod: status.escalationPeriod
         }));
 
-        // When timer reaches zero, end the game for everyone
+        // When timer reaches zero:
+        // 1. If not in escalation period, transition to escalation
+        // 2. If already in escalation, end the game
         if (newTime <= 0) {
-          console.log("Timer reached zero, game over for everyone");
-          
-          // Set game over state
-          setStatus(prev => ({ 
-            ...prev, 
-            isGameOver: true
-          }));
+          // Check if we can transition to escalation
+          if (!status.inEscalationPeriod) {
+            console.log("Timer reached zero, checking if escalation can start");
+            
+            // Instead of ending the game immediately, let the contract determine if
+            // escalation should start. This will be detected in the next API call cycle.
+            // Just keep the timer at 0 for now
+            return 0;
+          } else {
+            // Already in escalation and timer hit zero again
+            console.log("Escalation period ended, game over for everyone");
+            
+            // Set game over state
+            setStatus(prev => ({ 
+              ...prev, 
+              isGameOver: true
+            }));
 
-          // Clear the timer
-          clearInterval(timer);
-          
-          // Trigger the game over callback
-          if (onTimerEnd) {
-            console.log("Calling onTimerEnd callback");
-            onTimerEnd();
+            // Clear the timer
+            clearInterval(timer);
+            
+            // Trigger the game over callback
+            if (onTimerEnd) {
+              console.log("Calling onTimerEnd callback");
+              onTimerEnd();
+            }
+
+            // Create and dispatch a custom game-over event
+            const gameOverEvent = new CustomEvent('game-over');
+            document.dispatchEvent(gameOverEvent);
+            window.dispatchEvent(gameOverEvent);
+            console.log("Dispatched game-over event");
+            
+            return 0;
           }
-
-          // Create and dispatch a custom game-over event
-          const gameOverEvent = new CustomEvent('game-over');
-          document.dispatchEvent(gameOverEvent);
-          window.dispatchEvent(gameOverEvent);
-          console.log("Dispatched game-over event");
-          
-          return 0;
         }
 
         return newTime;
@@ -428,7 +456,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         <CardHeader>
           <CardTitle className={`flex items-center gap-2 ${textColorClass}`}>
             <Clock className="h-5 w-5" />
-            {status.isGameOver ? 'GAME OVER' : 'Time Remaining'}
+            {status.isGameOver ? 'GAME OVER' : (status.inEscalationPeriod ? 'ESCALATION PERIOD' : 'Time Remaining')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -437,15 +465,30 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               <div className={`text-2xl font-bold ${textColorClass}`}>
                 {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
               </div>
-              <Progress
-                value={(displayTime / 180) * 100}
-                className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
-              />
-              {isNearEnd ? (
-                <div className="mt-2 text-sm text-red-500">
-                  Game ending soon!
-                </div>
-              ) : null}
+              
+              {status.inEscalationPeriod ? (
+                <>
+                  <div className="mt-2 text-sm text-amber-500 font-bold">
+                    Escalation Period {status.escalationPeriod}/10
+                  </div>
+                  <Progress
+                    value={(displayTime / 300) * 100} // 5 minutes for escalation period
+                    className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
+                  />
+                </>
+              ) : (
+                <>
+                  <Progress
+                    value={(displayTime / 180) * 100} // 3 minutes for main period
+                    className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
+                  />
+                  {isNearEnd ? (
+                    <div className="mt-2 text-sm text-red-500">
+                      Game ending soon!
+                    </div>
+                  ) : null}
+                </>
+              )}
             </>
           ) : (
             <div className="text-2xl font-bold text-red-500">
@@ -481,7 +524,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         <CardHeader>
           <CardTitle className={`flex items-center gap-2 ${textColorClass}`}>
             <Clock className="h-5 w-5" />
-            {status.isGameOver ? 'GAME OVER' : 'Time Remaining'}
+            {status.isGameOver ? 'GAME OVER' : (status.inEscalationPeriod ? 'ESCALATION PERIOD' : 'Time Remaining')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -490,11 +533,33 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               <div className={`text-3xl font-bold ${textColorClass}`}>
                 {hours > 0 ? `${hours}:` : ''}{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
               </div>
-              {isNearEnd ? (
+              
+              {status.inEscalationPeriod ? (
+                <div className="mt-2 text-sm text-amber-500 font-bold">
+                  Escalation Period {status.escalationPeriod}/10
+                  <div className="text-xs mt-1">
+                    Entry cost: {status.requiredAmount} ETH
+                  </div>
+                </div>
+              ) : isNearEnd ? (
                 <div className="mt-2 text-sm text-red-500">
                   Game ending soon!
                 </div>
               ) : null}
+              
+              {status.inEscalationPeriod && (
+                <Progress
+                  value={(displayTime / 300) * 100} // 5 minutes for escalation period
+                  className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
+                />
+              )}
+              
+              {!status.inEscalationPeriod && (
+                <Progress
+                  value={(displayTime / 180) * 100} // 3 minutes for main period
+                  className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
+                />
+              )}
             </>
           ) : (
             <div className="text-2xl font-bold text-red-500">
