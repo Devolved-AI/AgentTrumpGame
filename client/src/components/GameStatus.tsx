@@ -169,17 +169,73 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       }
     };
 
-    // Reduce frequency of status updates to prevent timer disruption
-    const statusInterval = setInterval(updateStatus, 30000);
+    // More frequent updates of contract state (every 5 seconds)
+    const statusInterval = setInterval(updateStatus, 5000);
     updateStatus();
 
-    return () => clearInterval(statusInterval);
+    // Setup event listeners for both GuessSubmitted and Deposited events to update prize pool
+    const fetchContractBalance = async () => {
+      try {
+        const balance = await contract.getContractBalance();
+        setStatus(prev => ({
+          ...prev,
+          totalBalance: formatEther(balance)
+        }));
+        console.log("Updated prize pool balance:", formatEther(balance));
+      } catch (error) {
+        console.error("Error fetching contract balance:", error);
+      }
+    };
+
+    // Handle contract balance changes from guesses
+    const handleGuessEvent = () => {
+      fetchContractBalance();
+    };
+
+    // Handle contract balance changes from deposits
+    const handleDepositEvent = () => {
+      fetchContractBalance();
+    };
+
+    try {
+      // Listen for GuessSubmitted events
+      contract.on(
+        contract.getEvent("GuessSubmitted"),
+        handleGuessEvent
+      );
+
+      // Listen for Deposited events
+      contract.on(
+        contract.getEvent("Deposited"),
+        handleDepositEvent
+      );
+
+      return () => {
+        clearInterval(statusInterval);
+        try {
+          contract.removeListener(
+            contract.getEvent("GuessSubmitted"),
+            handleGuessEvent
+          );
+          contract.removeListener(
+            contract.getEvent("Deposited"),
+            handleDepositEvent
+          );
+        } catch (error) {
+          console.error("Error removing event listeners:", error);
+        }
+      };
+    } catch (error) {
+      console.error("Error setting up event listeners:", error);
+      return () => clearInterval(statusInterval);
+    }
   }, [contract]);
 
   useEffect(() => {
     if (!contract) return;
 
-    const handleGuessSubmitted = async (
+    // Listener for GuessSubmitted that handles game state and last player updates
+    const handleGuessEvent = async (
       player: string,
       amount: any,
       multiplier: any,
@@ -191,6 +247,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         // Get the updated time remaining from the contract
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
+        
+        // Also get the updated balance
+        const balance = await contract.getContractBalance();
 
         // Save the game state to localStorage with the last block number
         const gameState = {
@@ -203,37 +262,46 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         localStorage.setItem('gameState', JSON.stringify(gameState));
         console.log("Saved game state to localStorage:", gameState);
         
+        // Update all relevant state in one go
         setStatus(prev => ({
           ...prev,
           lastGuessTimestamp: Date.now(),
           lastPlayer: player,
           lastBlock: blockNumber ? blockNumber.toString() : "Unknown block",
-          timeRemaining: time
+          timeRemaining: time,
+          totalBalance: formatEther(balance) // Update prize pool immediately
         }));
+        
+        console.log("Updated status after guess event:", {
+          player,
+          timeRemaining: time,
+          balance: formatEther(balance)
+        });
       } catch (error) {
-        console.error("Error updating timer after guess:", error);
+        console.error("Error updating state after guess:", error);
       }
     };
 
     try {
-      // Use contract.on with the event name directly
+      // Listen for GuessSubmitted events with a unique named handler
       contract.on(
         contract.getEvent("GuessSubmitted"),
-        handleGuessSubmitted
+        handleGuessEvent
       );
 
       return () => {
         try {
+          // Clean up event listener
           contract.removeListener(
             contract.getEvent("GuessSubmitted"),
-            handleGuessSubmitted
+            handleGuessEvent
           );
         } catch (error) {
           console.error("Error removing event listener:", error);
         }
       };
     } catch (error) {
-      console.error("Error setting up event listener:", error);
+      console.error("Error setting up game state event listener:", error);
     }
   }, [contract]);
 
