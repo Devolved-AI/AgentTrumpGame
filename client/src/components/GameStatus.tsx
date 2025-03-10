@@ -441,13 +441,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     const handleFreshContract = (event: Event) => {
       const customEvent = event as CustomEvent<{
         contractAddress: string, 
-        reason: 'new-address' | 'full-time' | 'block-difference'
+        reason?: 'new-address' | 'full-time' | 'block-difference',
+        gameId?: string
       }>;
       
       console.log("Fresh contract detected in GameStatus:", customEvent.detail);
       
-      // Generate a new unique game ID for this session
-      const newGameId = Date.now().toString();
+      // Use the provided gameId from the event or generate a new one
+      const newGameId = customEvent.detail.gameId || `game_${Date.now()}`;
       
       // Reset the game timer to 5 minutes (300 seconds) for the new game
       setDisplayTime(300);
@@ -476,6 +477,12 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         inEscalation: false,
         escalationPeriod: 0
       }));
+      
+      // Additional freshness indicators for other components
+      localStorage.setItem('freshContractDetected', 'true');
+      localStorage.setItem('current_game_id', newGameId);
+      localStorage.setItem('contract_fresh_timestamp', Date.now().toString());
+      localStorage.setItem('contract_detection_reason', customEvent.detail.reason || 'unknown');
       
       // Also reset the game state in localStorage
       localStorage.setItem('gameState', JSON.stringify({
@@ -510,10 +517,25 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     window.addEventListener('fresh-contract-detected', handleFreshContract);
     document.addEventListener('fresh-contract-detected', handleFreshContract);
     
+    // Also listen for window messages as an additional channel
+    const handleWindowMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'fresh-contract-detected') {
+        console.log('GameStatus: Received window message for fresh contract:', event.data);
+        // Create an equivalent custom event to reuse our handler
+        const customEvent = new CustomEvent('fresh-contract-detected', {
+          detail: event.data.detail
+        });
+        handleFreshContract(customEvent);
+      }
+    };
+    
+    window.addEventListener('message', handleWindowMessage);
+    
     // Return cleanup function
     return () => {
       window.removeEventListener('fresh-contract-detected', handleFreshContract);
       document.removeEventListener('fresh-contract-detected', handleFreshContract);
+      window.removeEventListener('message', handleWindowMessage);
     };
   }, [contract]);
   

@@ -315,6 +315,20 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     document.addEventListener('game-over', handleGameOver);
     window.addEventListener('fresh-contract-detected', handleFreshContract);
     document.addEventListener('fresh-contract-detected', handleFreshContract);
+    
+    // Also listen for window messages as an additional channel
+    const handleWindowMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'fresh-contract-detected') {
+        console.log('Received window message for fresh contract:', event.data);
+        // Create an equivalent custom event to reuse our handler
+        const customEvent = new CustomEvent('fresh-contract-detected', {
+          detail: event.data.detail
+        });
+        handleFreshContract(customEvent);
+      }
+    };
+    
+    window.addEventListener('message', handleWindowMessage);
 
     return () => {
       clearInterval(interval);
@@ -322,6 +336,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
       document.removeEventListener('game-over', handleGameOver);
       window.removeEventListener('fresh-contract-detected', handleFreshContract);
       document.removeEventListener('fresh-contract-detected', handleFreshContract);
+      window.removeEventListener('message', handleWindowMessage);
     };
   }, [contract, onTimerEnd]);
 
