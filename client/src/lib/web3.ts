@@ -3,9 +3,7 @@ import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
-const CONTRACT_ADDRESS = "0x1FDe9B28F8f3f2F4d36Be7135295dcC526688Ddd";
-// Using the checksummed address format to prevent errors
-const CONTRACT_OWNER = "0xd7Bc9888A66Bf8683521d65A7938A839406C2e0E"; // Owner's wallet address (same as the connected wallet)
+const CONTRACT_ADDRESS = "0x20e40FA1e80B48C0BC21d474b7dF62a9671e9107";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -888,9 +886,6 @@ const checkNetwork = async (ethereum: any) => {
     return false;
   }
 };
-
-// Export the CONTRACT_OWNER constant so it can be used in other files
-export { CONTRACT_OWNER };
 
 export const useWeb3Store = create<Web3State>((set, get) => ({
   provider: null,

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useWeb3Store, formatEther, CONTRACT_OWNER } from "@/lib/web3";
+import { useWeb3Store, formatEther } from "@/lib/web3";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,7 +15,6 @@ import { TypingIndicator } from "./TypingIndicator";
 import { TransactionVisualization } from "./TransactionVisualization";
 import { generateTrumpResponse } from "@/lib/openai";
 import { PERSUASION_EVENT } from "./PersuasionScore";
-import { ethers } from "ethers";
 
 interface GuessFormProps {
   onTimerEnd?: () => void;
@@ -37,11 +36,6 @@ interface TransactionState {
   hash: string;
   status: 'pending' | 'confirmed' | 'failed';
   value?: string;
-  ownerHash?: string; // Hash of the transaction to owner
-  splitDetails?: {
-    contractAmount: string;
-    ownerAmount: string;
-  };
 }
 
 interface Message {
@@ -56,7 +50,7 @@ interface Message {
 
 
 export function GuessForm({ onTimerEnd }: GuessFormProps) {
-  const { contract, address, getRequiredAmount, signer } = useWeb3Store();
+  const { contract, address, getRequiredAmount } = useWeb3Store();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -370,39 +364,15 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
         isUser: true
       };
       setMessages(prev => [...prev, userMessage]);
-      
-      // Calculate 70% for the prize pool (contract) and 30% for the owner
-      const contractAmount = ethers.parseEther((parseFloat(ethers.formatEther(requiredAmount)) * 0.7).toFixed(18));
-      const ownerAmount = requiredAmount - contractAmount;
-      
-      console.log(`Splitting transaction: ${ethers.formatEther(requiredAmount)} ETH total`);
-      console.log(`- Prize pool (70%): ${ethers.formatEther(contractAmount)} ETH`);
-      console.log(`- Owner (30%): ${ethers.formatEther(ownerAmount)} ETH`);
 
-      // First, send 30% to the contract owner
-      if (!signer) {
-        throw new Error("No signer available");
-      }
-      
-      // Use ethers.js getAddress to ensure the address is in the correct checksum format
-      const checksumOwnerAddress = ethers.getAddress(CONTRACT_OWNER);
-      
-      const ownerTx = await signer.sendTransaction({
-        to: checksumOwnerAddress,
-        value: ownerAmount
-      });
-      
-      console.log("Owner transaction sent:", ownerTx.hash);
-      
-      // Then, submit the guess with 70% to the contract
       const tx = await contract.submitGuess(
         data.response,
         {
-          value: contractAmount
+          value: requiredAmount
         }
       );
 
-      console.log("Contract transaction sent:", tx.hash);
+      console.log("Transaction sent:", tx.hash);
 
       setMessages(prev => {
         const updated = [...prev];
@@ -413,12 +383,7 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
             transaction: {
               hash: tx.hash,
               status: 'pending',
-              value: requiredAmount.toString(),
-              ownerHash: ownerTx.hash,
-              splitDetails: {
-                contractAmount: ethers.formatEther(contractAmount),
-                ownerAmount: ethers.formatEther(ownerAmount)
-              }
+              value: requiredAmount.toString()
             }
           };
         }
