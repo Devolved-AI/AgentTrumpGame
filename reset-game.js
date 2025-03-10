@@ -1,7 +1,7 @@
 // Script to reset game state with new contract address
 import fetch from 'node-fetch';
 
-const CONTRACT_ADDRESS = "0x6757f5dc48baFcf09d0D497f1E56969fdA56cecD";
+const CONTRACT_ADDRESS = "0x542535A8089F887d298E91F4E026EBd15D3ccE92";
 const DEFAULT_SCORE = 25; // Set persuasion scores to 25 instead of 50
 
 // Make sure the persuasion score is valid
