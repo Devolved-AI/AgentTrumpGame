@@ -29,7 +29,7 @@ interface GameStatusProps {
 }
 
 export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastGuessOnly, onTimerEnd }: GameStatusProps) {
-  const { contract, isGameOver } = useWeb3Store();
+  const { contract, isGameOver, prizePool, updatePrizePool } = useWeb3Store();
   const [status, setStatus] = useState({
     timeRemaining: 0,
     lastPlayer: "",
@@ -39,6 +39,17 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     lastGuessTimestamp: 0,
     isGameOver: false
   });
+  
+  // Update local state with prize pool from Web3Store
+  useEffect(() => {
+    if (prizePool) {
+      setStatus(prev => ({
+        ...prev,
+        totalBalance: prizePool
+      }));
+      console.log("Updated prize pool from Web3Store:", prizePool);
+    }
+  }, [prizePool]);
   const [displayTime, setDisplayTime] = useState(180); // 3 minutes in seconds (custom timer for this game)
   const [baseTime, setBaseTime] = useState(180); // Match the 3-minute timer
 
@@ -124,17 +135,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     const updateStatus = async () => {
       try {
+        // Update prize pool first, to ensure it's accurate
+        await updatePrizePool();
+        
         const [
           timeRemaining,
           lastPlayer,
-          balance,
           won,
           gameOver,
           requiredAmount
         ] = await Promise.all([
           contract.getTimeRemaining(),
           contract.lastPlayer(),
-          contract.getContractBalance(),
           contract.gameWon(),
           isGameOver(),
           contract.getCurrentRequiredAmount()
@@ -148,7 +160,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           won,
           gameOver,
           lastPlayer,
-          balance: formatEther(balance)
+          // Now using prizePool from Web3Store
+          prizePool
         });
 
         // Update the baseTime
@@ -158,7 +171,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           ...prev,
           timeRemaining: time,
           lastPlayer,
-          totalBalance: formatEther(balance),
+          // totalBalance is now updated via the prizePool useEffect
           won,
           isGameOver: gameOver,
           requiredAmount: formatEther(requiredAmount),
@@ -174,27 +187,17 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     updateStatus();
 
     // Setup event listeners for both GuessSubmitted and Deposited events to update prize pool
-    const fetchContractBalance = async () => {
-      try {
-        const balance = await contract.getContractBalance();
-        setStatus(prev => ({
-          ...prev,
-          totalBalance: formatEther(balance)
-        }));
-        console.log("Updated prize pool balance:", formatEther(balance));
-      } catch (error) {
-        console.error("Error fetching contract balance:", error);
-      }
-    };
-
-    // Handle contract balance changes from guesses
+    
+    // Handle contract balance changes from guesses - use Web3Store updatePrizePool
     const handleGuessEvent = () => {
-      fetchContractBalance();
+      console.log("GuessSubmitted event detected, updating prize pool");
+      updatePrizePool();
     };
 
-    // Handle contract balance changes from deposits
+    // Handle contract balance changes from deposits - use Web3Store updatePrizePool
     const handleDepositEvent = () => {
-      fetchContractBalance();
+      console.log("Deposited event detected, updating prize pool");
+      updatePrizePool();
     };
 
     try {
@@ -248,8 +251,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
         
-        // Also get the updated balance
-        const balance = await contract.getContractBalance();
+        // Update the prize pool using the centralized Web3Store method
+        await updatePrizePool();
 
         // Save the game state to localStorage with the last block number
         const gameState = {
@@ -269,13 +272,13 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           lastPlayer: player,
           lastBlock: blockNumber ? blockNumber.toString() : "Unknown block",
           timeRemaining: time,
-          totalBalance: formatEther(balance) // Update prize pool immediately
+          // Prize pool is updated via the prizePool useEffect
         }));
         
         console.log("Updated status after guess event:", {
           player,
           timeRemaining: time,
-          balance: formatEther(balance)
+          prizePool // Use the Web3Store prize pool value
         });
       } catch (error) {
         console.error("Error updating state after guess:", error);
@@ -303,7 +306,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     } catch (error) {
       console.error("Error setting up game state event listener:", error);
     }
-  }, [contract]);
+  }, [contract, updatePrizePool]);
 
   useEffect(() => {
     if (status.isGameOver) return;
