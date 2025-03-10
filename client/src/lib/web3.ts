@@ -888,6 +888,9 @@ const checkNetwork = async (ethereum: any) => {
   }
 };
 
+// Export the CONTRACT_OWNER constant so it can be used in other files
+export { CONTRACT_OWNER };
+
 export const useWeb3Store = create<Web3State>((set, get) => ({
   provider: null,
   signer: null,

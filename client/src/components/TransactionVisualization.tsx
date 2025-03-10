@@ -6,10 +6,16 @@ interface TransactionVisualizationProps {
   hash: string;
   status: 'pending' | 'confirmed' | 'failed';
   value?: string;
+  ownerHash?: string;
+  splitDetails?: {
+    contractAmount: string;
+    ownerAmount: string;
+  };
 }
 
-export function TransactionVisualization({ hash, status, value }: TransactionVisualizationProps) {
+export function TransactionVisualization({ hash, status, value, ownerHash, splitDetails }: TransactionVisualizationProps) {
   const explorerUrl = `https://sepolia.basescan.org/tx/${hash}`;
+  const ownerExplorerUrl = ownerHash ? `https://sepolia.basescan.org/tx/${ownerHash}` : '';
   
   const statusConfig = {
     pending: {
