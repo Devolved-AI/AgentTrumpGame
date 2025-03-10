@@ -56,56 +56,73 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         const time = Number(timeRemaining.toString());
 
-        // Calculate the display time based on saved state or contract time
-        let calculatedDisplayTime = 0;
-        const savedState = localStorage.getItem('gameTimerState');
-
         // Cap the max time to 4 minutes (240 seconds) for this game
         const MAX_GAME_TIME = 240;
+        
+        // Log time from contract for debugging
+        console.log("Contract returned time:", time);
+        
         // Cap the contract time to our max game time
         const cappedContractTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
-          console.log(`Contract returned ${time} seconds, capping to ${MAX_GAME_TIME} seconds`);
+          console.log(`Contract time ${time}s capped to ${MAX_GAME_TIME}s`);
         }
 
-        if (savedState) {
+        // Always prioritize contract time - fixes reset issues
+        // Only use localStorage for small adjustments to prevent timer jumps
+        let finalTime = cappedContractTime;
+        const savedState = localStorage.getItem('gameTimerState');
+
+        if (savedState && !gameOver) {
           try {
             const parsedState = JSON.parse(savedState);
             const { savedTime, timestamp } = parsedState;
-
-            // Only use saved state if the saved time is greater than contract time
-            // This ensures we don't reset progress when reconnecting
+            
+            // Calculate elapsed time since last save
             const elapsedSeconds = Math.floor((Date.now() - timestamp) / 1000);
             const adjustedSavedTime = Math.max(0, savedTime - elapsedSeconds);
-
-            if (adjustedSavedTime > cappedContractTime) {
-              calculatedDisplayTime = Math.min(adjustedSavedTime, MAX_GAME_TIME);
-              console.log("Using saved time (capped):", calculatedDisplayTime);
+            
+            // Check if the time difference is small (within 30 seconds)
+            // This prevents large jumps while still allowing continuity
+            const timeDifference = Math.abs(adjustedSavedTime - cappedContractTime);
+            
+            if (timeDifference <= 30) {
+              // Only use the lower value to ensure timer doesn't jump backward
+              finalTime = Math.min(adjustedSavedTime, cappedContractTime);
+              console.log(`Small time difference (${timeDifference}s), using: ${finalTime}s`);
             } else {
-              // If capped contract time is better, use that
-              calculatedDisplayTime = cappedContractTime;
-              console.log("Using capped contract time:", calculatedDisplayTime);
+              // Time difference too large, use contract time
+              finalTime = cappedContractTime;
+              console.log(`Large time difference (${timeDifference}s), using contract time: ${finalTime}s`);
+              
+              // Reset localStorage with current contract time to prevent future jumps
+              localStorage.setItem('gameTimerState', JSON.stringify({
+                savedTime: cappedContractTime,
+                timestamp: Date.now()
+              }));
             }
           } catch (e) {
-            // If parsing fails, use capped contract time
-            calculatedDisplayTime = cappedContractTime;
-            console.log("Using capped contract time (parsing error):", calculatedDisplayTime);
+            // If parsing fails, use contract time
+            finalTime = cappedContractTime;
+            console.error("Error parsing saved time:", e);
           }
         } else {
-          // No saved state, use capped contract time
-          calculatedDisplayTime = cappedContractTime;
-          console.log("No saved state, using capped contract time:", calculatedDisplayTime);
+          // No saved state, use contract time
+          finalTime = cappedContractTime;
+          console.log("Using contract time (no saved state):", finalTime);
         }
 
         // Make sure we have a valid time
-        calculatedDisplayTime = Math.max(calculatedDisplayTime, 0);
+        finalTime = Math.max(finalTime, 0);
+        
+        console.log("Final time set to:", finalTime);
 
         // Update status with new values from contract
         setStatus(prev => {
           const updatedStatus = {
             ...prev,
-            timeRemaining: calculatedDisplayTime, // Use the calculated time for consistency
+            timeRemaining: finalTime,
             isGameOver: gameOver,
             won: won
           };
@@ -113,7 +130,15 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         });
 
         // Update the display time
-        setDisplayTime(calculatedDisplayTime);
+        setDisplayTime(finalTime);
+        
+        // Update local storage with current time
+        if (!gameOver) {
+          localStorage.setItem('gameTimerState', JSON.stringify({
+            savedTime: finalTime,
+            timestamp: Date.now()
+          }));
+        }
       } catch (error) {
         console.error("Error fetching initial time:", error);
       }
@@ -150,32 +175,104 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           contract.getCurrentEscalationPeriod ? contract.getCurrentEscalationPeriod() : Promise.resolve(0)
         ]);
         
-        // Enhanced conversion of lastPlayer to string with better object handling
+        // Robust extraction of the lastPlayer address with specific validation
         let lastPlayerAddress = '';
         
         try {
+          console.log("Raw lastPlayer value:", lastPlayer);
+          console.log("lastPlayer type:", typeof lastPlayer);
+          
+          // First check if it's a direct string (already an address)
           if (typeof lastPlayer === 'string') {
-            lastPlayerAddress = lastPlayer;
-          } else if (lastPlayer && typeof lastPlayer === 'object') {
-            const lastPlayerObj = lastPlayer as any; // Type assertion to bypass strict checking
-            
-            if (typeof lastPlayerObj.toString === 'function') {
-              lastPlayerAddress = lastPlayerObj.toString();
-            } else if (lastPlayerObj.address) {
-              lastPlayerAddress = lastPlayerObj.address;
+            // Validate it's an Ethereum address (0x followed by 40 hex chars)
+            if (/^0x[a-fA-F0-9]{40}$/.test(lastPlayer)) {
+              lastPlayerAddress = lastPlayer;
+              console.log("lastPlayer is valid address string:", lastPlayerAddress);
             } else {
-              // Try to access address as a property (some contracts return structured data)
-              const addressStr = JSON.stringify(lastPlayerObj);
-              console.log("Last player object:", addressStr);
-              lastPlayerAddress = addressStr;
+              console.warn("lastPlayer is string but not valid address format:", lastPlayer);
+              lastPlayerAddress = lastPlayer; // Still use it but flag the issue
             }
+          } 
+          // Object handling with careful extraction
+          else if (lastPlayer && typeof lastPlayer === 'object') {
+            const lastPlayerObj = lastPlayer as any;
+            
+            // Debug what's in the object
+            console.log("lastPlayer object properties:", Object.keys(lastPlayerObj));
+            
+            // Check common properties returned by different contract implementations
+            if (lastPlayerObj.address && typeof lastPlayerObj.address === 'string') {
+              lastPlayerAddress = lastPlayerObj.address;
+              console.log("Using .address property:", lastPlayerAddress);
+            }
+            else if (typeof lastPlayerObj.toString === 'function') {
+              const strValue = lastPlayerObj.toString();
+              if (/^0x[a-fA-F0-9]{40}$/.test(strValue)) {
+                lastPlayerAddress = strValue;
+                console.log("Using toString() method:", lastPlayerAddress);
+              } else {
+                console.warn("toString() didn't return valid address:", strValue);
+              }
+            }
+            // Handle new contract property format
+            else if (lastPlayerObj._address) {
+              lastPlayerAddress = lastPlayerObj._address;
+              console.log("Using ._address property:", lastPlayerAddress);
+            }
+            // Try common properties for addresses
+            else if (lastPlayerObj.addr) {
+              lastPlayerAddress = lastPlayerObj.addr;
+              console.log("Using .addr property:", lastPlayerAddress);
+            }
+            // Last resort - try to extract from stringified object
+            else {
+              const objStr = JSON.stringify(lastPlayerObj);
+              console.log("Full lastPlayer object as string:", objStr);
+              
+              // Try to find an address pattern in the string
+              const addressMatch = objStr.match(/0x[a-fA-F0-9]{40}/);
+              if (addressMatch) {
+                lastPlayerAddress = addressMatch[0];
+                console.log("Extracted address from object string:", lastPlayerAddress);
+              } else {
+                console.warn("Could not extract address from object");
+                lastPlayerAddress = objStr;
+              }
+            }
+          }
+          // Value is null/undefined
+          else if (!lastPlayer) {
+            console.warn("lastPlayer is null or undefined");
+            
+            // Try to get last player from localStorage as fallback
+            try {
+              const savedState = localStorage.getItem('gameState');
+              if (savedState) {
+                const { lastPlayer: savedPlayer } = JSON.parse(savedState);
+                if (savedPlayer && typeof savedPlayer === 'string' && /^0x[a-fA-F0-9]{40}$/.test(savedPlayer)) {
+                  lastPlayerAddress = savedPlayer;
+                  console.log("Using saved lastPlayer from localStorage:", lastPlayerAddress);
+                }
+              }
+            } catch (e) {
+              console.error("Error reading saved player from localStorage:", e);
+            }
+            
+            if (!lastPlayerAddress) {
+              lastPlayerAddress = "No player yet";
+            }
+          }
+          // Everything else - try to convert to string
+          else {
+            console.warn("Unexpected lastPlayer type:", typeof lastPlayer);
+            lastPlayerAddress = String(lastPlayer) || "Unknown player";
           }
         } catch (err) {
           console.error("Error processing lastPlayer address:", err);
-          lastPlayerAddress = String(lastPlayer) || "Unknown address";
+          lastPlayerAddress = String(lastPlayer) || "Error processing address";
         }
         
-        console.log("Processed lastPlayer to:", lastPlayerAddress);
+        console.log("Final processed lastPlayer address:", lastPlayerAddress);
 
         const time = Number(timeRemaining.toString());
         // Cap the time to 4 minutes
@@ -310,29 +407,82 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         // Update the prize pool using the centralized Web3Store method
         await updatePrizePool();
 
-        // Process player address with simple type assertions to avoid TypeScript errors
+        // Process player address using the same robust method as lastPlayer extraction
         let processedAddress = '';
         
         try {
+          console.log("GuessEvent - Raw player value:", player);
+          console.log("GuessEvent - player type:", typeof player);
+          
+          // First check if it's a direct string (already an address)
           if (typeof player === 'string') {
-            processedAddress = player;
-          } else if (player && typeof player === 'object') {
-            const playerObj = player as any; // Type assertion to bypass strict type checking
-            
-            if (typeof playerObj.toString === 'function') {
-              processedAddress = playerObj.toString();
-            } else if (playerObj.address) {
-              processedAddress = playerObj.address;
+            // Validate it's an Ethereum address (0x followed by 40 hex chars)
+            if (/^0x[a-fA-F0-9]{40}$/.test(player)) {
+              processedAddress = player;
+              console.log("GuessEvent - player is valid address string:", processedAddress);
             } else {
-              processedAddress = JSON.stringify(playerObj);
+              console.warn("GuessEvent - player is string but not valid address format:", player);
+              processedAddress = player; // Still use it but flag the issue
+            }
+          } 
+          // Object handling with careful extraction
+          else if (player && typeof player === 'object') {
+            const playerObj = player as any;
+            
+            // Debug what's in the object
+            console.log("GuessEvent - player object properties:", Object.keys(playerObj));
+            
+            // Check common properties returned by different contract implementations
+            if (playerObj.address && typeof playerObj.address === 'string') {
+              processedAddress = playerObj.address;
+              console.log("GuessEvent - Using .address property:", processedAddress);
+            }
+            else if (typeof playerObj.toString === 'function') {
+              const strValue = playerObj.toString();
+              if (/^0x[a-fA-F0-9]{40}$/.test(strValue)) {
+                processedAddress = strValue;
+                console.log("GuessEvent - Using toString() method:", processedAddress);
+              } else {
+                console.warn("GuessEvent - toString() didn't return valid address:", strValue);
+              }
+            }
+            // Handle new contract property format
+            else if (playerObj._address) {
+              processedAddress = playerObj._address;
+              console.log("GuessEvent - Using ._address property:", processedAddress);
+            }
+            // Try common properties for addresses
+            else if (playerObj.addr) {
+              processedAddress = playerObj.addr;
+              console.log("GuessEvent - Using .addr property:", processedAddress);
+            }
+            // Last resort - try to extract from stringified object
+            else {
+              const objStr = JSON.stringify(playerObj);
+              console.log("GuessEvent - Full player object as string:", objStr);
+              
+              // Try to find an address pattern in the string
+              const addressMatch = objStr.match(/0x[a-fA-F0-9]{40}/);
+              if (addressMatch) {
+                processedAddress = addressMatch[0];
+                console.log("GuessEvent - Extracted address from object string:", processedAddress);
+              } else {
+                console.warn("GuessEvent - Could not extract address from object");
+                processedAddress = objStr;
+              }
             }
           }
+          // Everything else - try to convert to string
+          else {
+            console.warn("GuessEvent - Unexpected player type:", typeof player);
+            processedAddress = String(player) || "Unknown player";
+          }
         } catch (err) {
-          console.error("Error processing player address:", err);
-          processedAddress = String(player) || "Unknown address";
+          console.error("GuessEvent - Error processing player address:", err);
+          processedAddress = String(player) || "Error processing address";
         }
         
-        console.log("Processed player address to:", processedAddress);
+        console.log("GuessEvent - Final processed player address:", processedAddress);
         
         // Save the game state to localStorage with the last block number
         const gameState = {
