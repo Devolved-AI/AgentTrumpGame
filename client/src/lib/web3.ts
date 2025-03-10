@@ -838,6 +838,9 @@ interface Web3State {
   resetPersuasionScores: () => Promise<void>;
   getRequiredAmount: () => Promise<string>;
   isGameOver: () => Promise<boolean>;
+  getContractBalance: () => Promise<string>;
+  prizePool: string;
+  updatePrizePool: () => Promise<void>;
 }
 
 const checkNetwork = async (ethereum: any) => {
@@ -892,6 +895,31 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
   balance: null,
   isInitialized: false,
   currentContractAddress: null,
+  prizePool: "0",
+  
+  getContractBalance: async () => {
+    const { contract } = get();
+    if (!contract) return "0";
+    
+    try {
+      const balance = await contract.getContractBalance();
+      return ethers.formatEther(balance);
+    } catch (error) {
+      console.error("Error getting contract balance:", error);
+      return "0";
+    }
+  },
+  
+  updatePrizePool: async () => {
+    try {
+      const balance = await get().getContractBalance();
+      set({ prizePool: balance });
+      console.log("Updated prize pool balance:", balance);
+      return;
+    } catch (error) {
+      console.error("Error updating prize pool:", error);
+    }
+  },
 
   getRequiredAmount: async () => {
     const { contract } = get();
@@ -993,6 +1021,16 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
           console.log(`Contract address changed from ${previousContractAddress || 'none'} to ${CONTRACT_ADDRESS}`);
         }
 
+        // Get initial prize pool balance
+        let initialPrizePool = "0";
+        try {
+          const contractBalance = await contract.getContractBalance();
+          initialPrizePool = ethers.formatEther(contractBalance);
+          console.log("Initial prize pool balance:", initialPrizePool);
+        } catch (error) {
+          console.error("Error getting initial prize pool balance:", error);
+        }
+        
         set({ 
           provider, 
           signer, 
@@ -1000,8 +1038,30 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
           address, 
           balance, 
           isInitialized: true,
-          currentContractAddress: CONTRACT_ADDRESS
+          currentContractAddress: CONTRACT_ADDRESS,
+          prizePool: initialPrizePool
         });
+        
+        // Setup event listeners for contract balance updates
+        try {
+          contract.on(contract.getEvent("GuessSubmitted"), async () => {
+            // Wait a moment for the transaction to be processed
+            setTimeout(async () => {
+              get().updatePrizePool();
+            }, 1000);
+          });
+          
+          contract.on(contract.getEvent("Deposited"), async () => {
+            // Wait a moment for the transaction to be processed
+            setTimeout(async () => {
+              get().updatePrizePool();
+            }, 1000);
+          });
+          
+          console.log("Set up contract event listeners for balance updates");
+        } catch (error) {
+          console.error("Error setting up contract event listeners:", error);
+        }
 
         toast({
           title: "Wallet Connected",
@@ -1047,8 +1107,9 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       window.ethereum.removeAllListeners('accountsChanged');
     }
     
-    // Keep track of contract address even when disconnected
+    // Keep track of contract address and prize pool even when disconnected
     const currentContractAddress = get().currentContractAddress;
+    const prizePool = get().prizePool;
     
     set({
       provider: null,
@@ -1057,7 +1118,8 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       address: null,
       balance: null,
       isInitialized: false,
-      currentContractAddress // Preserve contract address
+      currentContractAddress, // Preserve contract address
+      prizePool // Preserve prize pool
     });
     set((state) => {
       state.clearMessages();
@@ -1074,7 +1136,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       window.ethereum.removeAllListeners('accountsChanged');
     }
     
-    // When fully resetting, we also clear the contract address
+    // When fully resetting, we also clear the contract address and prize pool
     set({
       provider: null,
       signer: null,
@@ -1082,7 +1144,8 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
       address: null,
       balance: null,
       isInitialized: false,
-      currentContractAddress: null
+      currentContractAddress: null,
+      prizePool: "0"
     });
   },
 
