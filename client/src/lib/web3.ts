@@ -1096,21 +1096,26 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         
         // Setup event listeners for contract balance updates
         try {
-          contract.on(contract.getEvent("GuessSubmitted"), async () => {
+          // Use direct event name strings instead of getEvent method
+          console.log("Setting up contract event listeners for balance updates");
+          
+          contract.on("GuessSubmitted", async () => {
+            console.log("GuessSubmitted event detected in web3.ts");
             // Wait a moment for the transaction to be processed
             setTimeout(async () => {
               get().updatePrizePool();
             }, 1000);
           });
           
-          contract.on(contract.getEvent("Deposited"), async () => {
+          contract.on("Deposited", async () => {
+            console.log("Deposited event detected in web3.ts");
             // Wait a moment for the transaction to be processed
             setTimeout(async () => {
               get().updatePrizePool();
             }, 1000);
           });
           
-          console.log("Set up contract event listeners for balance updates");
+          console.log("Successfully set up contract event listeners for balance updates");
         } catch (error) {
           console.error("Error setting up contract event listeners:", error);
         }
