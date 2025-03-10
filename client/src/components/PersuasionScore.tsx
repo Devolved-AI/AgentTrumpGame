@@ -441,7 +441,7 @@ export function PersuasionScore() {
           // Handle AI content detection
           if (errorData.error === 'AI-generated content detected') {
             console.error('Server detected AI content:', errorData.message);
-            setError('AI-generated content detected - penalty applied');
+            setError('Slop Detected - penalty applied');
             
             // Update UI with penalized score
             if (typeof errorData.penalizedScore === 'number') {

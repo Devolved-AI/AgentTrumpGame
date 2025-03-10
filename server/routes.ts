@@ -714,9 +714,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           saveScoresToDisk();
           
           return res.status(403).json({ 
-            error: 'AI-generated content detected',
+            error: 'AI-generated content detected', // Keep this the same for code compatibility
             penalizedScore,
-            message: 'Using AI to play the game is not allowed and results in a score penalty.'
+            message: 'Slop detected in your messages. This results in a score penalty.'
           });
         }
       }
