@@ -183,12 +183,31 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     const interval = setInterval(checkGameState, 2000);
     
     // Also listen for custom game-over events
-    const handleGameOver = () => {
-      console.log("Game over event received in GuessForm");
+    const handleGameOver = (event: Event) => {
+      const customEvent = event as CustomEvent<{reason?: string; timestamp?: number}>;
+      console.log("Game over event received in GuessForm:", customEvent.detail);
+      
+      // Set game over state immediately
       setIsGameOver(true);
+      
+      // Log additional debugging info
+      if (customEvent.detail && customEvent.detail.reason === 'timer-expired') {
+        console.log("Game ended due to timer expiration at:", 
+          customEvent.detail.timestamp 
+            ? new Date(customEvent.detail.timestamp).toLocaleTimeString() 
+            : "unknown time"
+        );
+      }
+      
+      // If onTimerEnd callback exists, call it
       if (onTimerEnd) {
         onTimerEnd();
       }
+      
+      // Clear any pending responses or state
+      form.reset();
+      setIsSubmitting(false);
+      setIsTyping(false);
     };
     
     // Listen for game over events

@@ -267,12 +267,19 @@ export function GameOverDialog() {
     }
   };
 
-  // Listen for custom game-over event (from PersuasionScore component)
+  // Listen for custom game-over event (from PersuasionScore component or timer)
   useEffect(() => {
-    const handleGameOver = (event: CustomEvent<{winner: string}>) => {
-      console.log("Game over event received, winner:", event.detail.winner);
+    const handleGameOver = (event: CustomEvent<{winner?: string; reason?: string; timestamp?: number}>) => {
+      console.log("Game over event received:", event.detail);
       
-      // Update game info with the winner address from the event
+      // Check if this is a timer-expired event
+      const isTimerExpired = event.detail.reason === 'timer-expired';
+      
+      if (isTimerExpired) {
+        console.log("Game over due to timer expiration");
+      }
+      
+      // Update game info with the winner address from the event (if there is one)
       if (event.detail.winner) {
         // Add check to prevent setting our address as winner if it's not really the winner
         if (event.detail.winner !== address || event.detail.winner === address && event.detail.winner !== "0x0000000000000000000000000000000000000000") {
@@ -290,8 +297,7 @@ export function GameOverDialog() {
       // Show the dialog immediately 
       setOpen(true);
       
-      // Also fetch additional info from the contract, passing the winner address
-      // This will verify the winner through multiple sources
+      // Also fetch additional info from the contract, passing the winner address if available
       fetchGameOverInfo(event.detail.winner);
     };
 

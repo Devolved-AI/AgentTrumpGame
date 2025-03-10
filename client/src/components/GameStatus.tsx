@@ -641,6 +641,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           // Clear the timer
           clearInterval(timer);
           
+          // Clean up localStorage to prevent restarting timer
+          localStorage.setItem('gameTimerState', JSON.stringify({
+            savedTime: 0,
+            timestamp: Date.now(),
+            gameId: currentGameId,
+            isGameOver: true
+          }));
+          
           // Trigger the game over callback
           if (onTimerEnd) {
             console.log("Calling onTimerEnd callback");
@@ -648,10 +656,18 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           }
 
           // Create and dispatch a custom game-over event
-          const gameOverEvent = new CustomEvent('game-over');
+          // This will trigger the GameOverDialog to show
+          const gameOverEvent = new CustomEvent('game-over', {
+            detail: { 
+              winner: undefined, 
+              reason: 'timer-expired',
+              timestamp: Date.now()
+            }
+          });
+          
           document.dispatchEvent(gameOverEvent);
           window.dispatchEvent(gameOverEvent);
-          console.log("Dispatched game-over event");
+          console.log("Dispatched game-over event with timer expired reason");
           
           return 0;
         }
