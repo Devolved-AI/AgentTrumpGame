@@ -512,7 +512,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   const minutes = Math.floor((displayTime % 3600) / 60);
   const seconds = displayTime % 60;
   const isNearEnd = !status.isEscalation && displayTime <= 120; // 2 minutes remaining
-  const textColorClass = status.isGameOver ? 'text-red-500' : (status.isEscalation || isNearEnd ? 'text-red-500' : 'text-black dark:text-white');
+  // Make sure the text is clearly red during escalation mode or when near the end
+  const textColorClass = status.isGameOver ? 'text-red-600 font-bold' : (status.isEscalation ? 'text-red-600 font-bold' : (isNearEnd ? 'text-red-500' : 'text-black dark:text-white'));
 
   if (showPrizePoolOnly) {
     return (
@@ -557,7 +558,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               </div>
               <Progress
                 value={(displayTime / (status.isEscalation ? 300 : 1800)) * 100}
-                className={`mt-2 ${status.isEscalation || isNearEnd ? 'bg-red-200' : ''}`}
+                className={`mt-2 ${status.isEscalation ? 'bg-red-300 h-2 [&>div]:bg-red-600' : isNearEnd ? 'bg-red-200' : ''}`}
               />
               {status.isEscalation ? (
                 <div className="mt-2 text-sm text-red-500">
