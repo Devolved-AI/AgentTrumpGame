@@ -11,9 +11,12 @@ interface GameOverInfo {
 export function GameOverDialog() {
   const { contract, address, isGameOver } = useWeb3Store();
   const [open, setOpen] = useState(false);
+  // Try to get saved block number from localStorage
+  const savedFinalBlock = localStorage.getItem('finalGameBlock');
+  
   const [gameInfo, setGameInfo] = useState<GameOverInfo>({
     lastGuessAddress: address || "Loading address...",
-    lastBlock: "Loading block information...",
+    lastBlock: savedFinalBlock || "Loading block information...",
     winner: undefined
   });
 
@@ -31,6 +34,7 @@ export function GameOverDialog() {
       }));
       
       // Fetch game over info immediately from contract
+      // We specifically need lastGuessBlock which is the exact block that ended the game
       const [lastPlayer, block, gameWon] = await Promise.all([
         contract.lastPlayer(),
         contract.lastGuessBlock(),
@@ -43,10 +47,25 @@ export function GameOverDialog() {
         gameWon 
       });
       
-      // Immediately update with the block information
+      // Immediately update with the FINAL block information
+      // This is the actual block of the last transaction that ended the game
+      let finalBlock = "Block information unavailable";
+      if (block) {
+        finalBlock = block.toString();
+        // Store this final block number so it's consistent and doesn't keep updating
+        localStorage.setItem('finalGameBlock', finalBlock);
+      } else {
+        // Try to get from localStorage if previously stored
+        const storedFinalBlock = localStorage.getItem('finalGameBlock');
+        if (storedFinalBlock) {
+          finalBlock = storedFinalBlock;
+          console.log("Using stored final block:", finalBlock);
+        }
+      }
+      
       setGameInfo(prev => ({
         ...prev,
-        lastBlock: block ? block.toString() : "Block information unavailable"
+        lastBlock: finalBlock
       }));
       
       // If there's a winner but it's not explicitly provided, try to find it
@@ -123,6 +142,9 @@ export function GameOverDialog() {
       }
       
       // Update the game info state with winner and block data
+      // Save the block info to localStorage to ensure it stays consistent
+      localStorage.setItem('finalGameBlock', blockInfo);
+      
       const gameInfoUpdate = {
         lastGuessAddress: lastPlayer || "Unknown",
         lastBlock: blockInfo,
@@ -155,16 +177,15 @@ export function GameOverDialog() {
         }
       }
       
-      // If we still don't have a block number, attempt to get it from the provider
-      if (!lastBlock && contract?.runner?.provider) {
-        try {
-          const provider = contract.runner.provider;
-          const blockNumber = await provider.getBlockNumber();
-          lastBlock = blockNumber.toString();
-          console.log("Using current block number as fallback:", lastBlock);
-        } catch (blockError) {
-          console.error("Error getting current block number:", blockError);
-          lastBlock = "Unable to retrieve block number";
+      // Try to get the final game block from localStorage
+      if (!lastBlock) {
+        const finalGameBlock = localStorage.getItem('finalGameBlock');
+        if (finalGameBlock) {
+          lastBlock = finalGameBlock;
+          console.log("Using stored final game block:", lastBlock);
+        } else {
+          lastBlock = "Block information unavailable";
+          console.log("Using static block information message");
         }
       }
 
