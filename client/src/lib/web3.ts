@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
 const CONTRACT_ADDRESS = "0x1FDe9B28F8f3f2F4d36Be7135295dcC526688Ddd";
+const CONTRACT_OWNER = "0x5B4EE669bee8093214D5b9E785e011EB93995171"; // Owner's wallet address
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
