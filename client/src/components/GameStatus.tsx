@@ -383,7 +383,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               detail: { interval: 1, price: ESCALATION_PRICES[0] }
             });
             document.dispatchEvent(escalationEvent);
-            console.log("Dispatched escalation-started event");
+            window.dispatchEvent(escalationEvent); // Also dispatch on window for wider compatibility
+            console.log("Dispatched escalation-started event with interval 1 and price", ESCALATION_PRICES[0]);
 
             // Don't end game or clear the timer - we're now in escalation mode
           }
@@ -424,6 +425,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       localStorage.setItem('escalationPrice', currentPrice);
 
       // We don't set displayTime here anymore as it's handled in the initialization effect
+    } else if (status.isEscalation && status.escalationInterval > 0) {
+      // Always keep displayEscalationInterval in sync with status.escalationInterval
+      setDisplayEscalationInterval(status.escalationInterval);
     }
   }, [status.isEscalation, status.escalationInterval]);
 
@@ -484,6 +488,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           localStorage.setItem('escalationInterval', nextInterval.toString());
           localStorage.setItem('escalationPrice', nextPrice);
           console.log(`Escalation data saved to localStorage: interval=${nextInterval}, price=${nextPrice}`);
+          
+          // Dispatch event for interval transition
+          const escalationEvent = new CustomEvent('escalation-started', {
+            detail: { interval: nextInterval, price: nextPrice }
+          });
+          document.dispatchEvent(escalationEvent);
+          window.dispatchEvent(escalationEvent);
+          console.log(`Dispatched escalation-started event for new interval ${nextInterval} with price ${nextPrice}`);
         }
       }
     }, 1000);
@@ -567,15 +579,16 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                 className={`mt-2 ${status.isEscalation ? 'bg-red-300 h-2 [&>div]:bg-red-600' : isNearEnd ? 'bg-red-200' : ''}`}
               />
               {status.isEscalation ? (
-                <div className="mt-2 text-sm text-red-500">
-                  <div>Escalation Period {status.escalationInterval} of 10</div>
-                  <div className="mt-1">
-                    Base cost: {parseFloat(status.requiredAmount).toFixed(4)} ETH
+                <div className="mt-2 text-sm text-red-600 font-bold">
+                  <div>ESCALATION PERIOD {status.escalationInterval} of 10</div>
+                  <div className="mt-2 border border-red-500 rounded-md p-2 bg-red-50 dark:bg-red-950">
+                    <span className="block">Current Guess Fee:</span>
+                    <span className="text-lg block">{parseFloat(status.requiredAmount).toFixed(4)} ETH</span>
                   </div>
-                  <div className="mt-1 text-xs">
+                  <div className="mt-1 text-xs text-red-500">
                     A 10% buffer will be added to ensure transaction success
                   </div>
-                  <div className="mt-1 text-xs">
+                  <div className="mt-1 text-xs text-red-500">
                     Each interval lasts exactly 5:00 minutes
                   </div>
                 </div>
@@ -619,7 +632,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         <CardHeader>
           <CardTitle className={`flex items-center gap-2 ${textColorClass}`}>
             <Clock className="h-5 w-5" />
-            {status.isGameOver ? 'GAME OVER' : 'Time Remaining'}
+            {status.isGameOver ? 'GAME OVER' : (status.isEscalation ? 'ESCALATION PERIOD' : 'Time Remaining')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -629,7 +642,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                 {hours > 0 ? `${hours}:` : ''}{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
               </div>
               {status.isEscalation ? (
-                <div className="mt-2 text-sm text-red-500 font-bold">
+                <div className="mt-2 text-sm text-red-600 font-bold">
                   ESCALATION PERIOD {displayEscalationInterval} of 10
                 </div>
               ) : isNearEnd ? (
@@ -638,8 +651,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                 </div>
               ) : null}
               {status.isEscalation && (
-                <div className="mt-1 text-xs text-red-500">
-                  Current Guess Fee: {status.requiredAmount} ETH
+                <div className="mt-1 text-sm text-red-600 font-bold border border-red-500 rounded-md p-2 bg-red-50 dark:bg-red-950">
+                  <span className="block">Current Guess Fee:</span>
+                  <span className="text-lg block">{status.requiredAmount} ETH</span>
                 </div>
               )}
             </>

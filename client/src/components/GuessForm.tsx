@@ -205,20 +205,32 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
     
     // Listen for escalation mode events
     const handleEscalationStarted = (event: Event) => {
-      console.log("Escalation mode started event received in GuessForm", 
-        (event as CustomEvent<{interval: number, price: string}>).detail);
+      const detail = (event as CustomEvent<{interval: number, price: string}>).detail;
+      console.log("Escalation mode started event received in GuessForm", detail);
       
       // Reset game over state since we're now in escalation mode
       setIsGameOver(false);
+      
+      // Update messages with escalation info
+      const escalationStartMessage: Message = {
+        text: `⚠️ ESCALATION PERIOD ${detail.interval} STARTED! ⚠️\n\nThe cost to guess is now ${detail.price} ETH. Each escalation period lasts exactly 5 minutes.`,
+        timestamp: Math.floor(Date.now() / 1000),
+        isUser: false
+      };
+      
+      setMessages(prevMessages => [...prevMessages, escalationStartMessage]);
     };
     
+    // Listen on both window and document to ensure we catch the event
     window.addEventListener('game-over', handleGameOver);
     document.addEventListener('escalation-started', handleEscalationStarted);
+    window.addEventListener('escalation-started', handleEscalationStarted);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('game-over', handleGameOver);
       document.removeEventListener('escalation-started', handleEscalationStarted);
+      window.removeEventListener('escalation-started', handleEscalationStarted);
     };
   }, [contract, onTimerEnd]);
 
