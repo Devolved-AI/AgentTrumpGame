@@ -203,7 +203,6 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         localStorage.setItem('gameState', JSON.stringify(gameState));
         console.log("Saved game state to localStorage:", gameState);
         
-        // Not in escalation mode
         setStatus(prev => ({
           ...prev,
           lastGuessTimestamp: Date.now(),
