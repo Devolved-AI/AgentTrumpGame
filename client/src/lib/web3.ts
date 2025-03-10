@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
-const CONTRACT_ADDRESS = "0xCa9Fccaf7a04bC194B751dF6363aa6905f6965eA";
+const CONTRACT_ADDRESS = "0x3d86eBFBA84ED806f5004E6E42c715658aB5494f";
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
@@ -1096,26 +1096,21 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
         
         // Setup event listeners for contract balance updates
         try {
-          // Use direct event name strings instead of getEvent method
-          console.log("Setting up contract event listeners for balance updates");
-          
-          contract.on("GuessSubmitted", async () => {
-            console.log("GuessSubmitted event detected in web3.ts");
+          contract.on(contract.getEvent("GuessSubmitted"), async () => {
             // Wait a moment for the transaction to be processed
             setTimeout(async () => {
               get().updatePrizePool();
             }, 1000);
           });
           
-          contract.on("Deposited", async () => {
-            console.log("Deposited event detected in web3.ts");
+          contract.on(contract.getEvent("Deposited"), async () => {
             // Wait a moment for the transaction to be processed
             setTimeout(async () => {
               get().updatePrizePool();
             }, 1000);
           });
           
-          console.log("Successfully set up contract event listeners for balance updates");
+          console.log("Set up contract event listeners for balance updates");
         } catch (error) {
           console.error("Error setting up contract event listeners:", error);
         }

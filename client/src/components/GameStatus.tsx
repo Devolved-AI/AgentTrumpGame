@@ -268,31 +268,27 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     };
 
     try {
-      // Listen for GuessSubmitted events directly using event name string
-      console.log("Setting up GuessSubmitted event listener");
+      // Listen for GuessSubmitted events
       contract.on(
-        "GuessSubmitted",
+        contract.getEvent("GuessSubmitted"),
         handleGuessEvent
       );
 
-      // Listen for Deposited events directly using event name string
-      console.log("Setting up Deposited event listener");
+      // Listen for Deposited events
       contract.on(
-        "Deposited",
+        contract.getEvent("Deposited"),
         handleDepositEvent
       );
 
       return () => {
         clearInterval(statusInterval);
         try {
-          console.log("Removing GuessSubmitted event listener");
           contract.removeListener(
-            "GuessSubmitted",
+            contract.getEvent("GuessSubmitted"),
             handleGuessEvent
           );
-          console.log("Removing Deposited event listener");
           contract.removeListener(
-            "Deposited",
+            contract.getEvent("Deposited"),
             handleDepositEvent
           );
         } catch (error) {
@@ -390,18 +386,16 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
     try {
       // Listen for GuessSubmitted events with a unique named handler
-      console.log("Setting up detailed GuessSubmitted event listener for game state");
       contract.on(
-        "GuessSubmitted",
+        contract.getEvent("GuessSubmitted"),
         handleGuessEvent
       );
 
       return () => {
         try {
           // Clean up event listener
-          console.log("Removing detailed GuessSubmitted event listener");
           contract.removeListener(
-            "GuessSubmitted",
+            contract.getEvent("GuessSubmitted"),
             handleGuessEvent
           );
         } catch (error) {
