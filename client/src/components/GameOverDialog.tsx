@@ -50,16 +50,51 @@ export function GameOverDialog() {
       // Immediately update with the FINAL block information
       // This is the actual block of the last transaction that ended the game
       let finalBlock = "Block information unavailable";
-      if (block) {
+      
+      // Try multiple methods to get the block information
+      // Method 1: From contract response
+      if (block && block.toString() !== "0") {
         finalBlock = block.toString();
+        console.log("Using block from contract:", finalBlock);
         // Store this final block number so it's consistent and doesn't keep updating
         localStorage.setItem('finalGameBlock', finalBlock);
       } else {
-        // Try to get from localStorage if previously stored
+        // Method 2: Try to get from localStorage if previously stored
         const storedFinalBlock = localStorage.getItem('finalGameBlock');
-        if (storedFinalBlock) {
+        if (storedFinalBlock && storedFinalBlock !== "Block information unavailable") {
           finalBlock = storedFinalBlock;
           console.log("Using stored final block:", finalBlock);
+        } else {
+          // Method 3: Try to get the lastBlock from gameState in localStorage
+          const gameState = localStorage.getItem('gameState');
+          if (gameState) {
+            try {
+              const parsedState = JSON.parse(gameState);
+              if (parsedState.lastBlock && parsedState.lastBlock !== "Unknown block") {
+                finalBlock = parsedState.lastBlock;
+                console.log("Using last block from game state:", finalBlock);
+                // Store this for future use
+                localStorage.setItem('finalGameBlock', finalBlock);
+              }
+            } catch (e) {
+              console.error("Error parsing game state from localStorage:", e);
+            }
+          }
+          
+          // Method 4: If we still don't have a valid block number, try to get current block number
+          if (finalBlock === "Block information unavailable") {
+            try {
+              const provider = contract.provider;
+              if (provider) {
+                const currentBlockNumber = await provider.getBlockNumber();
+                finalBlock = currentBlockNumber.toString();
+                console.log("Using current block number as fallback:", finalBlock);
+                localStorage.setItem('finalGameBlock', finalBlock);
+              }
+            } catch (blockError) {
+              console.error("Error getting current block number:", blockError);
+            }
+          }
         }
       }
       
@@ -339,7 +374,9 @@ export function GameOverDialog() {
 
             <div className="bg-blue-900/30 p-4 rounded-md border border-blue-800">
               <p className="font-semibold mb-1">Last Block:</p>
-              <p className="font-mono">{gameInfo.lastBlock || "Loading block information..."}</p>
+              <p className="font-mono text-lg">{gameInfo.lastBlock && gameInfo.lastBlock !== "Block information unavailable" 
+                ? gameInfo.lastBlock 
+                : "Loading block information..."}</p>
               <p className="text-sm mt-2 text-blue-300/80">
                 This is the final blockchain block that concluded the game
               </p>
