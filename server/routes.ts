@@ -517,7 +517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // This ensures that even if client-side detection is bypassed, the server will catch it
           console.log(`Server detected AI content from ${address}, applying penalty`);
           
-          // Apply significant penalty (changed from 25 to 5)
+          // Apply minimal penalty (changed from 25 to 5, now reduced further)
           const penalizedScore = Math.max(0, existingData.score - 5);
           
           // Update with penalized score
