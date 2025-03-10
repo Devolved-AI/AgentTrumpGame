@@ -43,6 +43,43 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
   const { data: ethPrice } = useEthPrice();
 
+  // Initial timer initialization - happens once on component mount
+  useEffect(() => {
+    // Try to restore timer from localStorage first
+    const savedState = localStorage.getItem('gameTimerState');
+    
+    if (savedState) {
+      try {
+        const parsedState = JSON.parse(savedState);
+        const { savedTime, timestamp, gameId } = parsedState;
+        
+        // Calculate elapsed time since last save
+        const elapsedSeconds = Math.floor((Date.now() - timestamp) / 1000);
+        const adjustedSavedTime = Math.max(0, savedTime - elapsedSeconds);
+        
+        console.log("Initial load: Found saved timer state:", { 
+          savedTime, 
+          elapsed: elapsedSeconds,
+          adjustedTime: adjustedSavedTime,
+          gameId
+        });
+        
+        // Update display time with the time from localStorage
+        setDisplayTime(adjustedSavedTime);
+        setBaseTime(adjustedSavedTime);
+        
+        // Pre-populate status with saved time
+        setStatus(prev => ({
+          ...prev,
+          timeRemaining: adjustedSavedTime
+        }));
+      } catch (e) {
+        console.error("Error parsing initial saved time:", e);
+      }
+    }
+  }, []);  // Empty dependency array means this only runs once at component mount
+
+  // Timer initialization after contract connection
   useEffect(() => {
     if (!contract) return;
 
@@ -55,9 +92,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining.toString());
-
-        // Cap the max time to 5 minutes (300 seconds) for testing
-        const MAX_GAME_TIME = 300;
+        const MAX_GAME_TIME = 300; // 5 minutes (300 seconds)
         
         // Log time from contract for debugging
         console.log("Contract returned time:", time);
@@ -69,38 +104,56 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           console.log(`Contract time ${time}s capped to ${MAX_GAME_TIME}s`);
         }
 
-        // Always prioritize contract time - fixes reset issues
-        // Only use localStorage for small adjustments to prevent timer jumps
+        // Get the current game ID (if supported by contract)
+        let gameId = "default";
+        try {
+          if (contract.gameId) {
+            gameId = (await contract.gameId()).toString();
+          } else {
+            console.log("Contract does not have gameId method");
+          }
+        } catch (err) {
+          console.log("Could not get gameId:", err);
+        }
+
+        // First try to get time from localStorage
         let finalTime = cappedContractTime;
         const savedState = localStorage.getItem('gameTimerState');
 
         if (savedState && !gameOver) {
           try {
             const parsedState = JSON.parse(savedState);
-            const { savedTime, timestamp } = parsedState;
+            const { savedTime, timestamp, savedGameId } = parsedState;
             
             // Calculate elapsed time since last save
             const elapsedSeconds = Math.floor((Date.now() - timestamp) / 1000);
             const adjustedSavedTime = Math.max(0, savedTime - elapsedSeconds);
             
-            // Check if the time difference is small (within 30 seconds)
-            // This prevents large jumps while still allowing continuity
-            const timeDifference = Math.abs(adjustedSavedTime - cappedContractTime);
+            console.log("Timer state found:", { 
+              savedTime, 
+              elapsed: elapsedSeconds, 
+              adjustedTime: adjustedSavedTime, 
+              savedGameId,
+              currentGameId: gameId
+            });
             
-            if (timeDifference <= 30) {
-              // Only use the lower value to ensure timer doesn't jump backward
-              finalTime = Math.min(adjustedSavedTime, cappedContractTime);
-              console.log(`Small time difference (${timeDifference}s), using: ${finalTime}s`);
-            } else {
-              // Time difference too large, use contract time
-              finalTime = cappedContractTime;
-              console.log(`Large time difference (${timeDifference}s), using contract time: ${finalTime}s`);
+            // If game IDs match, or we don't have game IDs, use saved time
+            // IMPORTANT: This always prioritizes the saved time from localStorage 
+            // as long as it's for the same game, which ensures timer continuity
+            if (!savedGameId || savedGameId === gameId) {
+              finalTime = adjustedSavedTime;
+              console.log("Using saved time (prioritizing continuity):", finalTime);
               
-              // Reset localStorage with current contract time to prevent future jumps
-              localStorage.setItem('gameTimerState', JSON.stringify({
-                savedTime: cappedContractTime,
-                timestamp: Date.now()
-              }));
+              // Only if contract time is significantly lower, use it instead
+              // This handles cases where game might have been reset on chain
+              if (cappedContractTime < adjustedSavedTime - 30) {
+                finalTime = cappedContractTime;
+                console.log("Contract time much lower, possible game reset. Using:", finalTime);
+              }
+            } else {
+              // Different game IDs - use contract time
+              finalTime = cappedContractTime;
+              console.log("Different game ID detected, using contract time:", finalTime);
             }
           } catch (e) {
             // If parsing fails, use contract time
@@ -131,12 +184,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         // Update the display time
         setDisplayTime(finalTime);
+        setBaseTime(finalTime);
         
         // Update local storage with current time
         if (!gameOver) {
           localStorage.setItem('gameTimerState', JSON.stringify({
             savedTime: finalTime,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            gameId
           }));
         }
       } catch (error) {
@@ -538,8 +593,24 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
     }
   }, [contract, updatePrizePool]);
 
+  // This effect sets up the countdown timer logic
+  // It no longer depends on the contract to ensure continuity during wallet changes
   useEffect(() => {
     if (status.isGameOver) return;
+
+    // Get the current game ID from localStorage if available
+    let currentGameId = "default";
+    try {
+      const savedState = localStorage.getItem('gameTimerState');
+      if (savedState) {
+        const { gameId } = JSON.parse(savedState);
+        if (gameId) currentGameId = gameId;
+      }
+    } catch (e) {
+      console.error("Error reading gameId from localStorage:", e);
+    }
+
+    console.log("Setting up countdown timer with gameId:", currentGameId);
 
     // Set up a single timer for consistent countdown
     const timer = setInterval(() => {
@@ -547,11 +618,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const newTime = Math.max(0, prev - 1);
 
         // Save timer state to localStorage for persistence across reconnects
+        // IMPORTANT: The timestamp is updated every tick to ensure accurate time tracking
         localStorage.setItem('gameTimerState', JSON.stringify({
           savedTime: newTime,
           timestamp: Date.now(),
           inEscalation: status.inEscalationPeriod,
-          escalationPeriod: status.escalationPeriod
+          escalationPeriod: status.escalationPeriod,
+          gameId: currentGameId, // Preserve game ID for continuity
+          lastUpdate: Date.now() // Add last update time
         }));
 
         // When timer reaches zero, end the game for everyone
@@ -592,8 +666,24 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [status, contract, onTimerEnd]);
+    // Cleanup on unmount
+    return () => {
+      console.log("Cleaning up timer - current displayTime:", displayTime);
+      
+      // Store the current time on unmount to ensure timer continuity
+      localStorage.setItem('gameTimerState', JSON.stringify({
+        savedTime: displayTime,
+        timestamp: Date.now(),
+        inEscalation: status.inEscalationPeriod,
+        escalationPeriod: status.escalationPeriod,
+        gameId: currentGameId, // Preserve game ID
+        lastUpdate: Date.now(),
+        isUnmount: true // Flag that this was from unmount
+      }));
+      
+      clearInterval(timer);
+    };
+  }, [status.isGameOver, status.inEscalationPeriod, status.escalationPeriod, onTimerEnd, displayTime]); // No longer depends on contract
 
   const usdValue = ethPrice ? (parseFloat(status.totalBalance) * ethPrice).toLocaleString('en-US', {
     style: 'currency',
