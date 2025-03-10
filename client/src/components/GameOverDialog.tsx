@@ -388,12 +388,6 @@ export function GameOverDialog() {
                 This is the address of the last player to interact with the game
               </p>
             </div>
-            
-            <p className="text-center mt-4 text-sm">
-              The prize pool has been distributed to {gameInfo.winner ? "the winner" : "the last player"}.
-              <br />
-              Start a new game session to play again!
-            </p>
           </div>
         </div>
       </DialogContent>
