@@ -151,6 +151,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
           isGameOver(),
           contract.getCurrentRequiredAmount()
         ]);
+        
+        // Convert lastPlayer to string if it's an address object
+        const lastPlayerAddress = typeof lastPlayer === 'object' ? 
+          (lastPlayer.toString ? lastPlayer.toString() : null) : 
+          lastPlayer;
 
         const time = Number(timeRemaining.toString());
 
@@ -172,7 +177,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         setStatus(prev => ({
           ...prev,
           timeRemaining: time,
-          lastPlayer,
+          lastPlayer: lastPlayerAddress, // Use the converted address
           // totalBalance is now updated via the prizePool useEffect
           won,
           isGameOver: gameOver,
