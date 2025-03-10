@@ -513,7 +513,13 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   const seconds = displayTime % 60;
   const isNearEnd = !status.isEscalation && displayTime <= 120; // 2 minutes remaining
   // Make sure the text is clearly red during escalation mode or when near the end
-  const textColorClass = status.isGameOver ? 'text-red-600 font-bold' : (status.isEscalation ? 'text-red-600 font-bold' : (isNearEnd ? 'text-red-500' : 'text-black dark:text-white'));
+  const textColorClass = status.isGameOver 
+    ? 'text-red-600 font-bold' 
+    : (status.isEscalation 
+      ? 'text-red-600 font-bold' 
+      : (isNearEnd 
+        ? 'text-red-500' 
+        : 'text-black dark:text-white'));
 
   if (showPrizePoolOnly) {
     return (
