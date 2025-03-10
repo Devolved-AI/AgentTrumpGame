@@ -372,12 +372,11 @@ export function GuessForm({ onTimerEnd }: GuessFormProps) {
 
             console.log(`Using exact price from table for period ${periodIndex + 1}: ${exactPrice} ETH`);
 
-            // Add a tiny buffer for gas price fluctuations (0.5%)
-            // This should help prevent "insufficient payment" errors
-            // This is a very small amount but can make a difference
-            const buffer = requiredAmount * BigInt(1005) / BigInt(1000);
+            // Add a 10% buffer for gas price fluctuations
+            // This should help prevent "insufficient payment" errors and match the UI message
+            const buffer = requiredAmount * BigInt(110) / BigInt(100); // 10% buffer
             requiredAmount = buffer;
-            console.log(`With tiny buffer: ${formatEther(requiredAmount)} ETH`);
+            console.log(`With 10% buffer: ${formatEther(requiredAmount)} ETH (original: ${exactPrice} ETH)`);
           } else {
             // Fallback to contract value if period is invalid
             requiredAmount = await contract.currentRequiredAmount();
