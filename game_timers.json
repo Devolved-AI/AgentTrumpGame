@@ -5,5 +5,12 @@
     "gameStarted": true,
     "gameId": "game_1741646300000",
     "gameEndTime": 1741646600311
+  },
+  "0x8925E8CdABB88247Cfa6d7677C249552172aF5c6": {
+    "contractAddress": "0x8925E8CdABB88247Cfa6d7677C249552172aF5c6",
+    "startTime": 1741646936073,
+    "gameStarted": true,
+    "gameId": "game_1741646936073",
+    "gameEndTime": 1741647236085
   }
 }
