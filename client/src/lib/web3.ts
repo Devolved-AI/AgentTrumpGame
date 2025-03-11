@@ -4,7 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
 // Base Mainnet contract address
-const CONTRACT_ADDRESS = "0x1c4ff00f5030E94d4b19A4fBc4D8674e0d8b1CBA"; 
+const CONTRACT_ADDRESS = "0xf5a94fAd390079Ef7CAB7767E764b1C3a6a7B06c"; 
 const CHAIN_ID = "0x2105"; // Base Mainnet: 8453 in hex
 const BASE_MAINNET_CONFIG = {
   chainId: CHAIN_ID,
