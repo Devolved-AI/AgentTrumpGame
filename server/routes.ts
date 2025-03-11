@@ -512,36 +512,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rate limiting to prevent rapid-fire submissions typical of AI usage
-  // Track submission timestamps by address
+  // Tracking for analytics purposes only - no penalties
   const lastSubmissionTime = new Map<string, number>();
   const submissionCounts = new Map<string, number[]>();
-  const MIN_SUBMISSION_INTERVAL = 500; // 0.5 seconds minimum between submissions (reduced from 5 seconds)
   
-  // Rate limiting function to detect unusual submission patterns
+  // Function to track submissions but never restrict them
   const checkRateLimit = (address: string): { allowed: boolean; reason?: string } => {
     const now = Date.now();
     const lastTime = lastSubmissionTime.get(address) || 0;
     const timeDiff = now - lastTime;
     
-    // Update submission time
+    // Update submission time for analytics only
     lastSubmissionTime.set(address, now);
     
-    // First message is always allowed
-    if (lastTime === 0) {
-      return { allowed: true };
-    }
-    
-    // Check if submission is too rapid (0.5 seconds minimum)
-    if (timeDiff < MIN_SUBMISSION_INTERVAL) {
-      console.log(`Rate limiting triggered: ${address} sent messages too quickly (${timeDiff}ms)`);
-      return { 
-        allowed: false, 
-        reason: `Messages must be at least ${MIN_SUBMISSION_INTERVAL/1000} seconds apart` 
-      };
-    }
-    
-    // Track submission pattern over time (submission window)
+    // Track submission pattern over time for analytics only
     const SUBMISSION_WINDOW = 10 * 60 * 1000; // 10 minutes in milliseconds
     const recentSubmissions = submissionCounts.get(address) || [];
     
@@ -552,22 +536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ];
     submissionCounts.set(address, updatedSubmissions);
     
-    // If user has submitted too many times in a short period, flag as suspicious
-    if (updatedSubmissions.length > 10) {
-      const oldestRecentSubmission = updatedSubmissions[0];
-      const timeSpan = now - oldestRecentSubmission;
-      const averageInterval = timeSpan / (updatedSubmissions.length - 1);
-      
-      // If average interval is too short (under 20 seconds), this is suspicious behavior
-      if (averageInterval < 20000 && updatedSubmissions.length >= 5) {
-        console.log(`Rate limiting triggered: ${address} has suspicious submission pattern (avg ${averageInterval.toFixed(0)}ms between msgs)`);
-        return { 
-          allowed: false, 
-          reason: 'Unusual submission pattern detected - please wait longer between messages' 
-        };
-      }
-    }
-    
+    // Always allow submissions with no timing restrictions
     return { allowed: true };
   };
   
@@ -666,58 +635,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastUpdated: Date.now()
       };
       
-      // Apply rate limiting if message is provided (genuine user interaction)
+      // Track submissions for analytics only (no penalties)
       if (message) {
-        // Check if rate limit is exceeded
+        // Track submission but never limit
         const rateLimitCheck = checkRateLimit(address);
-        if (!rateLimitCheck.allowed) {
-          console.log(`Rate limit exceeded for ${address}: ${rateLimitCheck.reason}`);
-          
-          // Apply minimal penalty for rate limit violations (reduced from 10 to 1)
-          const penalizedScore = Math.max(0, existingData.score - 1);
-          
-          // Update score with penalty
-          const penalizedData = {
-            ...existingData,
-            score: penalizedScore,
-            lastUpdated: Date.now()
-          };
-          
-          scoreCache.set(address, penalizedData);
-          saveScoresToDisk();
-          
-          return res.status(429).json({ 
-            error: 'Rate limit exceeded',
-            penalizedScore,
-            message: `${rateLimitCheck.reason}. This has resulted in a score penalty.`
-          });
-        }
         
-        // Enhanced server-side AI detection if message is provided
+        // AI content detection for logging purposes only
         const isAiGenerated = detectAiContent(message);
         if (isAiGenerated) {
-          // Apply a server-side penalty for AI-generated content
-          // This ensures that even if client-side detection is bypassed, the server will catch it
-          console.log(`Server detected AI content from ${address}, applying penalty`);
-          
-          // Apply minimal penalty (changed from 25 to 5, now reduced further)
-          const penalizedScore = Math.max(0, existingData.score - 5);
-          
-          // Update with penalized score
-          const penalizedData = {
-            ...existingData,
-            score: penalizedScore,
-            lastUpdated: Date.now()
-          };
-          
-          scoreCache.set(address, penalizedData);
-          saveScoresToDisk();
-          
-          return res.status(403).json({ 
-            error: 'AI-generated content detected', // Keep this the same for code compatibility
-            penalizedScore,
-            message: 'Slop detected in your messages. This results in a score penalty.'
-          });
+          // Log potential AI content but don't penalize or block
+          console.log(`Detected AI-like content from ${address}, but allowing it`);
         }
       }
 
