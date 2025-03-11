@@ -129,7 +129,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining.toString());
-        const MAX_GAME_TIME = 300; // 5 minutes (300 seconds)
+        const MAX_GAME_TIME = 600; // 10 minutes (600 seconds)
         
         // Log time from contract for debugging
         console.log("Contract returned time:", time);
@@ -367,8 +367,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         console.log("Final processed lastPlayer address:", lastPlayerAddress);
 
         const time = Number(timeRemaining.toString());
-        // Cap the time to 5 minutes (300 seconds) for testing
-        const MAX_GAME_TIME = 300;
+        // Cap the time to 10 minutes (600 seconds) for testing
+        const MAX_GAME_TIME = 600;
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {

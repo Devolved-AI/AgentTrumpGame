@@ -382,7 +382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Calculate game values
         const elapsedTime = 0;
-        const gameLength = 300; // 5 minutes in seconds
+        const gameLength = 600; // 10 minutes in seconds
         const remainingTime = gameLength;
         
         return res.json({
@@ -395,7 +395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate elapsed time since game started
       const elapsedTime = Math.floor((Date.now() - timerState.startTime) / 1000);
-      const gameLength = 300; // 5 minutes in seconds
+      const gameLength = 600; // 10 minutes in seconds
       const remainingTime = Math.max(0, gameLength - elapsedTime);
       
       // Check if the game is over based on timer
@@ -462,7 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Reset game timer for ${contractAddress}`);
       
       // Return the new timer state
-      const gameLength = 300; // 5 minutes in seconds
+      const gameLength = 600; // 10 minutes in seconds
       res.json({
         ...gameTimerState[contractAddress],
         elapsedTime: 0,
