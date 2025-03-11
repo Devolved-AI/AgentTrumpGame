@@ -129,7 +129,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining.toString());
-        const MAX_GAME_TIME = 600; // 10 minutes (600 seconds)
+        const MAX_GAME_TIME = 259200; // 72 hours (259200 seconds)
         
         // Log time from contract for debugging
         console.log("Contract returned time:", time);

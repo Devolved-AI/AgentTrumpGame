@@ -124,14 +124,14 @@ export default function Game() {
                 </p>
 
                 <p>
-                  You have 10 minutes to convince Agent Trump (AGT) to give the Prize Pool Money to you.
+                  You have 72 hours (3 days) to convince Agent Trump (AGT) to give the Prize Pool Money to you. Can you do it?
                 </p>
 
                 <div>
                   <h3 className="text-lg font-semibold mb-2">How to Win:</h3>
                   <ul className="list-disc list-inside space-y-1">
                     <li>Your persuasion score must reach 100 to win immediately.</li>
-                    <li>If no one wins within 10 minutes, the game ends for everyone.</li>
+                    <li>If no one wins within 72 hours, the game ends for everyone.</li>
                   </ul>
                 </div>
 
