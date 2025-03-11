@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
-const CONTRACT_ADDRESS = "0x8925E8CdABB88247Cfa6d7677C249552172aF5c6"; // Updated contract address
+const CONTRACT_ADDRESS = "0x609E5D7ea5e2fD84b64Efc60A75fBc3ba5A48414"; // Updated contract address
 const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
 const BASE_SEPOLIA_CONFIG = {
   chainId: CHAIN_ID,
