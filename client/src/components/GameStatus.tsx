@@ -129,7 +129,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining.toString());
-        const MAX_GAME_TIME = 600; // 10 minutes (600 seconds)
+        const MAX_GAME_TIME = 900; // 15 minutes (900 seconds)
         
         // Log time from contract for debugging
         console.log("Contract returned time:", time);
@@ -367,8 +367,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         console.log("Final processed lastPlayer address:", lastPlayerAddress);
 
         const time = Number(timeRemaining.toString());
-        // Cap the time to 10 minutes (600 seconds)
-        const MAX_GAME_TIME = 600; // 10 minutes (600 seconds)
+        // Cap the time to 15 minutes (900 seconds)
+        const MAX_GAME_TIME = 900; // 15 minutes (900 seconds)
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
@@ -504,11 +504,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       
       // Save the new state to localStorage with a new game ID to ensure fresh state
       localStorage.setItem('gameTimerState', JSON.stringify({ 
-        displayTime: 600,
-        savedTime: 600,
+        displayTime: 900,
+        savedTime: 900,
         timestamp: Date.now(),
         lastUpdated: Date.now(),
-        baseTime: 600,
+        baseTime: 900,
         gameId: newGameId,
         isGameOver: false,
         inEscalation: false,
@@ -526,7 +526,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         lastPlayer: "",
         lastBlock: "",
         lastTimestamp: Date.now(),
-        timeRemaining: 600,
+        timeRemaining: 900,
         gameId: newGameId,
         isNewGame: true
       }));
@@ -593,8 +593,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
         
-        // Cap the time to 10 minutes (600 seconds)
-        const MAX_GAME_TIME = 600; // 10 minutes (600 seconds)
+        // Cap the time to 15 minutes (900 seconds)
+        const MAX_GAME_TIME = 900; // 15 minutes (900 seconds)
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
@@ -846,7 +846,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   }) : '...';
 
   // Handle null displayTime with default values
-  const timeValue = displayTime ?? 600; // Default to 10 minutes if still loading
+  const timeValue = displayTime ?? 900; // Default to 15 minutes if still loading
   const hours = Math.floor(timeValue / 3600);
   const minutes = Math.floor((timeValue % 3600) / 60);
   const seconds = timeValue % 60;
@@ -910,14 +910,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                     Escalation Period {status.escalationPeriod}/10
                   </div>
                   <Progress
-                    value={(timeValue / 600) * 100} // 10 minutes (600 seconds) for escalation period
+                    value={(timeValue / 900) * 100} // 15 minutes (900 seconds) for escalation period
                     className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                   />
                 </>
               ) : (
                 <>
                   <Progress
-                    value={(timeValue / 600) * 100} // 10 minutes (600 seconds)
+                    value={(timeValue / 900) * 100} // 15 minutes (900 seconds)
                     className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                   />
                   {isNearEnd ? (
@@ -975,14 +975,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               
               {status.inEscalationPeriod && (
                 <Progress
-                  value={(timeValue / 600) * 100} // 10 minutes (600 seconds) for escalation period
+                  value={(timeValue / 900) * 100} // 15 minutes (900 seconds) for escalation period
                   className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                 />
               )}
               
               {!status.inEscalationPeriod && (
                 <Progress
-                  value={(timeValue / 600) * 100} // 10 minutes (600 seconds)
+                  value={(timeValue / 900) * 100} // 15 minutes (900 seconds)
                   className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                 />
               )}
