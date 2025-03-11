@@ -368,7 +368,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
 
         const time = Number(timeRemaining.toString());
         // Cap the time to 10 minutes (600 seconds) for testing
-        const MAX_GAME_TIME = 600;
+        const MAX_GAME_TIME = 259200; // 72 hours (259200 seconds)
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
@@ -487,9 +487,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       // Use the provided gameId from the event or generate a new one
       const newGameId = customEvent.detail.gameId || `game_${Date.now()}`;
       
-      // Reset the game timer to 10 minutes (600 seconds) for the new game
-      setDisplayTime(600);
-      setBaseTime(600);
+      // Reset the game timer to 72 hours (259200 seconds) for the new game
+      setDisplayTime(259200);
+      setBaseTime(259200);
       
       // Reset game over state
       setStatus(prev => ({
@@ -594,7 +594,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const time = Number(timeRemaining.toString());
         
         // Cap the time to 10 minutes (600 seconds) for testing
-        const MAX_GAME_TIME = 600;
+        const MAX_GAME_TIME = 259200; // 72 hours (259200 seconds)
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
