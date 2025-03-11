@@ -496,7 +496,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ...prev,
         isGameOver: false,
         won: false,
-        timeRemaining: 600,
+        timeRemaining: 259200,
         lastGuessTimestamp: Date.now(),
         inEscalationPeriod: false,
         escalationPeriod: 0
@@ -504,11 +504,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       
       // Save the new state to localStorage with a new game ID to ensure fresh state
       localStorage.setItem('gameTimerState', JSON.stringify({ 
-        displayTime: 600,
-        savedTime: 600,
+        displayTime: 259200,
+        savedTime: 259200,
         timestamp: Date.now(),
         lastUpdated: Date.now(),
-        baseTime: 600,
+        baseTime: 259200,
         gameId: newGameId,
         isGameOver: false,
         inEscalation: false,
@@ -526,7 +526,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         lastPlayer: "",
         lastBlock: "",
         lastTimestamp: Date.now(),
-        timeRemaining: 600,
+        timeRemaining: 259200,
         gameId: newGameId,
         isNewGame: true
       }));
@@ -846,11 +846,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   }) : '...';
 
   // Handle null displayTime with default values
-  const timeValue = displayTime ?? 600; // Default to 10 minutes if still loading
+  const timeValue = displayTime ?? 259200; // Default to 72 hours if still loading
   const hours = Math.floor(timeValue / 3600);
   const minutes = Math.floor((timeValue % 3600) / 60);
   const seconds = timeValue % 60;
-  const isNearEnd = timeValue <= 120; // 2 minutes remaining
+  const isNearEnd = timeValue <= 7200; // 2 hours remaining
   
   // Show loading indicator if timer hasn't initialized yet
   const isTimerLoading = displayTime === null;
@@ -910,14 +910,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                     Escalation Period {status.escalationPeriod}/10
                   </div>
                   <Progress
-                    value={(timeValue / 600) * 100} // 10 minutes (600 seconds) for escalation period
+                    value={(timeValue / 259200) * 100} // 72 hours (259200 seconds) for escalation period
                     className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                   />
                 </>
               ) : (
                 <>
                   <Progress
-                    value={(timeValue / 600) * 100} // 10 minutes (600 seconds)
+                    value={(timeValue / 259200) * 100} // 72 hours (259200 seconds)
                     className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                   />
                   {isNearEnd ? (
@@ -975,14 +975,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               
               {status.inEscalationPeriod && (
                 <Progress
-                  value={(timeValue / 600) * 100} // 10 minutes (600 seconds) for escalation period
+                  value={(timeValue / 259200) * 100} // 72 hours (259200 seconds) for escalation period
                   className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                 />
               )}
               
               {!status.inEscalationPeriod && (
                 <Progress
-                  value={(timeValue / 600) * 100} // 10 minutes (600 seconds)
+                  value={(timeValue / 259200) * 100} // 72 hours (259200 seconds)
                   className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                 />
               )}
