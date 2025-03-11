@@ -1,7 +1,7 @@
 // Script to reset game state with new contract address
 import fetch from 'node-fetch';
 
-const CONTRACT_ADDRESS = "0x55C7E558Ca15aeDaB08CFA30bB9fD0F2d777bF4e";
+const CONTRACT_ADDRESS = "0x1c4ff00f5030E94d4b19A4fBc4D8674e0d8b1CBA";
 const DEFAULT_SCORE = 25; // Set persuasion scores to 25 instead of 50
 
 // Make sure the persuasion score is valid
@@ -87,7 +87,7 @@ async function resetGame() {
     
     console.log('Game reset successful!');
     console.log(`All player persuasion scores have been reset to ${defaultScore}`);
-    console.log('Game timer has been reset to 10 minutes (600 seconds)');
+    console.log('Game timer has been reset to 15 minutes (900 seconds)');
     console.log('Contract address updated to:', contractAddress);
   } catch (error) {
     console.error('Error resetting game:', error);
