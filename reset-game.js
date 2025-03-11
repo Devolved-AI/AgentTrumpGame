@@ -87,7 +87,7 @@ async function resetGame() {
     
     console.log('Game reset successful!');
     console.log(`All player persuasion scores have been reset to ${defaultScore}`);
-    console.log('Game timer has been reset to 5 minutes (300 seconds)');
+    console.log('Game timer has been reset to 10 minutes (600 seconds)');
     console.log('Contract address updated to:', contractAddress);
   } catch (error) {
     console.error('Error resetting game:', error);
