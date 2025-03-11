@@ -4,7 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
 // Base Mainnet contract address
-const CONTRACT_ADDRESS = "0xf5a94fAd390079Ef7CAB7767E764b1C3a6a7B06c"; 
+const CONTRACT_ADDRESS = "0x7e864d272D657D79c76A6663d9165b8fF9fBc6d8"; 
 const CHAIN_ID = "0x2105"; // Base Mainnet: 8453 in hex
 const BASE_MAINNET_CONFIG = {
   chainId: CHAIN_ID,
@@ -19,83 +19,6 @@ const BASE_MAINNET_CONFIG = {
 };
 
 const CONTRACT_ABI = [
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "playerAddress",
-                                "type": "address"
-                        }
-                ],
-                "name": "getAllPlayerResponses",
-                "outputs": [
-                        {
-                                "components": [
-                                        {
-                                                "internalType": "string[]",
-                                                "name": "responses",
-                                                "type": "string[]"
-                                        },
-                                        {
-                                                "internalType": "bool[]",
-                                                "name": "exists",
-                                                "type": "bool[]"
-                                        },
-                                        {
-                                                "internalType": "uint256[]",
-                                                "name": "timestamps",
-                                                "type": "uint256[]"
-                                        }
-                                ],
-                                "internalType": "struct AgentTrumpGame.PlayerResponses",
-                                "name": "",
-                                "type": "tuple"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "winner",
-                                "type": "address"
-                        }
-                ],
-                "name": "buttonPushed",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "deposit",
-                "outputs": [],
-                "stateMutability": "payable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "emergencyWithdraw",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "endGame",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "forceEndGame",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
         {
                 "inputs": [],
                 "stateMutability": "nonpayable",
@@ -334,13 +257,6 @@ const CONTRACT_ABI = [
                 "type": "event"
         },
         {
-                "inputs": [],
-                "name": "pause",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
                 "anonymous": false,
                 "inputs": [
                         {
@@ -352,46 +268,6 @@ const CONTRACT_ABI = [
                 ],
                 "name": "Paused",
                 "type": "event"
-        },
-        {
-                "inputs": [],
-                "name": "renounceOwnership",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "string",
-                                "name": "response",
-                                "type": "string"
-                        }
-                ],
-                "name": "submitGuess",
-                "outputs": [],
-                "stateMutability": "payable",
-                "type": "function"
-        },
-        {
-                "inputs": [
-                        {
-                                "internalType": "address",
-                                "name": "newOwner",
-                                "type": "address"
-                        }
-                ],
-                "name": "transferOwnership",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "unpause",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
         },
         {
                 "anonymous": false,
@@ -431,23 +307,215 @@ const CONTRACT_ABI = [
         },
         {
                 "inputs": [],
-                "name": "withdraw",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-        },
-        {
-                "stateMutability": "payable",
-                "type": "receive"
-        },
-        {
-                "inputs": [],
                 "name": "BASE_MULTIPLIER",
                 "outputs": [
                         {
                                 "internalType": "uint256",
                                 "name": "",
                                 "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "BLOCKS_PER_MINUTE",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "ESCALATION_PERIOD",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "GAME_FEE",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "INITIAL_GAME_DURATION",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "MAX_RESPONSE_LENGTH",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
+                                "name": "winner",
+                                "type": "address"
+                        }
+                ],
+                "name": "buttonPushed",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "currentMultiplier",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "currentRequiredAmount",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "deposit",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "emergencyWithdraw",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "endGame",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "escalationActive",
+                "outputs": [
+                        {
+                                "internalType": "bool",
+                                "name": "",
+                                "type": "bool"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "name": "escalationPrices",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "escalationStartBlock",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "forceEndGame",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "gameEndBlock",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "gameWon",
+                "outputs": [
+                        {
+                                "internalType": "bool",
+                                "name": "",
+                                "type": "bool"
                         }
                 ],
                 "stateMutability": "view",
