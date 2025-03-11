@@ -487,16 +487,16 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       // Use the provided gameId from the event or generate a new one
       const newGameId = customEvent.detail.gameId || `game_${Date.now()}`;
       
-      // Reset the game timer to 5 minutes (300 seconds) for the new game
-      setDisplayTime(300);
-      setBaseTime(300);
+      // Reset the game timer to 10 minutes (600 seconds) for the new game
+      setDisplayTime(600);
+      setBaseTime(600);
       
       // Reset game over state
       setStatus(prev => ({
         ...prev,
         isGameOver: false,
         won: false,
-        timeRemaining: 300,
+        timeRemaining: 600,
         lastGuessTimestamp: Date.now(),
         inEscalationPeriod: false,
         escalationPeriod: 0
@@ -504,11 +504,11 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       
       // Save the new state to localStorage with a new game ID to ensure fresh state
       localStorage.setItem('gameTimerState', JSON.stringify({ 
-        displayTime: 300,
-        savedTime: 300,
+        displayTime: 600,
+        savedTime: 600,
         timestamp: Date.now(),
         lastUpdated: Date.now(),
-        baseTime: 300,
+        baseTime: 600,
         gameId: newGameId,
         isGameOver: false,
         inEscalation: false,
@@ -526,7 +526,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         lastPlayer: "",
         lastBlock: "",
         lastTimestamp: Date.now(),
-        timeRemaining: 300,
+        timeRemaining: 600,
         gameId: newGameId,
         isNewGame: true
       }));
@@ -593,8 +593,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
         
-        // Cap the time to 5 minutes (300 seconds) for testing
-        const MAX_GAME_TIME = 300;
+        // Cap the time to 10 minutes (600 seconds) for testing
+        const MAX_GAME_TIME = 600;
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
@@ -846,7 +846,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   }) : '...';
 
   // Handle null displayTime with default values
-  const timeValue = displayTime ?? 300; // Default to 5 minutes if still loading
+  const timeValue = displayTime ?? 600; // Default to 10 minutes if still loading
   const hours = Math.floor(timeValue / 3600);
   const minutes = Math.floor((timeValue % 3600) / 60);
   const seconds = timeValue % 60;
@@ -910,14 +910,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
                     Escalation Period {status.escalationPeriod}/10
                   </div>
                   <Progress
-                    value={(timeValue / 300) * 100} // 5 minutes (300 seconds) for escalation period
+                    value={(timeValue / 600) * 100} // 10 minutes (600 seconds) for escalation period
                     className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                   />
                 </>
               ) : (
                 <>
                   <Progress
-                    value={(timeValue / 300) * 100} // 5 minutes (300 seconds)
+                    value={(timeValue / 600) * 100} // 10 minutes (600 seconds)
                     className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                   />
                   {isNearEnd ? (
@@ -987,14 +987,14 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
               
               {status.inEscalationPeriod && (
                 <Progress
-                  value={(timeValue / 300) * 100} // 5 minutes (300 seconds) for escalation period
+                  value={(timeValue / 600) * 100} // 10 minutes (600 seconds) for escalation period
                   className={`mt-2 bg-amber-100 ${status.escalationPeriod > 5 ? 'bg-red-100' : ''}`}
                 />
               )}
               
               {!status.inEscalationPeriod && (
                 <Progress
-                  value={(timeValue / 300) * 100} // 5 minutes (300 seconds)
+                  value={(timeValue / 600) * 100} // 10 minutes (600 seconds)
                   className={`mt-2 ${isNearEnd ? 'bg-red-200' : ''}`}
                 />
               )}
