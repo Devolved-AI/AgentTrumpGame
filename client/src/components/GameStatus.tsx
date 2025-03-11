@@ -939,21 +939,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
   }
 
   if (showLastGuessOnly) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Last Guess Address
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm font-mono break-all">
-            {status.lastPlayer || "No guesses yet"}
-          </div>
-        </CardContent>
-      </Card>
-    );
+    // Return null to remove the Last Guess Address card from the UI
+    // Backend functionality remains intact
+    return null;
   }
 
   return (

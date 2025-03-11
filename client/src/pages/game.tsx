@@ -104,10 +104,9 @@ export default function Game() {
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-semibold text-black dark:text-white">Game Status</h2>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <PersuasionScore />
               <GameStatus showTimeRemainingOnly={true} onTimerEnd={() => setGameOver(true)} />
-              <GameStatus showLastGuessOnly={true} />
             </div>
 
             <div className="space-y-4">
