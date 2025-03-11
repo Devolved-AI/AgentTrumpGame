@@ -522,149 +522,29 @@ const CONTRACT_ABI = [
                 "type": "function"
         },
         {
-                "inputs": [],
-                "name": "BLOCKS_PER_MINUTE",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "currentMultiplier",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "currentRequiredAmount",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "ESCALATION_PERIOD",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "escalationActive",
-                "outputs": [
-                        {
-                                "internalType": "bool",
-                                "name": "",
-                                "type": "bool"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
                 "inputs": [
                         {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
+                                "internalType": "address",
+                                "name": "player",
+                                "type": "address"
                         }
                 ],
-                "name": "escalationPrices",
+                "name": "getAllPlayerResponses",
                 "outputs": [
                         {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "escalationStartBlock",
-                "outputs": [
+                                "internalType": "string[]",
+                                "name": "responses",
+                                "type": "string[]"
+                        },
                         {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "GAME_FEE",
-                "outputs": [
+                                "internalType": "uint256[]",
+                                "name": "timestamps",
+                                "type": "uint256[]"
+                        },
                         {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "gameEndBlock",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "gameStartBlock",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
-                "name": "gameWon",
-                "outputs": [
-                        {
-                                "internalType": "bool",
-                                "name": "",
-                                "type": "bool"
+                                "internalType": "bool[]",
+                                "name": "exists",
+                                "type": "bool[]"
                         }
                 ],
                 "stateMutability": "view",
@@ -685,7 +565,20 @@ const CONTRACT_ABI = [
         },
         {
                 "inputs": [],
-                "name": "getCurrentEscalationInterval",
+                "name": "getCurrentEscalationPeriod",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "getCurrentRequiredAmount",
                 "outputs": [
                         {
                                 "internalType": "uint256",
@@ -702,31 +595,48 @@ const CONTRACT_ABI = [
                                 "internalType": "address",
                                 "name": "player",
                                 "type": "address"
+                        },
+                        {
+                                "internalType": "uint256",
+                                "name": "index",
+                                "type": "uint256"
                         }
                 ],
-                "name": "getPlayerResponses",
+                "name": "getPlayerResponseByIndex",
                 "outputs": [
                         {
-                                "components": [
-                                        {
-                                                "internalType": "string",
-                                                "name": "response",
-                                                "type": "string"
-                                        },
-                                        {
-                                                "internalType": "uint256",
-                                                "name": "timestamp",
-                                                "type": "uint256"
-                                        },
-                                        {
-                                                "internalType": "bool",
-                                                "name": "exists",
-                                                "type": "bool"
-                                        }
-                                ],
-                                "internalType": "struct TrumpGuessGame.PlayerResponse[]",
+                                "internalType": "string",
+                                "name": "response",
+                                "type": "string"
+                        },
+                        {
+                                "internalType": "uint256",
+                                "name": "timestamp",
+                                "type": "uint256"
+                        },
+                        {
+                                "internalType": "bool",
+                                "name": "exists",
+                                "type": "bool"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
+                                "name": "player",
+                                "type": "address"
+                        }
+                ],
+                "name": "getPlayerResponseCount",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
                                 "name": "",
-                                "type": "tuple[]"
+                                "type": "uint256"
                         }
                 ],
                 "stateMutability": "view",
@@ -747,7 +657,7 @@ const CONTRACT_ABI = [
         },
         {
                 "inputs": [],
-                "name": "INITIAL_GAME_DURATION",
+                "name": "lastGuessBlock",
                 "outputs": [
                         {
                                 "internalType": "uint256",
@@ -773,19 +683,6 @@ const CONTRACT_ABI = [
         },
         {
                 "inputs": [],
-                "name": "MAX_RESPONSE_LENGTH",
-                "outputs": [
-                        {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                        }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-        },
-        {
-                "inputs": [],
                 "name": "owner",
                 "outputs": [
                         {
@@ -795,6 +692,13 @@ const CONTRACT_ABI = [
                         }
                 ],
                 "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "pause",
+                "outputs": [],
+                "stateMutability": "nonpayable",
                 "type": "function"
         },
         {
@@ -832,7 +736,7 @@ const CONTRACT_ABI = [
                         },
                         {
                                 "internalType": "uint256",
-                                "name": "timestamp",
+                                "name": "blockNumber",
                                 "type": "uint256"
                         },
                         {
@@ -842,6 +746,13 @@ const CONTRACT_ABI = [
                         }
                 ],
                 "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "renounceOwnership",
+                "outputs": [],
+                "stateMutability": "nonpayable",
                 "type": "function"
         },
         {
@@ -871,6 +782,19 @@ const CONTRACT_ABI = [
                 "type": "function"
         },
         {
+                "inputs": [
+                        {
+                                "internalType": "string",
+                                "name": "response",
+                                "type": "string"
+                        }
+                ],
+                "name": "submitGuess",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+        },
+        {
                 "inputs": [],
                 "name": "totalCollected",
                 "outputs": [
@@ -882,6 +806,37 @@ const CONTRACT_ABI = [
                 ],
                 "stateMutability": "view",
                 "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
+                                "name": "newOwner",
+                                "type": "address"
+                        }
+                ],
+                "name": "transferOwnership",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "unpause",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "withdraw",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "stateMutability": "payable",
+                "type": "receive"
         }
 ];
 
