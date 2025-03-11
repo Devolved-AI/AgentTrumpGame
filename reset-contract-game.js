@@ -70,8 +70,8 @@ console.log("\n");
 
 async function resetContractGame() {
   try {
-    // Assume we need to use the Base Sepolia network
-    const provider = new ethers.JsonRpcProvider("https://sepolia.base.org");
+    // Use Base Mainnet network
+    const provider = new ethers.JsonRpcProvider("https://mainnet.base.org");
     
     // To interact with the contract, you need the private key of a wallet that
     // has permission to call endGame (typically the contract owner)

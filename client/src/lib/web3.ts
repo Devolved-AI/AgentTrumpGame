@@ -3,18 +3,19 @@ import { create } from 'zustand';
 import { toast } from '@/hooks/use-toast';
 import { PERSUASION_EVENT } from '@/components/PersuasionScore';
 
-const CONTRACT_ADDRESS = "0x55C7E558Ca15aeDaB08CFA30bB9fD0F2d777bF4e"; // Updated contract address
-const CHAIN_ID = "0x14a34"; // Base Sepolia: 84532 in hex
-const BASE_SEPOLIA_CONFIG = {
+// TODO: Replace with actual mainnet contract address once deployed
+const CONTRACT_ADDRESS = "0x55C7E558Ca15aeDaB08CFA30bB9fD0F2d777bF4e"; 
+const CHAIN_ID = "0x2105"; // Base Mainnet: 8453 in hex
+const BASE_MAINNET_CONFIG = {
   chainId: CHAIN_ID,
-  chainName: "Base Sepolia",
+  chainName: "Base",
   nativeCurrency: {
     name: "Ethereum",
     symbol: "ETH",
     decimals: 18,
   },
-  rpcUrls: ["https://sepolia.base.org"],
-  blockExplorerUrls: ["https://sepolia.basescan.org"],
+  rpcUrls: ["https://mainnet.base.org"],
+  blockExplorerUrls: ["https://basescan.org"],
 };
 
 const CONTRACT_ABI = [
@@ -860,14 +861,14 @@ const checkNetwork = async (ethereum: any) => {
           try {
             await ethereum.request({
               method: "wallet_addEthereumChain",
-              params: [BASE_SEPOLIA_CONFIG],
+              params: [BASE_MAINNET_CONFIG],
             });
             return true;
           } catch (addError) {
             console.error("Failed to add network:", addError);
             toast({
               title: "Network Error",
-              description: "Failed to add Base Sepolia network. Please add it manually in MetaMask.",
+              description: "Failed to add Base Mainnet network. Please add it manually in MetaMask.",
               variant: "destructive",
             });
             return false;
@@ -876,7 +877,7 @@ const checkNetwork = async (ethereum: any) => {
         console.error("Failed to switch network:", switchError);
         toast({
           title: "Network Error",
-          description: "Please switch to Base Sepolia network manually in MetaMask.",
+          description: "Please switch to Base Mainnet network manually in MetaMask.",
           variant: "destructive",
         });
         return false;
@@ -1226,7 +1227,7 @@ export const useWeb3Store = create<Web3State>((set, get) => ({
 
         toast({
           title: "Wallet Connected",
-          description: "Successfully connected to Base Sepolia network",
+          description: "Successfully connected to Base Mainnet",
         });
 
         // Setup event listeners
