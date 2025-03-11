@@ -487,16 +487,16 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       // Use the provided gameId from the event or generate a new one
       const newGameId = customEvent.detail.gameId || `game_${Date.now()}`;
       
-      // Reset the game timer to 10 minutes (600 seconds) for the new game
-      setDisplayTime(600);
-      setBaseTime(600);
+      // Reset the game timer to 15 minutes (900 seconds) for the new game
+      setDisplayTime(900);
+      setBaseTime(900);
       
       // Reset game over state
       setStatus(prev => ({
         ...prev,
         isGameOver: false,
         won: false,
-        timeRemaining: 600,
+        timeRemaining: 900,
         lastGuessTimestamp: Date.now(),
         inEscalationPeriod: false,
         escalationPeriod: 0
