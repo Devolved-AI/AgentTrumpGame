@@ -516,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Track submission timestamps by address
   const lastSubmissionTime = new Map<string, number>();
   const submissionCounts = new Map<string, number[]>();
-  const MIN_SUBMISSION_INTERVAL = 5000; // 5 seconds minimum between submissions
+  const MIN_SUBMISSION_INTERVAL = 500; // 0.5 seconds minimum between submissions (reduced from 5 seconds)
   
   // Rate limiting function to detect unusual submission patterns
   const checkRateLimit = (address: string): { allowed: boolean; reason?: string } => {
@@ -532,7 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return { allowed: true };
     }
     
-    // Check if submission is too rapid (5 seconds minimum)
+    // Check if submission is too rapid (0.5 seconds minimum)
     if (timeDiff < MIN_SUBMISSION_INTERVAL) {
       console.log(`Rate limiting triggered: ${address} sent messages too quickly (${timeDiff}ms)`);
       return { 
@@ -673,8 +673,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!rateLimitCheck.allowed) {
           console.log(`Rate limit exceeded for ${address}: ${rateLimitCheck.reason}`);
           
-          // Apply reduced penalty for rate limit violations (changed from 25 to 10)
-          const penalizedScore = Math.max(0, existingData.score - 10);
+          // Apply minimal penalty for rate limit violations (reduced from 10 to 1)
+          const penalizedScore = Math.max(0, existingData.score - 1);
           
           // Update score with penalty
           const penalizedData = {
