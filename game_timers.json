@@ -45,6 +45,7 @@
     "contractAddress": "0x6440C7944643bc9f51FF2354013EF91842D6DCEd",
     "startTime": 1741708664151,
     "gameStarted": true,
-    "gameId": "game_1741708664151"
+    "gameId": "game_1741708664151",
+    "gameEndTime": 1741709267408
   }
 }
