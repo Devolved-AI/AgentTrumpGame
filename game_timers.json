@@ -19,5 +19,12 @@
     "gameStarted": true,
     "gameId": "game_1741703217554",
     "gameEndTime": 1741703518532
+  },
+  "0x0e01Cc6f228F479Afdb70FF95677553B0D143f8F": {
+    "contractAddress": "0x0e01Cc6f228F479Afdb70FF95677553B0D143f8F",
+    "startTime": 1741703987857,
+    "gameStarted": true,
+    "gameId": "game_1741703987857",
+    "gameEndTime": 1741704588097
   }
 }
