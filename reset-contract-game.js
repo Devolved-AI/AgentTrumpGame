@@ -2,7 +2,7 @@
 import { ethers } from 'ethers';
 
 // Use the new contract address
-const CONTRACT_ADDRESS = "0x0e01Cc6f228F479Afdb70FF95677553B0D143f8F";
+const CONTRACT_ADDRESS = "0x7e29a9C06dCBb4656347a2C0739bc9Daa9d7cD53";
 
 // Contract ABI (we only need the function we're calling - endGame)
 const CONTRACT_ABI = [
