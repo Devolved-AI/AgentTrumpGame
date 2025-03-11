@@ -129,7 +129,7 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         ]);
 
         const time = Number(timeRemaining.toString());
-        const MAX_GAME_TIME = 900; // 15 minutes (900 seconds)
+        const MAX_GAME_TIME = 172800; // 48 hours (172800 seconds)
         
         // Log time from contract for debugging
         console.log("Contract returned time:", time);
@@ -367,8 +367,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         console.log("Final processed lastPlayer address:", lastPlayerAddress);
 
         const time = Number(timeRemaining.toString());
-        // Cap the time to 15 minutes (900 seconds)
-        const MAX_GAME_TIME = 900; // 15 minutes (900 seconds)
+        // Cap the time to 48 hours (172800 seconds)
+        const MAX_GAME_TIME = 172800; // 48 hours (172800 seconds)
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {
@@ -487,9 +487,9 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
       // Use the provided gameId from the event or generate a new one
       const newGameId = customEvent.detail.gameId || `game_${Date.now()}`;
       
-      // Reset the game timer to 15 minutes (900 seconds) for the new game
-      setDisplayTime(900);
-      setBaseTime(900);
+      // Reset the game timer to 48 hours (172800 seconds) for the new game
+      setDisplayTime(172800);
+      setBaseTime(172800);
       
       // Reset game over state
       setStatus(prev => ({
@@ -593,8 +593,8 @@ export function GameStatus({ showPrizePoolOnly, showTimeRemainingOnly, showLastG
         const timeRemaining = await contract.getTimeRemaining();
         const time = Number(timeRemaining.toString());
         
-        // Cap the time to 15 minutes (900 seconds)
-        const MAX_GAME_TIME = 900; // 15 minutes (900 seconds)
+        // Cap the time to 48 hours (172800 seconds)
+        const MAX_GAME_TIME = 172800; // 48 hours (172800 seconds)
         const cappedTime = Math.min(time, MAX_GAME_TIME);
         
         if (time > MAX_GAME_TIME) {

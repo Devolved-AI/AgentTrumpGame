@@ -462,7 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Reset game timer for ${contractAddress}`);
       
       // Return the new timer state
-      const gameLength = 900; // 15 minutes in seconds
+      const gameLength = 172800; // 48 hours in seconds
       res.json({
         ...gameTimerState[contractAddress],
         elapsedTime: 0,
