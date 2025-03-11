@@ -18,7 +18,7 @@ async function resetGame() {
     console.log(`Resetting game with new contract address: ${contractAddress} and persuasion score: ${defaultScore}`);
     
     // First update the contract address on the server
-    const contractResponse = await fetch('http://localhost:5000/api/contract', {
+    const contractResponse = await fetch('https://agenttrump.devolvedai.com/api/contract', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -45,7 +45,7 @@ async function resetGame() {
     
     // Reset the game timer for this contract
     try {
-      const timerResponse = await fetch(`http://localhost:5000/api/game/timer/reset/${contractAddress}`, {
+      const timerResponse = await fetch(`https://agenttrump.devolvedai.com/api/game/timer/reset/${contractAddress}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -64,7 +64,7 @@ async function resetGame() {
     
     // Now reset all scores to the default score explicitly
     try {
-      const resetResponse = await fetch('http://localhost:5000/api/persuasion/reset-all', {
+      const resetResponse = await fetch('https://agenttrump.devolvedai.com/api/persuasion/reset-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
